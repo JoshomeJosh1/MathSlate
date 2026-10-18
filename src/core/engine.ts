@@ -31,7 +31,10 @@ export interface OutputView {
   value?: CasValue;
   error?: string;
   backend?: string;
+  /** Answered by a fallback backend while the preferred one loads; recomputed when it is ready. */
   provisional?: boolean;
+  /** The preferred backend could not do this, so another one answered. */
+  fallback?: boolean;
   /** True while a recomputation is pending and `value` is from the previous version. */
   stale?: boolean;
 }
@@ -90,6 +93,12 @@ export class Engine {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   };
+
+  /** Forget which results are current (e.g. after switching backends) and recompute all. */
+  invalidate(): void {
+    this.keys = new Map();
+    this.schedule(0);
+  }
 
   update(doc: Doc): void {
     this.doc = doc;
@@ -236,10 +245,19 @@ export class Engine {
       if (!view) continue;
       const outputs = view.outputs.flatMap((o): OutputView[] => {
         if (o.id !== job.outputId) return [o];
-        if (!result.ok)
-          return [
-            { ...o, state: 'error', error: result.error, backend: result.backend, stale: false },
-          ];
+        if (!result.ok) {
+          const failed: OutputView = {
+            ...o,
+            state: 'error',
+            error: result.error,
+            backend: result.backend,
+            stale: false,
+          };
+          // A fallback backend's failure is retried once the preferred backend is ready.
+          if (result.provisional) failed.provisional = true;
+          else delete failed.provisional;
+          return [failed];
+        }
         if (job.auto && addsNothing(result.value, job.auto)) return [];
         const next: OutputView = {
           ...o,
@@ -250,6 +268,8 @@ export class Engine {
         };
         if (result.provisional) next.provisional = true;
         else delete next.provisional;
+        if (result.fallback) next.fallback = true;
+        else delete next.fallback;
         delete next.error;
         return [next];
       });

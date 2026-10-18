@@ -29,6 +29,8 @@ export interface Doc {
   /** Symbol interpretation choices, e.g. { i: 'imaginary-unit' }. */
   interpretations: Record<string, string>;
   nextOutputLabel: number;
+  /** Preferred CAS backend id ('sympy', 'nerdamer'); absent = automatic (SymPy first). */
+  preferredBackend?: string;
 }
 
 export function newId(): string {

@@ -1,25 +1,49 @@
 import { useState } from 'react';
-import { useCasStatus } from './app/services';
+import { useBackends } from './app/services';
 import { docActions, docStore } from './document/docStore';
-import { exampleDoc } from './document/examples';
+import { documentationDoc } from './document/documentation';
 import { emptyDoc } from './document/model';
+import { useStore } from './document/store';
 import { RowList } from './ui/rows/RowList';
 
+const STATE_LABEL = { idle: 'idle', loading: 'loading…', ready: 'ready', error: 'failed' } as const;
+
+/** Loading state of every CAS backend, e.g. "SymPy loading… · Nerdamer ready". */
 function CasStatus() {
-  const status = useCasStatus();
-  const label =
-    status.state === 'ready'
-      ? (status.message ?? 'SymPy ready')
-      : status.state === 'loading'
-        ? (status.message ?? 'Loading SymPy…')
-        : status.state === 'error'
-          ? (status.message ?? 'SymPy failed to load')
-          : 'SymPy idle';
+  const backends = useBackends();
   return (
-    <span className={`cas-status ${status.state}`} role="status">
-      <span className="dot" aria-hidden="true" />
-      {label}
+    <span className="cas-status-list" role="status">
+      {backends.map((b) => (
+        <span
+          key={b.id}
+          className={`cas-status ${b.status.state}`}
+          title={b.status.message ?? `${b.name} ${STATE_LABEL[b.status.state]}`}
+        >
+          <span className="dot" aria-hidden="true" />
+          {b.name} {STATE_LABEL[b.status.state]}
+        </span>
+      ))}
     </span>
+  );
+}
+
+/** Per-document choice of the preferred CAS backend. */
+function BackendPicker() {
+  const doc = useStore(docStore);
+  return (
+    <label className="toggle" title="Which computer algebra system answers first">
+      CAS
+      <select
+        value={doc.preferredBackend ?? ''}
+        onChange={(e) => {
+          docActions.setPreferredBackend(e.target.value || null);
+        }}
+      >
+        <option value="">Auto (SymPy)</option>
+        <option value="sympy">SymPy</option>
+        <option value="nerdamer">Nerdamer</option>
+      </select>
+    </label>
   );
 }
 
@@ -45,14 +69,16 @@ export function App() {
             New
           </button>
           <button
+            title="A slate that demonstrates everything MathSlate can do"
             onClick={() => {
-              if (!hasContent() || window.confirm('Replace this slate with the examples?')) {
-                docActions.replace(exampleDoc());
+              if (!hasContent() || window.confirm('Replace this slate with the documentation?')) {
+                docActions.replace(documentationDoc());
               }
             }}
           >
-            Examples
+            Documentation
           </button>
+          <BackendPicker />
           <label className="toggle">
             <input
               type="checkbox"

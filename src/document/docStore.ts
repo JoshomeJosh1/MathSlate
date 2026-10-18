@@ -44,6 +44,14 @@ export const docActions = {
   setRowKind(id: RowId, kind: 'note' | 'math') {
     docStore.set((doc) => setRowKind(doc, id, kind));
   },
+  setPreferredBackend(id: string | null) {
+    docStore.set((doc) => {
+      const next = { ...doc };
+      if (id) next.preferredBackend = id;
+      else delete next.preferredBackend;
+      return next;
+    });
+  },
   replace(doc: Doc) {
     docStore.set(doc);
   },

@@ -193,3 +193,20 @@ describe('calculus notation end to end', { timeout: 60_000 }, () => {
     expect(await last(['\\prod_{k=1}^{5}k'])).toEqual(['120']);
   });
 });
+
+describe('documentation slate with SymPy', { timeout: 120_000 }, () => {
+  it('computes every row without a CAS error', async () => {
+    const { documentationDoc } = await import('../../document/documentation');
+    const doc = documentationDoc();
+    const engine = new Engine(backend(), { debounceMs: 0 });
+    engine.update(doc);
+    await engine.settled();
+    const snapshot = engine.getSnapshot();
+    const failures = doc.rows.flatMap((row) =>
+      (snapshot.rows.get(row.id)?.outputs ?? [])
+        .filter((o) => o.state !== 'ok')
+        .map((o) => `${row.latex} [${o.commandId}]: ${o.state} ${o.error ?? ''}`),
+    );
+    expect(failures).toEqual([]);
+  });
+});

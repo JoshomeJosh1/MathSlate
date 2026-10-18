@@ -47,15 +47,25 @@ export function OutputRow({ output, onPromote, onRemove }: Props) {
       </div>
       <div className="output-body">
         {output.title && <span className="output-title">{output.title}</span>}
-        {output.state === 'error' ? (
+        {output.state === 'error' && output.provisional ? (
+          // The fallback backend could not do it; the preferred one will once it has loaded.
+          <span className="muted" title={output.error}>
+            waiting for SymPy…
+          </span>
+        ) : output.state === 'error' ? (
           <span className="output-error">{output.error}</span>
         ) : output.value ? (
           <ValueView value={output.value} />
         ) : (
           <span className="muted">computing…</span>
         )}
-        {output.provisional && output.backend && (
-          <span className="output-backend" title="Preliminary result; SymPy is still loading">
+        {output.state === 'ok' && output.provisional && output.backend && (
+          <span className="output-backend" title="Preliminary result while SymPy loads">
+            via {output.backend}
+          </span>
+        )}
+        {output.state === 'ok' && output.fallback && output.backend && (
+          <span className="output-backend" title="The preferred CAS could not do this">
             via {output.backend}
           </span>
         )}

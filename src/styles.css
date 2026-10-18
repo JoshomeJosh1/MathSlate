@@ -99,6 +99,21 @@ button {
   color: var(--accent);
 }
 
+.cas-status-list {
+  display: inline-flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toggle select {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
 .cas-status {
   font-size: 0.8rem;
   color: var(--muted);

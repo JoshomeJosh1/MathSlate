@@ -1,4 +1,5 @@
 import * as Comlink from 'comlink';
+import type { ProgramRunner } from '../runner';
 import type { BackendStatus, CasBackend, CasOpName, CasRequest, CasResult } from '../types';
 import { toCasValue, type SympyResultJson } from './fromSympy';
 import { SerializeError, serializeRequest } from './serialize';
@@ -18,14 +19,6 @@ const SUPPORTED: ReadonlySet<CasOpName> = new Set<CasOpName>([
 ]);
 
 const TIMED_OUT = Symbol('timed out');
-
-/** Something that runs a generated Python program and returns the runtime's JSON. */
-export interface ProgramRunner {
-  init(onProgress: (message: string) => void): Promise<void>;
-  run(code: string): Promise<string>;
-  /** Abandon the current computation (e.g. terminate the worker). */
-  reset(): void;
-}
 
 /** Runs programs in a dedicated Web Worker; a timed-out computation kills and replaces it. */
 export function workerRunner(): ProgramRunner {

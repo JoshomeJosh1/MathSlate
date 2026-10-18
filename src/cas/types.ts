@@ -45,8 +45,16 @@ export type CasValue =
   | { kind: 'boolean'; value: boolean };
 
 export type CasResult =
-  | { ok: true; value: CasValue; backend: string; provisional?: boolean }
-  | { ok: false; error: string; backend: string };
+  | {
+      ok: true;
+      value: CasValue;
+      backend: string;
+      /** From a fallback backend while the preferred one is still loading. */
+      provisional?: boolean;
+      /** The preferred backend could not do this; another backend answered. */
+      fallback?: boolean;
+    }
+  | { ok: false; error: string; backend: string; provisional?: boolean };
 
 export interface BackendStatus {
   state: 'idle' | 'loading' | 'ready' | 'error';

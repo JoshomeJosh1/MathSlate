@@ -1,4 +1,4 @@
-import { exampleDoc } from './examples';
+import { documentationDoc } from './documentation';
 import type { Doc } from './model';
 import type { Store } from './store';
 
@@ -27,9 +27,9 @@ export function loadDoc(): Doc {
       if (isDoc(parsed)) return parsed;
     }
   } catch {
-    // Storage unavailable or corrupt: fall through to the example slate.
+    // Storage unavailable or corrupt: fall through to the documentation slate.
   }
-  return exampleDoc();
+  return documentationDoc();
 }
 
 /** Saves the document (debounced) whenever the store changes. Returns an unsubscribe function. */

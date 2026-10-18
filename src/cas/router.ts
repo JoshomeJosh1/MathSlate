@@ -65,14 +65,26 @@ export class CasRouter implements CasBackend {
         backend: this.id,
       };
     }
-    if (best.status().state === 'ready') return best.run(request);
-    const fallback = candidates.find((b) => b.status().state === 'ready');
-    if (fallback) {
-      const result = await fallback.run(request);
-      return result.ok ? { ...result, provisional: true } : result;
+    const ready = candidates.filter((b) => b.status().state === 'ready');
+    if (ready.length === 0) {
+      await best.init();
+      return best.run(request);
     }
-    await best.init();
-    return best.run(request);
+    // While the preferred backend is still loading, answers from others are provisional: the
+    // preferred backend gets the final word once it is ready.
+    const provisional = ready[0] !== best;
+    // Try the ready backends in preference order; one that cannot do this hands over to the next.
+    let firstFailure: CasResult | null = null;
+    for (const backend of ready) {
+      const result = await backend.run(request);
+      if (result.ok) {
+        if (provisional) return { ...result, provisional: true };
+        return backend === best ? result : { ...result, fallback: true };
+      }
+      firstFailure ??= result;
+    }
+    if (!firstFailure) throw new Error('unreachable');
+    return provisional ? { ...firstFailure, provisional: true } : firstFailure;
   }
 
   private ordered(): CasBackend[] {
