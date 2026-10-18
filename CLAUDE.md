@@ -139,7 +139,9 @@ operators/relations. Built-in function names come from the registry (`functionSh
 `core/decorate.ts`, call-only ones excluded) and defined names from `nameShortcuts`. Only LaTeX
 commands MathLive defines (`LATEX_FUNCTION_COMMANDS`) are printed as `\cmd`; others as
 `\operatorname{…}`. MathLive re-serializes a typed `\operatorname{lcm}` as
-`\operatorname{\mathrm{lcm}}`: the lexer unwraps it and decoration tidies it.
+`\operatorname{\mathrm{lcm}}`: the lexer unwraps it and decoration tidies it. Backspace right
+after a word shortcut fires undoes it, leaving the typed letters (`MathLiveEditor.tsx`,
+`firedShortcut`), so `binom` → Backspace → `binomial(…)`; symbol shortcuts (≤, ″) just delete.
 
 ### Evaluation (`core/engine.ts`)
 
