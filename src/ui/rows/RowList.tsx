@@ -3,8 +3,10 @@ import {
   DndContext,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -22,6 +24,16 @@ import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { RowItem } from './RowItem';
 
 const FUNCTION_SHORTCUTS = functionShortcuts();
+
+/**
+ * The row a dragged row is over: the one under the pointer (by the rows' positions when the drag
+ * started), else the nearest (keyboard dragging, gaps). Comparing centres instead makes rows of
+ * different heights swap back and forth.
+ */
+const rowUnderPointer: CollisionDetection = (args) => {
+  const under = pointerWithin(args);
+  return under.length > 0 ? under : closestCenter(args);
+};
 
 export function RowList({ showDebug }: { showDebug: boolean }) {
   const doc = useStore(docStore);
@@ -109,7 +121,7 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
 
   return (
     <div className="row-list">
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={rowUnderPointer} onDragEnd={onDragEnd}>
         <SortableContext items={doc.rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {doc.rows.map((row, index) => (
             <RowItem

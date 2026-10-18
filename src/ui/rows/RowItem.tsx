@@ -48,7 +48,7 @@ export function RowItem(props: Props) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: row.id });
+  } = useSortable({ id: row.id, transition: { duration: 150, easing: 'ease-out' } });
   const isNote = row.kind === 'note';
 
   return (
