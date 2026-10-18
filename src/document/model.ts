@@ -215,6 +215,20 @@ export function groupRows(
 }
 
 /**
+ * Puts row `id` directly after row `targetId` and both into a new folder (dropping a row on the
+ * right half of a row that is in no folder). Returns the folder's id.
+ */
+export function groupWith(doc: Doc, targetId: RowId, id: RowId): { doc: Doc; id: RowId | null } {
+  const row = doc.rows.find((r) => r.id === id);
+  if (!row || id === targetId || row.kind === 'folder') return { doc, id: null };
+  const rows = doc.rows.filter((r) => r.id !== id);
+  const at = rows.findIndex((r) => r.id === targetId);
+  if (at === -1) return { doc, id: null };
+  rows.splice(at + 1, 0, omit(row, 'folder'));
+  return groupRows({ ...doc, rows: normalizeFolders(rows) }, [targetId, id]);
+}
+
+/**
  * Moves row `id` to where `overId` is (above it when moving up, below it when moving down, as in
  * a sortable list) and into folder `into` (or out of folders, for null). A folder moves with all
  * its rows and never goes inside a folder. Dropping onto a folder's title row with `into` set to

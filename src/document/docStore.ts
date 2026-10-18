@@ -2,6 +2,7 @@ import {
   addOutput,
   deleteRow,
   groupRows,
+  groupWith,
   insertRowAfter,
   moveRow,
   removeOutput,
@@ -43,6 +44,16 @@ export const docActions = {
   },
   moveRow(id: RowId, overId: RowId, into: RowId | null) {
     docStore.set((doc) => moveRow(doc, id, overId, into));
+  },
+  /** Drops row `id` on top-level row `targetId`: a new folder with both. Returns its id. */
+  groupWith(targetId: RowId, id: RowId): RowId | null {
+    let folder: RowId | null = null;
+    docStore.set((doc) => {
+      const result = groupWith(doc, targetId, id);
+      folder = result.id;
+      return result.doc;
+    });
+    return folder;
   },
   groupRows(ids: readonly RowId[]): RowId | null {
     let id: RowId | null = null;

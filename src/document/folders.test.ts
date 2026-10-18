@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   deleteRow,
   groupRows,
+  groupWith,
   insertRowAfter,
   moveRow,
   normalizeFolders,
@@ -116,6 +117,20 @@ describe('folders', () => {
       '@',
       '  a',
       '  c',
+    ]);
+  });
+
+  it('dropping a row on a top-level row makes a folder with both', () => {
+    const titled = (d: Doc) => show(d).map((s) => (s.startsWith('@') ? '@' : s));
+    expect(titled(groupWith(doc('a', 'b', 'c'), 'c', 'a').doc)).toEqual(['b', '@', '  c', '  a']);
+    expect(titled(groupWith(doc('a', 'b', 'c'), 'a', 'c').doc)).toEqual(['@', '  a', '  c', 'b']);
+    // A row taken from a folder leaves it.
+    expect(titled(groupWith(doc('@F', '  x', '  y', 'a'), 'a', 'x').doc)).toEqual([
+      '@',
+      '  y',
+      '@',
+      '  a',
+      '  x',
     ]);
   });
 

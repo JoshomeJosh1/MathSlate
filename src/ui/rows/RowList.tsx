@@ -22,7 +22,7 @@ import { docActions, docStore } from '../../document/docStore';
 import type { InputRow, RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
-import { dropTarget } from './dropTarget';
+import { dropTarget, sameTarget, type DropTarget } from './dropTarget';
 import { RowItem } from './RowItem';
 
 const FUNCTION_SHORTCUTS = functionShortcuts();
@@ -53,8 +53,8 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
   const [editingRow, setEditingRow] = useState<RowId | null>(null);
   // Rows selected with Shift+click on their numbers (for grouping into a folder).
   const [selected, setSelected] = useState<ReadonlySet<RowId>>(new Set());
-  // The row being dragged, and the folder it would land in (undefined: not over anything).
-  const [dragging, setDragging] = useState<{ id: RowId; into?: RowId | null } | null>(null);
+  // The row being dragged, and where it would land (undefined: not over anything).
+  const [dragging, setDragging] = useState<{ id: RowId; target?: DropTarget } | null>(null);
 
   const byId = useMemo(() => new Map(doc.rows.map((r) => [r.id, r])), [doc]);
   // Rows of collapsed folders are hidden (they still compute).
@@ -130,8 +130,8 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  /** The folder the dragged row would land in, for the current pointer position. */
-  const landing = (event: DragMoveEvent | DragEndEvent): RowId | null | undefined => {
+  /** Where the dragged row would land, for the current pointer position. */
+  const landing = (event: DragMoveEvent | DragEndEvent): DropTarget | undefined => {
     const active = byId.get(String(event.active.id));
     const over = event.over ? byId.get(String(event.over.id)) : undefined;
     if (!active || !over || !event.over) return undefined;
@@ -140,9 +140,14 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
 
   const onDragEnd = (event: DragEndEvent) => {
     setDragging(null);
-    const into = landing(event);
-    if (event.over && into !== undefined) {
-      docActions.moveRow(String(event.active.id), String(event.over.id), into);
+    const target = landing(event);
+    if (!event.over || target === undefined) return;
+    const id = String(event.active.id);
+    if (target && 'newFolderWith' in target) {
+      // A new folder with the row it was dropped on: name it straight away.
+      focusRow(docActions.groupWith(target.newFolderWith, id) ?? undefined, true);
+    } else {
+      docActions.moveRow(id, String(event.over.id), target ? target.folder : null);
     }
   };
 
@@ -216,10 +221,10 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
           setDragging({ id: String(active.id) });
         }}
         onDragMove={(event) => {
-          const into = landing(event);
+          const target = landing(event);
           setDragging((current) =>
-            current && current.into !== into
-              ? { id: current.id, ...(into === undefined ? {} : { into }) }
+            current && !sameTarget(current.target, target)
+              ? { id: current.id, ...(target === undefined ? {} : { target }) }
               : current,
           );
         }}
@@ -230,9 +235,14 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
       >
         <SortableContext items={visible.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {visible.map((row, index) => {
-            const isDragged = dragging?.id === row.id;
+            // While dragging, the dragged row shows the indent it will get, and a row it would
+            // make a new folder with shows its indent too.
+            const target = dragging?.target;
             const inFolder =
-              isDragged && dragging.into !== undefined ? dragging.into !== null : !!row.folder;
+              dragging?.id === row.id && target !== undefined
+                ? target !== null
+                : (target && 'newFolderWith' in target && target.newFolderWith === row.id) ||
+                  !!row.folder;
             return (
               <RowItem
                 key={row.id}
