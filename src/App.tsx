@@ -4,7 +4,6 @@ import { docActions, docStore } from './document/docStore';
 import { documentationDoc } from './document/documentation';
 import { emptyDoc } from './document/model';
 import { useStore } from './document/store';
-import { requestFocus } from './ui/rows/focusRequest';
 import { RowList } from './ui/rows/RowList';
 
 const STATE_LABEL = { idle: 'idle', loading: 'loading…', ready: 'ready', error: 'failed' } as const;
@@ -78,14 +77,6 @@ export function App() {
             }}
           >
             Documentation
-          </button>
-          <button
-            title="Add a folder to organise rows (or type @ in an empty row)"
-            onClick={() => {
-              requestFocus(docActions.addFolder());
-            }}
-          >
-            New folder
           </button>
           <BackendPicker />
           <label className="toggle">

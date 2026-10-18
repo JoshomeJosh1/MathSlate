@@ -44,7 +44,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Folders and notes' },
   {
-    note: 'Folders group rows and notes. Make one with New folder, by typing @ in an empty row, or by Shift+clicking row numbers and choosing Group into folder.',
+    note: 'Folders group rows and notes. Make one with + Folder at the bottom of the slate, by typing @ in an empty row, or by Shift+clicking row numbers and choosing Group into folder.',
   },
   {
     note: 'Click the arrow beside a folder to collapse or expand it. Folders only organise: rows in a collapsed folder still compute, and their definitions are used everywhere.',

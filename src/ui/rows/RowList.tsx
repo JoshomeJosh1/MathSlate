@@ -23,7 +23,6 @@ import type { InputRow, RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { dropTarget } from './dropTarget';
-import { requestFocus, takeFocusRequest } from './focusRequest';
 import { RowItem } from './RowItem';
 
 const FUNCTION_SHORTCUTS = functionShortcuts();
@@ -96,8 +95,6 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
   const pendingFocus = useRef<RowId | null>(null);
 
   useEffect(() => {
-    const requested = takeFocusRequest();
-    if (requested !== null) pendingFocus.current = requested;
     const id = pendingFocus.current;
     if (id === null) return;
     const editor = editors.current.get(id);
@@ -309,7 +306,7 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
         <button
           className="add-row"
           onClick={() => {
-            requestFocus(docActions.addFolder());
+            focusRow(docActions.addFolder(), true);
           }}
         >
           + Folder
