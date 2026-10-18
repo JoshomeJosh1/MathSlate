@@ -1,4 +1,5 @@
-import { emptyDoc, type Doc } from './model';
+import { exampleDoc } from './examples';
+import type { Doc } from './model';
 import type { Store } from './store';
 
 const STORAGE_KEY = 'mathslate.doc.v1';
@@ -26,9 +27,9 @@ export function loadDoc(): Doc {
       if (isDoc(parsed)) return parsed;
     }
   } catch {
-    // Storage unavailable or corrupt: fall through to a fresh document.
+    // Storage unavailable or corrupt: fall through to the example slate.
   }
-  return emptyDoc();
+  return exampleDoc();
 }
 
 /** Saves the document (debounced) whenever the store changes. Returns an unsubscribe function. */

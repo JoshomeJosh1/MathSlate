@@ -8,14 +8,17 @@ import { tokenize, type Delim, type OpSymbol, type RelSymbol, type Token } from 
  * Binding powers (higher binds tighter):
  *   relations (=, <, \le, …)            top level only, may chain
  *   + -                                 20
- *   \cdot \times * / \div, juxtaposition 30 (left-assoc; a/2b = (a/2)·b)
- *   prefix -                            operand parsed at 30 (-2x = (-2)·x, -x^2 = -(x^2))
+ *   \cdot \times * / \div               30 (left-assoc)
+ *   juxtaposition (implicit ×)          35: tighter than explicit operators, so letter runs stay
+ *                                       together: speed\cdot time = speed·(time), a/2b = a/(2b)
+ *   prefix -                            operand parsed at 30 (-2x = -(2x), -x^2 = -(x^2))
  *   ^ _ ' ! \%                          postfix on a primary
  * `^`, `_`, \frac and \sqrt take LaTeX arguments: one braced group or a single character.
  */
 
 const ADD_BP = 20;
 const MUL_BP = 30;
+const JUXT_BP = 35;
 
 const MATRIX_ENVS = new Set([
   'matrix',
@@ -129,8 +132,8 @@ class Parser {
         left = node;
       } else if (this.startsPrimary(t)) {
         // Implicit multiplication: collect a flat juxtaposition so the resolver can see letter runs.
-        if (MUL_BP <= rbp) break;
-        const right = this.parseExpr(MUL_BP);
+        if (JUXT_BP <= rbp) break;
+        const right = this.parseExpr(JUXT_BP);
         left =
           left.type === 'juxt'
             ? { type: 'juxt', items: [...left.items, right], span: spanOf(left.span, right.span) }

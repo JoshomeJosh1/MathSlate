@@ -12,21 +12,19 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useEffect, useMemo, useRef } from 'react';
-import { analyzeRows } from '../../core/analyze';
+import { useEffect, useRef, useState } from 'react';
+import { useEngine } from '../../app/services';
 import { docActions, docStore } from '../../document/docStore';
 import type { RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
-import { InputRow } from './InputRow';
+import { RowItem } from './RowItem';
 
 export function RowList({ showDebug }: { showDebug: boolean }) {
   const doc = useStore(docStore);
-  const analyses = useMemo(
-    () => analyzeRows(doc.rows, { interpretationChoices: doc.interpretations }),
-    [doc.rows, doc.interpretations],
-  );
+  const engine = useEngine();
   const editors = useRef(new Map<RowId, MathEditorHandle>());
+  const [focusedRow, setFocusedRow] = useState<RowId | null>(null);
   // A row to focus once it has been rendered (e.g. one that was just inserted).
   const pendingFocus = useRef<RowId | null>(null);
 
@@ -85,12 +83,13 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={doc.rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {doc.rows.map((row, index) => (
-            <InputRow
+            <RowItem
               key={row.id}
               row={row}
-              analysis={analyses[index]}
+              view={engine.rows.get(row.id)}
               index={index}
               showDebug={showDebug}
+              focused={focusedRow === row.id}
               editorRef={(handle) => {
                 if (handle) editors.current.set(row.id, handle);
                 else editors.current.delete(row.id);
@@ -101,21 +100,45 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
               onKeyAction={(action) => {
                 handleKey(row.id, index, action);
               }}
+              onFocus={() => {
+                setFocusedRow(row.id);
+              }}
               onDelete={() => {
                 docActions.deleteRow(row.id);
+              }}
+              onAddCommand={(command) => {
+                docActions.addOutput(row.id, command.id);
+              }}
+              onRemoveOutput={(outputId) => {
+                docActions.removeOutput(row.id, outputId);
+              }}
+              onPromote={(latexRows) => {
+                let after = row.id;
+                for (const latex of latexRows) after = docActions.insertRowAfter(after, latex);
+                focusRow(after);
               }}
             />
           ))}
         </SortableContext>
       </DndContext>
-      <button
-        className="add-row"
-        onClick={() => {
-          focusRow(docActions.insertRowAfter(null));
-        }}
-      >
-        + Add row
-      </button>
+      <div className="add-buttons">
+        <button
+          className="add-row"
+          onClick={() => {
+            focusRow(docActions.insertRowAfter(null));
+          }}
+        >
+          + Math
+        </button>
+        <button
+          className="add-row"
+          onClick={() => {
+            focusRow(docActions.insertRowAfter(null, '', 'note'));
+          }}
+        >
+          + Note
+        </button>
+      </div>
     </div>
   );
 }

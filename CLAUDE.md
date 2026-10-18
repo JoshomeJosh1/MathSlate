@@ -10,22 +10,25 @@ Extensibility via registries ("add one file") is the top design goal.
 
 ## Status
 
-| Milestone | Scope                                                                                         | State   |
-| --------- | --------------------------------------------------------------------------------------------- | ------- |
-| 1         | Scaffold, MathLive rows (add/delete/reorder), LaTeX debug, localStorage, Pages deploy         | done    |
-| 2         | Parser (lexer, Pratt CST, definitions, symbol table, resolver, printer) + tests               | done    |
-| 3         | Pyodide worker, CasBackend, engine, dependency graph, auto-eval, simplify/factor/expand/solve | planned |
-| 4         | Output rows UX (promote, `ans`, `out_k`), suggestion chips, `/` palette                       | planned |
-| 5         | Symbol interpretation prompts + row badges (registry + resolution already done in M2)         | planned |
-| 6         | Matrix commands (det, inverse, transpose, eigenvalues, dot, cross)                            | planned |
-| 7         | Built-in sequence evaluation (p_n, F_n, out_k), recursive sequences                           | planned |
-| 8         | URL share, error highlight inside the math field, perf                                        | planned |
+| Milestone | Scope                                                                                        | State   |
+| --------- | -------------------------------------------------------------------------------------------- | ------- |
+| 1         | Scaffold, MathLive rows (add/delete/reorder), LaTeX debug, localStorage, Pages deploy        | done    |
+| 2         | Parser (lexer, Pratt CST, definitions, symbol table, resolver, printer) + tests              | done    |
+| 3         | Pyodide worker, CasBackend + router, engine, dependency graph, auto-eval, commands, examples | done    |
+| 3b        | Nerdamer backend (instant, routed fallback while SymPy loads); compare backends              | planned |
+| 3c        | Calculus notation: d/dx, ∫ (indefinite → symbolic, definite → numeric), lim, Σ, Π            | planned |
+| 4         | Output rows UX (promote, `ans`, `out_k`), suggestion chips, `/` palette                      | planned |
+| 5         | Symbol interpretation prompts + row badges (registry + resolution already done in M2)        | planned |
+| 6         | Matrix commands (det, inverse, transpose, eigenvalues, dot, cross)                           | planned |
+| 7         | Built-in sequence evaluation (p_n, F_n, out_k), recursive sequences                          | planned |
+| 8         | URL share, error highlight inside the math field, perf                                       | planned |
 
 ## Commands
 
 ```sh
 npm run dev          # dev server (http://localhost:5173/MathSlate/)
 npm run check        # typecheck + lint + format check + tests — run before calling anything done
+npm run test:integration  # end-to-end tests against real SymPy in Pyodide (downloads it once)
 npm run build        # production build into dist/
 npm run preview      # serve dist/ to check the production build
 npm run format       # apply Prettier
@@ -38,21 +41,31 @@ src/
   main.tsx, App.tsx, styles.css
   ui/
     editor/        MathEditor.ts (editor-agnostic contract), MathLiveEditor.tsx, index.ts (picks impl)
-    rows/          RowList.tsx (sortable list, focus/keyboard nav, runs analysis), InputRow.tsx,
-                   RowDiagnostics.tsx (error with highlighted LaTeX, debug AST view)
+    editor/        … MathLiveView.tsx (read-only rendering for output rows)
+    rows/          RowList.tsx (sortable list, focus/keyboard nav), RowItem.tsx (input + outputs +
+                   chips, drags as a unit), OutputRow.tsx, NoteEditor.tsx, SuggestionChips.tsx,
+                   RowDiagnostics.tsx (errors with highlighted LaTeX, debug AST view), promote.ts
+  app/services.ts  singletons: backends → CasRouter → Engine, fed by docStore; React hooks
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
-                   docStore.ts (app singleton + actions), persistence.ts (localStorage autosave)
+                   docStore.ts (app singleton + actions), persistence.ts (localStorage autosave),
+                   examples.ts (the example slate: first visit + Examples button; tested)
   parser/          errors.ts (MathError + Span), lexer.ts, cst.ts, parser.ts (Pratt, LaTeX → CST),
                    definitions.ts (LHS shapes), symbols.ts (SymbolTable), resolve.ts (CST → AST),
                    ast.ts, printLatex.ts (AST → LaTeX), sexpr.ts (debug/test rendering)
-  core/            analyze.ts (whole-document analysis), builtinScope.ts
-                   -- planned: deps.ts (dependency graph), engine.ts, analysis of shapes for commands
+  core/            analyze.ts (whole-document analysis), builtinScope.ts, deps.ts (dependency graph,
+                   cycles, per-row environments), shape.ts (static facts for commands),
+                   engine.ts (doc → row views with outputs and suggestions; pure TS)
   registries/
     builtins/functions/defs/*.ts     built-in functions (auto-discovered)
     builtins/sequences/defs/*.ts     built-in sequences (auto-discovered)
     interpretations/defs/*.ts        meanings for undefined symbols (auto-discovered)
-    -- planned: commands/
-  cas/             -- planned: CasBackend interface; sympy/ (worker, serializer, result → AST)
+    commands/defs/*.ts               commands: simplify, factor, expand, solve, derivative,
+                                     integrate, limit, series, numeric (auto-discovered)
+  cas/             types.ts (backend-neutral CasBackend/CasRequest/CasValue), router.ts (routes ops
+                   to the preferred ready backend; provisional results)
+    sympy/         serialize.ts (AST → Python program), python/runtime.py (helpers + result → JSON
+                   tree), fromSympy.ts (JSON tree → AST), session.ts, worker.ts (Pyodide in a Web
+                   Worker via Comlink), SympyBackend.ts (queue, timeout + worker restart, cache)
 ```
 
 Registries use Vite's `import.meta.glob('./defs/*.ts', { eager: true })`, so a new file in a
@@ -78,7 +91,8 @@ Registries use Vite's `import.meta.glob('./defs/*.ts', { eager: true })`, so a n
 
 ### Parsing conventions (see `parser.ts` header)
 
-- Implicit multiplication has the same precedence as `\cdot`, left-assoc: `a/2b` = (a/2)·b.
+- Implicit multiplication binds tighter than explicit `\cdot`, `\times`, `/` (so letter runs stay
+  together: `speed\cdot time` = speed·time), and `a/2b` = a/(2b), `-2x` = -(2x).
 - `^`, `_`, `\frac`, `\sqrt` take one braced group or one character: `\frac23` = 2/3, `x^23` = x²·3.
 - `\sin 2x` = sin(2x); the argument stops at the next function: `\sin x\cos x` = sin x · cos x.
   `\sin^2 x` = (sin x)², `\sin^{-1} x` = arcsin x, `\log_2 8` = log(8, 2), `\sin(x)^2` = (sin x)².
@@ -87,6 +101,22 @@ Registries use Vite's `import.meta.glob('./defs/*.ts', { eager: true })`, so a n
   `\exponentialE`/`\imaginaryI`. SymPy's `\left[\begin{matrix}…\end{matrix}\right]` is accepted.
 - Juxtaposed `xy` prints back as `x\cdot y` (so it cannot merge into a defined `xy`); multi-letter
   names print as `\operatorname{speed}`. `printLatex` round-trips (tested).
+
+### Evaluation (`core/engine.ts`)
+
+On each document change (debounced): analyse → dependency graph (`deps.ts`: cycles are errors on
+every row involved; rows depending on an erroring row are "blocked") → for each row build jobs:
+automatic evaluation (expressions and constant definitions) plus attached commands
+(`InputRow.outputs`). Each job is a `CasRequest` whose `env` holds only the definitions the row
+needs, in dependency order. Backends cache by request, so editing one row only recomputes rows
+whose inputs or dependencies changed. Auto results are hidden when they add nothing (same as
+input, or symbolic and the row uses no definitions). Stale requests are dropped by generation.
+
+The SymPy backend turns each request into a self-contained Python program (`serialize.ts`): user
+constants become variables, functions become Python defs, sequences become memoised `_Sequence`
+objects filled bottom-up (no recursion limit for a_{1000}). Results return as a JSON tree shaped
+for display (ordered terms, fractions, roots) and become our AST, so outputs can be promoted
+(copied to an input row) and re-parsed. A request over 20 s kills and replaces the worker.
 
 ### Key design decisions
 
@@ -134,7 +164,17 @@ scope (`gh auth refresh -h github.com -s workflow`).
   `Interpretation`: `symbol` key (`'e'`, `'\\pi'`), `form` (`'bare'` or `'subscripted'`),
   `question`, `options` (each with a `Meaning`), `defaultOption`, `promptOnFirstUse`. New constant
   ids also need adding to `ConstantId` in `parser/ast.ts` and to `printLatex.ts`.
-- **Add a command** (milestone 3+): one file in `src/registries/commands/` exporting a `Command`
-  (id, title, slash name, `appliesTo` relevance score, `run`), plus a test.
-- **Add a CAS operation** (milestone 3+): extend the `CasOp` union and map it in each backend.
-- **Add a CAS backend** (milestone 3+): implement `CasBackend` in `src/cas/<name>/`.
+- **Add a command**: one file in `src/registries/commands/defs/` default-exporting a `Command`:
+  `id` (stored in documents — never rename), `title(ctx)` (chip/output label, may mention the
+  variable), `slash`, `aliases`, `description`, `appliesTo(ctx)` → relevance in [0, 1] using
+  `ctx.facts` (`ShapeFacts`: free variables, polynomial degree, relation, matrix…), and
+  `run(ctx, cas)` — usually `runOperation(ctx, cas, { op: … })`. Pick the variable with
+  `preferredVariable(ctx.facts)`. Add a case to `src/cas/sympy/sympy.integration.test.ts`.
+- **Add a CAS operation**: add it to `CasOperation` in `src/cas/types.ts`, then in each backend:
+  SymPy → `SUPPORTED` in `SympyBackend.ts`, `Serializer.operation` in `serialize.ts`, and a Python
+  helper in `runtime.py` if needed.
+- **Add a CAS backend**: implement `CasBackend` (`status`, `onStatusChange`, `init`, `supports`,
+  `run`) in `src/cas/<name>/`, converting results to `CasValue` with our AST, and register it in
+  `src/app/services.ts` (order = preference).
+- **Add an example**: append to `EXAMPLES` in `src/document/examples.ts`; `examples.test.ts`
+  fails if any example row has an unintended error.

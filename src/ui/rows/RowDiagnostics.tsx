@@ -1,18 +1,25 @@
 import type { RowAnalysis } from '../../core/analyze';
-import type { MathError } from '../../parser/errors';
+import type { Span } from '../../parser/errors';
 import { statementToSexpr } from '../../parser/sexpr';
 
-/** Per-row error message with the offending part of the LaTeX highlighted. */
-export function RowError({ latex, error }: { latex: string; error: MathError }) {
-  const { start, end } = error.span;
+/** Per-row error message, with the offending part of the LaTeX highlighted when known. */
+export function RowError({
+  latex,
+  message,
+  span,
+}: {
+  latex: string;
+  message: string;
+  span?: Span;
+}) {
   return (
     <div className="row-error" role="alert">
-      <span className="row-error-message">{error.message}</span>
-      {latex !== '' && (
+      <span className="row-error-message">{message}</span>
+      {span && latex !== '' && (
         <code className="row-error-source">
-          {latex.slice(0, start)}
-          <mark>{start === end ? ' ' : latex.slice(start, end)}</mark>
-          {latex.slice(end)}
+          {latex.slice(0, span.start)}
+          <mark>{span.start === span.end ? ' ' : latex.slice(span.start, span.end)}</mark>
+          {latex.slice(span.end)}
         </code>
       )}
     </div>

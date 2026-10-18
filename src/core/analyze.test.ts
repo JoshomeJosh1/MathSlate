@@ -74,8 +74,12 @@ describe('implicit multiplication', () => {
     ['x\\left(x+1\\right)', '(* x (+ x 1))'],
     ['\\left(x+1\\right)\\left(x-1\\right)', '(* (+ x 1) (- x 1))'],
     ['2\\sin x', '(* 2 (sin x))'],
-    ['a/2b', '(* (/ a 2) b)'],
-    ['-2x', '(* (- 2) x)'],
+    ['a/2b', '(/ a (* 2 b))'], // implicit multiplication binds tighter than explicit operators
+    ['-2x', '(- (* 2 x))'],
+    ['a\\cdot bc', '(* a (* b c))'],
+    // Regression: an explicit operator must not split a letter run (was (speed·t)·i·m·e).
+    [['speed=12', 'time=3', 'speed\\cdot time'], '(* speed time)'],
+    [['time=3', 'm=5', '2\\cdot time'], '(* 2 time)'],
     [['x=2', 'y=3', 'xy'], '(* x y)'],
     [['xy=6', 'xy+1'], '(+ xy 1)'],
     [['speed=3', '2speed'], '(* 2 speed)'],

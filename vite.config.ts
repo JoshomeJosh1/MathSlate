@@ -11,5 +11,7 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 1200 },
   test: {
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Integration tests load real SymPy (Pyodide) and are run separately: npm run test:integration
+    exclude: process.env.INTEGRATION ? [] : ['src/**/*.integration.test.ts'],
   },
 });

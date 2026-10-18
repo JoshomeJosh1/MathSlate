@@ -16,6 +16,9 @@ export interface OutputSpec {
 
 export interface InputRow {
   id: RowId;
+  /** 'note' rows hold plain text (headings, explanations) and are never evaluated. */
+  kind?: 'note';
+  /** LaTeX for math rows; plain text for notes. */
   latex: string;
   outputs: OutputSpec[];
 }
@@ -49,8 +52,9 @@ export function insertRowAfter(
   doc: Doc,
   afterId: RowId | null,
   latex = '',
+  kind?: 'note',
 ): { doc: Doc; id: RowId } {
-  const row = newRow(latex);
+  const row: InputRow = kind ? { ...newRow(latex), kind } : newRow(latex);
   const at = afterId === null ? -1 : indexOfRow(doc, afterId);
   const rows = [...doc.rows];
   rows.splice(at === -1 ? rows.length : at + 1, 0, row);
@@ -65,6 +69,25 @@ export function deleteRow(doc: Doc, id: RowId): Doc {
 
 export function updateLatex(doc: Doc, id: RowId, latex: string): Doc {
   return { ...doc, rows: doc.rows.map((r) => (r.id === id ? { ...r, latex } : r)) };
+}
+
+/** Attaches a command's output row to an input row, with the next stable out_k label. */
+export function addOutput(doc: Doc, rowId: RowId, commandId: string): Doc {
+  const spec: OutputSpec = { id: newId(), label: doc.nextOutputLabel, commandId };
+  return {
+    ...doc,
+    nextOutputLabel: doc.nextOutputLabel + 1,
+    rows: doc.rows.map((r) => (r.id === rowId ? { ...r, outputs: [...r.outputs, spec] } : r)),
+  };
+}
+
+export function removeOutput(doc: Doc, rowId: RowId, outputId: string): Doc {
+  return {
+    ...doc,
+    rows: doc.rows.map((r) =>
+      r.id === rowId ? { ...r, outputs: r.outputs.filter((o) => o.id !== outputId) } : r,
+    ),
+  };
 }
 
 /** Moves the row `id` to the position currently occupied by `overId`. */

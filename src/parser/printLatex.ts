@@ -132,8 +132,11 @@ export function printLatex(e: Expr): string {
  */
 function mulSeparator(e: Expr & { kind: 'binary' }, left: string, right: string): string {
   if (e.form === 'times') return '\\times ';
-  if (e.form === 'juxt' && e.left.kind === 'num' && !/^[0-9.]/.test(right) && !left.endsWith('.')) {
-    return '';
+  if (e.form === 'juxt') {
+    // After a number: 2x, 2\sin…  Before a command: x\cos(x), x\left(x+1\right) — a command
+    // cannot merge with the letters before it into a longer name.
+    if (e.left.kind === 'num' && !/^[0-9.]/.test(right) && !left.endsWith('.')) return '';
+    if (right.startsWith('\\') && !right.startsWith('\\cdot')) return '';
   }
   return '\\cdot ';
 }
