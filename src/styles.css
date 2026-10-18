@@ -253,6 +253,12 @@ button {
   padding-top: 1rem;
 }
 
+.note-editor.subheading {
+  color: var(--text);
+  font-weight: 600;
+  padding-top: 0.8rem;
+}
+
 .row-item.note .row-gutter {
   padding-top: 0.75rem;
 }

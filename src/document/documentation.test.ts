@@ -93,6 +93,14 @@ describe('documentation slate', () => {
     expect(missing).toEqual([]);
   });
 
+  it('describes every built-in function in a note', () => {
+    const notes = doc.rows.filter((r) => r.kind === 'note').map((r) => r.latex);
+    const missing = [...builtinFunctions.keys()].filter(
+      (f) => !notes.some((n) => new RegExp(`\\b${f}\\b`).test(n)),
+    );
+    expect(missing).toEqual([]);
+  });
+
   it('demonstrates every built-in sequence', () => {
     const missing = [...builtinSequences.keys()].filter((s) => !seen.sequences.has(s));
     expect(missing).toEqual([]);

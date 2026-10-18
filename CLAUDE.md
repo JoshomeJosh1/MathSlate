@@ -8,7 +8,9 @@ static site to GitHub Pages at `https://joshomejosh1.github.io/MathSlate/` (repo
 
 Extensibility via registries ("add one file") is the top design goal. The **documentation slate**
 (`src/document/documentation.ts`) is the user manual: it must demonstrate every feature, and
-its test fails when a built-in, command or calculus operator is missing.
+its test fails when a built-in, command or calculus operator is missing. Its function reference
+gives every built-in function a note naming it (also tested) and several example rows; notes
+starting `#` are headings, `##` subheadings.
 
 ## Status
 
@@ -221,7 +223,8 @@ Every new user-visible feature also gets an example in `src/document/documentati
   `\name` if listed in `FUNCTION_COMMANDS` (`lexer.ts`). Map it in each backend: `FUNCTIONS` in
   `cas/sympy/serialize.ts` (+ `_FUNCTION_NAMES` in `runtime.py` if SymPy names it differently)
   and `FUNCTIONS` in `cas/nerdamer/serialize.ts` / `parseText.ts`. Add it to the documentation
-  (the documentation test fails otherwise).
+  (a note describing it, under the right `##` group, plus example rows; the documentation test
+  fails otherwise).
 - **Add a built-in sequence**: a file in `src/registries/builtins/sequences/defs/`, a file in
   `src/registries/interpretations/defs/` with `form: 'subscripted'` and an option whose meaning is
   `{ kind: 'sequence', sequence: '<name>' }` (see `primes.ts`), and its implementation in

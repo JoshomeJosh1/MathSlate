@@ -11,7 +11,7 @@ interface Props {
 
 /**
  * Plain-text row for headings and explanations. Wraps and grows to fit its text. Lines starting
- * with "#" render as headings. Enter starts a new math row; Shift+Enter inserts a line break.
+ * with "#" render as headings ("##" as subheadings). Enter starts a new math row; Shift+Enter inserts a line break.
  */
 export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props) {
   const area = useRef<HTMLTextAreaElement>(null);
@@ -40,11 +40,11 @@ export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props
     };
   }, [value]);
 
-  const heading = value.startsWith('#');
+  const heading = value.startsWith('##') ? ' subheading' : value.startsWith('#') ? ' heading' : '';
   return (
     <textarea
       ref={area}
-      className={`note-editor${heading ? ' heading' : ''}`}
+      className={`note-editor${heading}`}
       value={value}
       rows={1}
       placeholder="Note"
