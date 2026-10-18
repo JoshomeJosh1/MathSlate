@@ -1,5 +1,6 @@
 # Builds the static site and publishes it to GitHub Pages on every push to main.
 # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
+# Pages needs a public repo on the free plan, so upload/deploy are skipped while the repo is private.
 name: Deploy to GitHub Pages
 
 on:
@@ -33,12 +34,12 @@ jobs:
       - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && !github.event.repository.private
         with:
           path: dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && !github.event.repository.private
     needs: build
     runs-on: ubuntu-latest
     environment:
