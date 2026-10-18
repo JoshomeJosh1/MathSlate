@@ -23,7 +23,7 @@ import type { InputRow, RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { dropTarget, sameTarget, type DropTarget } from './dropTarget';
-import { RowItem } from './RowItem';
+import { RowItem, type OutlinePiece } from './RowItem';
 
 const FUNCTION_SHORTCUTS = functionShortcuts();
 
@@ -39,13 +39,29 @@ const rowUnderPointer: CollisionDetection = (args) => {
 
 /**
  * Drop feedback, shown without changing any row's size (a size change would move the drop zones
- * under the pointer and make the target flicker): the folder a row would join is highlighted
- * (title and rows), and the row it would make a new folder with is outlined.
+ * under the pointer and make the target flicker): one dashed outline around the group the row
+ * would end up in, an existing folder (title and rows) or the row it would make a new folder
+ * with. Each row draws its piece of the outline; the result maps row id → piece.
  */
-function dropHighlight(row: InputRow, target: DropTarget | undefined): 'folder' | 'new' | null {
-  if (!target) return null;
-  if ('newFolderWith' in target) return target.newFolderWith === row.id ? 'new' : null;
-  return row.id === target.folder || row.folder === target.folder ? 'folder' : null;
+function dropOutline(
+  rows: readonly InputRow[],
+  activeId: RowId | undefined,
+  target: DropTarget | undefined,
+): Map<RowId, OutlinePiece> {
+  const pieces = new Map<RowId, OutlinePiece>();
+  if (!target) return pieces;
+  const inGroup = (r: InputRow) =>
+    'newFolderWith' in target
+      ? r.id === target.newFolderWith
+      : r.id === target.folder || r.folder === target.folder;
+  // The dragged row follows the pointer, so it is not part of the outline.
+  const group = rows.filter((r) => r.id !== activeId && inGroup(r));
+  group.forEach((r, i) => {
+    const first = i === 0;
+    const last = i === group.length - 1;
+    pieces.set(r.id, first && last ? 'only' : first ? 'first' : last ? 'last' : 'middle');
+  });
+  return pieces;
 }
 
 /** What dropping will do, shown on the dragged row; null when it stays where it is. */
@@ -284,6 +300,7 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
   const draggedRow = dragging ? byId.get(dragging.id) : undefined;
   const draggedFolder = draggedRow?.kind === 'folder' ? draggedRow.id : null;
   const labelText = draggedRow ? dragLabel(draggedRow, dragging?.target, byId) : null;
+  const outline = dropOutline(visible, dragging?.id, dragging?.target);
 
   return (
     <div className="row-list">
@@ -302,7 +319,6 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
       >
         <SortableContext items={visible.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {visible.map((row, index) => {
-            const target = dragging?.target;
             return (
               <RowItem
                 key={row.id}
@@ -312,7 +328,7 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
                 showDebug={showDebug}
                 focused={focusedRow === row.id}
                 inFolder={!!row.folder}
-                dropHighlight={dropHighlight(row, target)}
+                dropOutline={outline.get(row.id) ?? null}
                 folderSize={folderSizes.get(row.id) ?? 0}
                 selected={selected.has(row.id)}
                 movingWithFolder={draggedFolder !== null && row.folder === draggedFolder}

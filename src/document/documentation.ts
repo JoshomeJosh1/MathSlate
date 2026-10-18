@@ -50,7 +50,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Click the arrow beside a folder to collapse or expand it. Folders only organise: rows in a collapsed folder still compute, and their definitions are used everywhere.',
   },
   {
-    note: 'Drag rows by their number. Dropped over the right half of a row in a folder, a row joins that folder (the folder lights up); over the right half of a row in no folder, the two make a new folder (outlined). Drag into the indent on the left to take a row out. A label by the pointer says what will happen. Dragging a folder moves everything in it; deleting a folder keeps its rows.',
+    note: 'Drag rows by their number. Dropped on a row in a folder, a row joins that folder; drag it left of the folder’s indent line to take it out. Dropped on a folder’s title, or on a row in no folder, past the first third of it, the row joins that folder or makes a new folder with that row. A dashed outline shows the group it will join, and a label by the pointer says what will happen. Dragging a folder moves everything in it; deleting a folder keeps its rows.',
   },
   '\\mathrm{side}=3',
   '\\mathrm{side}^2',

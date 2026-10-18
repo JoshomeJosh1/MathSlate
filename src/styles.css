@@ -203,14 +203,39 @@ button {
 
 /* Drop feedback while dragging. Nothing here changes a row's size: that would move the drop
    zones under the pointer and make the target flicker. */
-.row-item.drop-into {
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
-  box-shadow: inset 3px 0 0 var(--accent);
+/* One dashed outline around the group a dragged row will join: each row draws its piece
+   (RowList dropOutline), so the pieces line up into a rectangle. A folder's rows are indented
+   (margin + 2px guide), so their piece reaches back to the folder's left edge. */
+.row-item.drop-outline::after {
+  content: '';
+  position: absolute;
+  inset: 0 3px;
+  border: 2px dashed var(--accent);
+  pointer-events: none;
+  z-index: 1;
 }
 
-.row-item.drop-new-folder {
-  outline: 2px dashed var(--accent);
-  outline-offset: -3px;
+.row-item.in-folder.drop-outline::after {
+  left: -27px;
+}
+
+.row-item.drop-first::after {
+  top: 3px;
+  border-bottom: none;
+}
+
+.row-item.drop-middle::after {
+  border-top: none;
+  border-bottom: none;
+}
+
+.row-item.drop-last::after {
+  bottom: 3px;
+  border-top: none;
+}
+
+.row-item.drop-only::after {
+  inset: 3px;
 }
 
 /* Follows the pointer while dragging (RowList sets its transform). */

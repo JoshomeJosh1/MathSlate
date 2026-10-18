@@ -18,6 +18,9 @@ const BRACKET_ONLY = bracketOnlyShortcuts();
 // The `\` menu lists only commands MathSlate understands.
 const COMPLETIONS = latexCompletions();
 
+/** Which part of a dashed outline around several rows a row draws (top, sides, bottom). */
+export type OutlinePiece = 'only' | 'first' | 'middle' | 'last';
+
 interface Props {
   row: InputRow;
   view: RowView | undefined;
@@ -27,8 +30,8 @@ interface Props {
   focused: boolean;
   /** Shown indented, as a row of a folder. */
   inFolder: boolean;
-  /** While dragging: part of the folder the row would join, or the row it would group with. */
-  dropHighlight: 'folder' | 'new' | null;
+  /** While dragging: this row's piece of the outline around the group the dragged row joins. */
+  dropOutline: OutlinePiece | null;
   /** Folders: how many rows they hold (shown when collapsed). */
   folderSize: number;
   selected: boolean;
@@ -76,8 +79,7 @@ export function RowItem(props: Props) {
     props.inFolder && 'in-folder',
     props.selected && 'selected',
     props.movingWithFolder && 'moving-with-folder',
-    props.dropHighlight === 'folder' && 'drop-into',
-    props.dropHighlight === 'new' && 'drop-new-folder',
+    props.dropOutline && `drop-outline drop-${props.dropOutline}`,
   ].filter(Boolean);
 
   const gutterLabel = isFolder

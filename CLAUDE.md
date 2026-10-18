@@ -222,11 +222,12 @@ Definite integrals keep any closed form SymPy finds, special functions included.
   update ends with `normalizeFolders`, which drops a row's folder when it is no longer next to
   it. `moveRow(id, overId, into)` moves a folder with its rows and snaps a row headed outside
   folders to the nearer end of a folder it would land in. In the UI (`RowList`), the drop target
-  comes from `ui/rows/dropTarget.ts`: right half of a row in a folder → join it, left of the row
-  (the indent) → leave, in between (the drag handle) → keep; right half of a row in no folder →
-  `groupWith` (a new folder with both). Drop feedback never changes a row's size (that moved the
-  drop zones under the pointer and made the target flicker): the target folder is tinted, a
-  grouping row outlined, and a label follows the pointer; it is recomputed on every pointer move. Typing `@` in an empty row makes a
+  comes from `ui/rows/dropTarget.ts`: on a row in a folder, right of the indent line (the row's
+  left edge) → join, left of it → leave; on a folder title, past the first third → join; on a
+  row in no folder, past the first third → `groupWith` (a new folder with both). Drop feedback
+  never changes a row's size (that moved the drop zones under the pointer and made the target
+  flicker): a dashed outline around the group to join (each row draws its piece) and a label
+  that follows the pointer, recomputed on every pointer move. Typing `@` in an empty row makes a
   folder, `#` a heading note, `"` a note; Shift+click on row numbers selects rows to group.
 
 ## Conventions
