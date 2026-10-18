@@ -7,6 +7,7 @@ import './mathlive.css';
 import { CommandMenu } from './CommandMenu';
 import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, MathEditorProps } from './MathEditor';
+import { emptyStructureRange } from './emptyStructure';
 import { INLINE_SHORTCUTS } from './shortcuts';
 
 MathfieldElement.fontsDirectory = null;
@@ -200,6 +201,14 @@ export function MathLiveEditor({
         revert(last);
         return;
       }
+      if ((ev.key === 'Backspace' || ev.key === 'Delete') && deleteEmptyStructure(ev.key)) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        typed = '';
+        spelling = null;
+        callbacks.current.onChange(mf.value);
+        return;
+      }
       const letter = /^[A-Za-z]$/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey;
       if (last && letter) {
         // The longest word ending in this letter that extends the shortcut and could still
@@ -245,6 +254,26 @@ export function MathLiveEditor({
       typed = '';
       fired = null;
       spelling = null;
+    };
+    /**
+     * Backspace after / Delete before a structure whose boxes are all empty (√□, □/□, Σ) removes
+     * it whole. MathLive would step into it, or unwrap it and leave a stray empty box behind.
+     * Returns whether it did.
+     */
+    const deleteEmptyStructure = (key: 'Backspace' | 'Delete'): boolean => {
+      if (!mf.selectionIsCollapsed) return false;
+      const range = emptyStructureRange(
+        (a, b) => mf.getValue(a, b, 'latex'),
+        mf.position,
+        mf.lastOffset,
+        key === 'Delete' ? 'forward' : 'backward',
+      );
+      if (!range) return false;
+      applying = true;
+      mf.selection = { ranges: [range], direction: 'none' };
+      mf.executeCommand('deleteBackward');
+      applying = false;
+      return true;
     };
     /** Turns a shortcut that just fired back into the letters that were typed. */
     const revert = (last: { key: string; by: 'mathlive' | 'us' }) => {
