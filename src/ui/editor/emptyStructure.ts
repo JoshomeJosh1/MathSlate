@@ -12,8 +12,59 @@ export function isEmptyStructure(latex: string): boolean {
   return /^\\[A-Za-z]+(?:\[\]|[_^]?\{\})+$/.test(rest);
 }
 
+const PLACEHOLDER = '\\placeholder{}';
+
+/**
+ * Removes empty boxes left behind by a deletion, which belong to nothing any more:
+ * - in brackets not after a function — `(□)` once the function name before it was deleted;
+ * - in an unfinished bracket — `erf(□` once its closing bracket was deleted;
+ * - loose in the row, outside any structure — `1+□`.
+ * Boxes of structures (`\frac{□}{□}`, `x^{□}`) and a function's argument box (`\erf(□)`) stay.
+ * Returns the new LaTeX and the offsets (in the old LaTeX) of the boxes removed.
+ */
+export function removeStrayPlaceholders(latex: string): { latex: string; removed: number[] } {
+  const removed: number[] = [];
+  let depth = 0; // braces and brackets, not counting a placeholder's own {}
+  for (let i = 0; i < latex.length; i++) {
+    if (latex.startsWith(PLACEHOLDER, i)) {
+      if (isStray(latex, i, depth)) removed.push(i);
+      i += PLACEHOLDER.length - 1;
+      continue;
+    }
+    const c = latex.charAt(i);
+    if (c === '\\') {
+      i++; // skip the escaped character (\{ \} \\), or the first letter of a command
+      continue;
+    }
+    if (c === '{' || c === '[') depth++;
+    else if (c === '}' || c === ']') depth--;
+  }
+  let out = latex;
+  for (const at of [...removed].reverse()) {
+    out = out.slice(0, at) + out.slice(at + PLACEHOLDER.length);
+  }
+  return { latex: out, removed };
+}
+
+function isStray(latex: string, at: number, depth: number): boolean {
+  const before = latex.slice(0, at);
+  const after = latex.slice(at + PLACEHOLDER.length);
+  if (before.endsWith('\\left(')) {
+    // In brackets: stray unless they are a function's complete argument brackets.
+    // A function: \erf, \operatorname{J}, \mathrm{area}, then maybe _{n} and ^{2}.
+    const fn =
+      /\\[A-Za-z]+(?:\{[A-Za-z]+\})?(?:_\{[^{}]*\}|_[A-Za-z0-9])?(?:\^\{[^{}]*\}|\^[A-Za-z0-9])?\s*\\left\($/.test(
+        before,
+      );
+    return !(fn && after.startsWith('\\right)'));
+  }
+  // Loose in the row: not in any structure's box, nor a matrix cell (\begin{pmatrix}…\end).
+  const openEnvironments = before.split('\\begin{').length - before.split('\\end{').length;
+  return depth === 0 && openEnvironments === 0;
+}
+
 /** Text that is nothing yet: a range still inside a structure reads as "" or bare boxes. */
-const nothingYet = (latex: string) => latex.replace(/\\placeholder\{\}/g, '').trim() === '';
+const nothingYet = (latex: string) => latex.split(PLACEHOLDER).join('').trim() === '';
 
 /**
  * The editor offsets [start, end] of an empty structure right after (`forward`, for Delete) or

@@ -7,7 +7,7 @@ import './mathlive.css';
 import { CommandMenu, type MenuAnchor } from './CommandMenu';
 import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
-import { emptyStructureRange } from './emptyStructure';
+import { emptyStructureRange, removeStrayPlaceholders } from './emptyStructure';
 import { INLINE_SHORTCUTS } from './shortcuts';
 
 MathfieldElement.fontsDirectory = null;
@@ -103,8 +103,33 @@ export function MathLiveEditor({
 
     const wordKeys = () => Object.keys(mf.inlineShortcuts).filter((k) => /^[A-Za-z]{2,}$/.test(k));
 
+    /** Set by Backspace/Delete: the next change is a deletion (see removeStray). */
+    let deleting = false;
+    /**
+     * After a deletion, removes empty boxes that belong to nothing any more (deleting a
+     * function's name leaves its argument box in bare brackets), keeping the caret in place.
+     */
+    const removeStray = () => {
+      const { latex, removed } = removeStrayPlaceholders(mf.value);
+      if (removed.length === 0) return;
+      const position = mf.position;
+      const prefix = mf.getValue(0, position, 'latex');
+      // Boxes removed before the caret move it back by one each.
+      const shift = mf.value.startsWith(prefix)
+        ? removed.filter((at) => at < prefix.length).length
+        : 0;
+      applying = true;
+      mf.value = latex;
+      mf.position = Math.max(0, Math.min(position - shift, mf.lastOffset));
+      applying = false;
+    };
+
     const onInput = () => {
       if (applying) return;
+      if (deleting) {
+        deleting = false;
+        removeStray();
+      }
       if (pending) {
         const { char } = pending;
         const key = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
@@ -209,7 +234,9 @@ export function MathLiveEditor({
         revert(last);
         return;
       }
+      deleting = ev.key === 'Backspace' || ev.key === 'Delete';
       if ((ev.key === 'Backspace' || ev.key === 'Delete') && deleteEmptyStructure(ev.key)) {
+        deleting = false;
         ev.preventDefault();
         ev.stopPropagation();
         typed = '';

@@ -1,5 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { emptyStructureRange, isEmptyStructure } from './emptyStructure';
+import { emptyStructureRange, isEmptyStructure, removeStrayPlaceholders } from './emptyStructure';
+
+describe('stray empty boxes after a deletion', () => {
+  const clean = (latex: string) => removeStrayPlaceholders(latex).latex;
+
+  it.each([
+    // The function name before its argument brackets was deleted
+    ['\\left(\\placeholder{}\\right)', '\\left(\\right)'],
+    ['2\\left(\\placeholder{}\\right)', '2\\left(\\right)'],
+    // The closing bracket was deleted
+    ['\\erf\\left(\\placeholder{}\\right.', '\\erf\\left(\\right.'],
+    // Loose in the row
+    ['1+\\placeholder{}', '1+'],
+    ['\\placeholder{}', ''],
+  ])('%s → %s', (latex, expected) => {
+    expect(clean(latex)).toBe(expected);
+  });
+
+  it.each([
+    '\\erf\\left(\\placeholder{}\\right)',
+    '\\operatorname{J}_{0}\\left(\\placeholder{}\\right)',
+    '\\frac{\\placeholder{}}{\\placeholder{}}',
+    'x^{\\placeholder{}}',
+    '\\sqrt[\\placeholder{}]{2}',
+    '\\lim_{\\placeholder{}\\to\\placeholder{}}',
+    '\\begin{pmatrix}\\placeholder{}&1\\end{pmatrix}',
+  ])('keeps the boxes of %s', (latex) => {
+    expect(clean(latex)).toBe(latex);
+  });
+
+  it('reports where boxes were removed', () => {
+    expect(removeStrayPlaceholders('1+\\placeholder{}+2').removed).toEqual([2]);
+  });
+});
 
 /**
  * Readings MathLive gave for 1+\sqrt{\placeholder{}}+2 (offsets 0–7: 2 is before √, 3–4 inside
