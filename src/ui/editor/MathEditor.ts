@@ -19,6 +19,12 @@ export interface MathEditorHandle {
   getLatex: () => string;
 }
 
+export interface CommandCompletion {
+  name: string;
+  latex: string;
+  description: string;
+}
+
 export interface MathEditorProps {
   /** LaTeX content. The editor is controlled: external changes are pushed into the field. */
   value: string;
@@ -41,6 +47,11 @@ export interface MathEditorProps {
    * straight after one turns it back into plain letters. Read once.
    */
   bracketOnly?: ReadonlySet<string>;
+  /**
+   * What the `\` menu offers (instead of every LaTeX command the editor knows). Read once.
+   * `latex` is inserted; `#?` marks an empty box to fill in.
+   */
+  completions?: readonly CommandCompletion[];
   ariaLabel?: string;
   ref?: Ref<MathEditorHandle>;
 }

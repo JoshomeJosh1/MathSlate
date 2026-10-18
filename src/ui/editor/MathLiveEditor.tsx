@@ -1,10 +1,12 @@
-import { useEffect, useImperativeHandle, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { MathfieldElement, type InlineShortcutDefinitions } from 'mathlive';
 // Importing the CSS lets Vite bundle the KaTeX fonts as hashed assets under the site's base path,
 // so MathLive must not try to load them itself.
 import 'mathlive/fonts.css';
 import './mathlive.css';
-import type { MathEditorProps } from './MathEditor';
+import { CommandMenu } from './CommandMenu';
+import { matchCompletions } from './matchCompletions';
+import type { CommandCompletion, MathEditorProps } from './MathEditor';
 import { INLINE_SHORTCUTS } from './shortcuts';
 
 MathfieldElement.fontsDirectory = null;
@@ -23,11 +25,20 @@ export function MathLiveEditor({
   shortcuts,
   macros,
   bracketOnly,
+  completions,
   ariaLabel,
   ref,
 }: MathEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<MathfieldElement | null>(null);
+  // The `\` menu. The element's key listener is attached once, so it reads the ref.
+  const [menu, setMenuState] = useState<MenuState | null>(null);
+  const menuRef = useRef<MenuState | null>(null);
+  const pickRef = useRef<((item: CommandCompletion) => void) | null>(null);
+  const setMenu = (next: MenuState | null) => {
+    menuRef.current = next;
+    setMenuState(next);
+  };
 
   // Callbacks change identity on every render; keep the latest in a ref so the element's
   // listeners are attached once.
@@ -57,6 +68,9 @@ export function MathLiveEditor({
     mf.mathVirtualKeyboardPolicy = 'manual';
     mf.menuItems = [];
     mf.smartFence = true;
+    // MathLive's own command suggestions (for LaTeX typed after "\") list every command it
+    // knows; we show our own menu instead (see openMenu).
+    mf.popoverPolicy = 'off';
     // Commands such as \lcm display as one upright unit that cannot be typed into.
     mf.macros = {
       ...mf.macros,
@@ -116,7 +130,65 @@ export function MathLiveEditor({
       }
       callbacks.current.onChange(mf.value);
     };
+    // The `\` menu: our own list of commands MathSlate understands, instead of MathLive's LaTeX
+    // mode, whose suggestions are every command MathLive knows. The field keeps focus; keys
+    // typed while the menu is open edit its query.
+    const openMenu = () => {
+      const caret = mf.shadowRoot?.querySelector('.ML__caret') ?? null;
+      const field = mf.getBoundingClientRect();
+      const x = caret ? caret.getBoundingClientRect().left : field.left;
+      setMenu({ query: '', active: 0, anchor: { x, y: field.bottom } });
+    };
+    const pick = (item: CommandCompletion) => {
+      setMenu(null);
+      mf.insert(item.latex, { selectionMode: 'placeholder', format: 'latex' });
+      callbacks.current.onChange(mf.value);
+    };
+    pickRef.current = pick;
+    /** Handles a key while the menu is open; false lets the key through to the field. */
+    const menuKey = (ev: KeyboardEvent, m: MenuState): boolean => {
+      const items = matchCompletions(completions ?? [], m.query);
+      const current = items[m.active];
+      if (/^[A-Za-z]$/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        setMenu({ ...m, query: m.query + ev.key, active: 0 });
+      } else if (ev.key === 'Backspace') {
+        setMenu(m.query ? { ...m, query: m.query.slice(0, -1), active: 0 } : null);
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        const step = ev.key === 'ArrowDown' ? 1 : -1;
+        setMenu({ ...m, active: (m.active + step + items.length) % Math.max(items.length, 1) });
+      } else if (ev.key === 'Enter' || ev.key === 'Tab' || ev.key === ' ') {
+        if (current) pick(current);
+        else setMenu(null);
+      } else if (ev.key === 'Escape') {
+        setMenu(null);
+      } else if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(ev.key)) {
+        // Modifiers on their own do nothing.
+      } else {
+        // Any other key (a bracket, a digit…) completes an exact name and is then typed.
+        const exact = items.find((c) => c.name === m.query);
+        if (exact) pick(exact);
+        else setMenu(null);
+        return false;
+      }
+      return true;
+    };
+
     const onKeyDown = (ev: KeyboardEvent) => {
+      const open = menuRef.current;
+      if (open && menuKey(ev, open)) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        return;
+      }
+      if (ev.key === '\\' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        typed = '';
+        fired = null;
+        spelling = null;
+        openMenu();
+        return;
+      }
       const last = fired;
       fired = null;
       if (last && ev.key === 'Backspace') {
@@ -186,7 +258,10 @@ export function MathLiveEditor({
       callbacks.current.onChange(mf.value);
     };
     const onFocusIn = () => callbacks.current.onFocus?.();
-    const onFocusOut = () => callbacks.current.onBlur?.();
+    const onFocusOut = () => {
+      setMenu(null);
+      callbacks.current.onBlur?.();
+    };
 
     mf.addEventListener('input', onInput);
     mf.addEventListener('keydown', onKeyDown, { capture: true });
@@ -220,7 +295,27 @@ export function MathLiveEditor({
     if (mf) mf.inlineShortcuts = { ...INLINE_SHORTCUTS, ...shortcuts };
   }, [shortcuts]);
 
-  return <div ref={containerRef} className="math-editor" />;
+  return (
+    <>
+      <div ref={containerRef} className="math-editor" />
+      {menu && (
+        <CommandMenu
+          query={menu.query}
+          items={matchCompletions(completions ?? [], menu.query)}
+          active={menu.active}
+          anchor={menu.anchor}
+          macros={macros}
+          onPick={(item) => pickRef.current?.(item)}
+        />
+      )}
+    </>
+  );
+}
+
+interface MenuState {
+  query: string;
+  active: number;
+  anchor: { x: number; y: number };
 }
 
 /**

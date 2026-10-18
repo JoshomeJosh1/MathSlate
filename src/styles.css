@@ -448,3 +448,69 @@ button {
 .add-row:hover {
   color: var(--accent);
 }
+
+/* The "\" menu in a math row: commands MathSlate understands. */
+.command-menu {
+  position: fixed;
+  z-index: 50;
+  width: 360px;
+  max-width: calc(100vw - 16px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.16);
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.command-menu-query {
+  padding: 0.4rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.command-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.command-menu li {
+  display: grid;
+  grid-template-columns: 3.25rem auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}
+
+.command-menu li.is-active,
+.command-menu li:hover {
+  background: var(--selection);
+}
+
+.command-menu-preview {
+  text-align: center;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.command-menu-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+}
+
+.command-menu-description {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-menu-empty {
+  padding: 0.6rem 0.7rem;
+  color: var(--muted);
+}

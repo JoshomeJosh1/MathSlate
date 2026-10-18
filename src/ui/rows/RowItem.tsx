@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Ref } from 'react';
+import { latexCompletions } from '../../core/completions';
 import { bracketOnlyShortcuts, functionMacros } from '../../core/decorate';
 import type { RowView } from '../../core/engine';
 import type { InputRow } from '../../document/model';
@@ -14,6 +15,8 @@ import { SuggestionChips } from './SuggestionChips';
 // Built-in functions display as single units (\lcm) and lcm/gcd/binomial need brackets.
 const FUNCTION_MACROS = functionMacros();
 const BRACKET_ONLY = bracketOnlyShortcuts();
+// The `\` menu lists only commands MathSlate understands.
+const COMPLETIONS = latexCompletions();
 
 interface Props {
   row: InputRow;
@@ -84,6 +87,7 @@ export function RowItem(props: Props) {
             shortcuts={props.shortcuts}
             macros={FUNCTION_MACROS}
             bracketOnly={BRACKET_ONLY}
+            completions={COMPLETIONS}
             ariaLabel={`Input row ${index + 1}`}
           />
         )}

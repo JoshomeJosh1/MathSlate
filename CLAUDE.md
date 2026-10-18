@@ -154,6 +154,13 @@ fires undoes it (theta → Backspace → letters); another letter undoes it when
 to spell a longer shortcut (binom → binomial, tan → artanh, which then fires) or when it needs
 brackets (`bracketOnly`: lcmab stays letters). Symbol shortcuts (≤, ″) are not affected.
 
+**The `\` menu** replaces MathLive's LaTeX mode, whose suggestions list every command MathLive
+knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser
+understands — structures/operators (a static list there), Greek letters (`GREEK`) and every
+built-in function from the registry (with brackets when it needs them) — and its test checks
+each entry parses. `ui/editor/CommandMenu.tsx` renders it; keys are handled in
+`MathLiveEditor.tsx` while the field keeps focus; matching is in `matchCompletions.ts`.
+
 ### Evaluation (`core/engine.ts`)
 
 On each document change (debounced): analyse → dependency graph (`deps.ts`: cycles are errors on

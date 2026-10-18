@@ -21,16 +21,13 @@ const NOT_AFTER_LETTER =
 const notAfterLetter = (value: string) => ({ after: NOT_AFTER_LETTER, value });
 
 /** Greek letters short enough to be products of variables (MathLive guards the same ones). */
-const GUARDED_GREEK = new Set(['eta', 'mu', 'nu', 'rho', 'tau', 'phi', 'Phi', 'psi', 'Psi']);
+const GUARDED_GREEK = new Set(['eta', 'mu', 'nu', 'xi', 'rho', 'tau', 'phi', 'Phi', 'psi', 'Psi']);
 
 const greek: InlineShortcutDefinitions = Object.fromEntries(
   [...GREEK]
     .filter((name) => name !== 'ell') // "ell" is too likely to be letters
     .map((name) => [name, GUARDED_GREEK.has(name) ? notAfterLetter(`\\${name}`) : `\\${name}`]),
 );
-// ξ is rare and "xi" is a common product (2xi = 2·x·i): only at the start or after a space,
-// operator or bracket, not after a digit.
-greek.xi = { after: 'nothing+space+binop+relop+punct+openfence', value: '\\xi' };
 
 export const INLINE_SHORTCUTS: InlineShortcutDefinitions = {
   ...greek,
