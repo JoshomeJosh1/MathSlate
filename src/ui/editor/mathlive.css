@@ -1,0 +1,29 @@
+/* Desmos-like minimal look: no chrome, no border, transparent background. */
+.math-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+.math-editor math-field {
+  display: block;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1.25rem;
+  color: var(--text);
+  padding: 0.5rem 0.25rem;
+  --caret-color: var(--accent);
+  --selection-background-color: var(--selection);
+  --contains-highlight-background-color: transparent;
+  --primary: var(--accent);
+}
+
+.math-editor math-field:focus-within {
+  outline: none;
+}
+
+.math-editor math-field::part(virtual-keyboard-toggle),
+.math-editor math-field::part(menu-toggle) {
+  display: none;
+}
