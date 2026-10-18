@@ -61,7 +61,7 @@ export function CommandMenu({ query, layout, active, anchor, macros, onPick }: P
                       role="option"
                       aria-selected={index === active}
                       aria-label={`\\${item.name}: ${item.description}`}
-                      title={`\\${item.name}: "${item.description}"`}
+                      title={`'\\${item.name}': ${item.description.replace(/\.?$/, '.')}`}
                       className={`command-menu-tile${index === active ? ' is-active' : ''}`}
                       onClick={() => {
                         onPick(item);
