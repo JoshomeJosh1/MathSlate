@@ -1,7 +1,8 @@
-import { LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
+import { GREEK, LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
 import type { NameOccurrence } from '../parser/resolve';
 import { builtinFunctions } from '../registries/builtins/functions';
 import type { RowAnalysis } from './analyze';
+import { needsBrackets } from './builtinScope';
 
 /**
  * Upright display of recognised multi-letter names. A defined name is written `\mathrm{speed}`
@@ -37,19 +38,17 @@ export function decorateLatex(latex: string, names: readonly NameOccurrence[]): 
 }
 
 function desiredSpelling(n: NameOccurrence, current: string): string | null {
-  // An explicit \operatorname{…} typed (or pasted) by the user is left alone, except that
-  // MathLive's \operatorname{\mathrm{lcm}} (its re-serialization of a typed shortcut) is tidied.
-  if (current.startsWith('\\operatorname')) {
-    const nested = /^\\operatorname\{\\mathrm\{([A-Za-z]+)\}\}$/.exec(current);
-    return nested ? `\\operatorname{${nested[1] ?? ''}}` : null;
-  }
+  // Upright spellings of a multi-letter name: \mathrm{speed}, \operatorname{lcm} (also MathLive's
+  // \operatorname{\mathrm{lc}\mathrm{m}} after editing inside it) and \lcm.
+  const upright = /^\\(?:mathrm|operatorname\{|[A-Za-z]+$)/.test(current);
   switch (n.known) {
     case 'user':
       return `\\mathrm{${n.key}}`;
     case 'builtin':
-      return current.startsWith('\\') ? null : `\\operatorname{${n.key}}`;
+      // Built-in functions are commands, which the editor shows as one unit (see functionMacros).
+      return /^\\[A-Za-z]+$/.test(current) ? null : functionLatex(n.key);
     case 'none':
-      return /^\\mathrm\{[A-Za-z]+\}$/.test(current) ? n.key : null;
+      return upright ? n.key : null;
     case 'subscript':
       return `\\mathrm{${n.key}}`;
     case 'differential':
@@ -66,17 +65,54 @@ export function decoratedRow(latex: string, analysis: RowAnalysis | undefined): 
 }
 
 /**
+ * How a built-in function is written in an input row: as a command, `\sin` or `\lcm`, which the
+ * editor displays as a single unit (you cannot type inside it). Names that are also Greek
+ * letters (gamma, zeta) stay `\operatorname{…}`.
+ */
+export function functionLatex(name: string): string {
+  return GREEK.has(name) ? `\\operatorname{${name}}` : `\\${name}`;
+}
+
+const multiLetterFunctions = () =>
+  [...builtinFunctions.values()].filter((f) => /^[A-Za-z]{2,}$/.test(f.name));
+
+/**
+ * Editor macros for the built-in function commands LaTeX itself does not define (`\lcm`,
+ * `\artanh`, `\erf`, …), each displayed as an upright operator name.
+ */
+export function functionMacros(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of multiLetterFunctions()) {
+    if (!LATEX_FUNCTION_COMMANDS.has(f.name) && !GREEK.has(f.name)) {
+      out[f.name] = `\\operatorname{${f.name}}`;
+    }
+  }
+  return out;
+}
+
+/**
  * Inline shortcuts for the built-in functions, so typing "sinh" or "lcm" turns upright at once.
- * Call-only functions (Si, Ci, li, …) are left out: without brackets their letters keep their
+ * Special functions (Si, Ci, li, …) are left out: without brackets their letters keep their
  * ordinary meaning (Si = S·i), and they are made upright once recognised.
  */
 export function functionShortcuts(): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const f of builtinFunctions.values()) {
-    if (f.callOnly || !/^[A-Za-z]{2,}$/.test(f.name)) continue;
-    out[f.name] = LATEX_FUNCTION_COMMANDS.has(f.name) ? `\\${f.name}` : `\\operatorname{${f.name}}`;
+  for (const f of multiLetterFunctions()) {
+    if (!f.callOnly) out[f.name] = functionLatex(f.name);
   }
   return out;
+}
+
+/**
+ * Function shortcuts that only stand when brackets follow (lcm, gcd, binomial: two or more
+ * arguments), so the editor turns them back into letters if another letter is typed.
+ */
+export function bracketOnlyShortcuts(): Set<string> {
+  return new Set(
+    multiLetterFunctions()
+      .filter((f) => !f.callOnly && needsBrackets(f))
+      .map((f) => f.name),
+  );
 }
 
 /** Inline shortcuts so typing a defined multi-letter name turns it upright immediately. */

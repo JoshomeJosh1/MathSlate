@@ -136,12 +136,23 @@ Ours: Greek letters (short ones only after a non-letter), structures (sqrt, frac
 calculus (`int` → bare `\int`, `defint`, sum, prod, lim, partial; no `dx` → `\differentialD`,
 the parser decides what is a differential), `''` → ordinary primes (not `\doubleprime`), and
 operators/relations. Built-in function names come from the registry (`functionShortcuts` in
-`core/decorate.ts`, call-only ones excluded) and defined names from `nameShortcuts`. Only LaTeX
-commands MathLive defines (`LATEX_FUNCTION_COMMANDS`) are printed as `\cmd`; others as
-`\operatorname{…}`. MathLive re-serializes a typed `\operatorname{lcm}` as
-`\operatorname{\mathrm{lcm}}`: the lexer unwraps it and decoration tidies it. Backspace right
-after a word shortcut fires undoes it, leaving the typed letters (`MathLiveEditor.tsx`,
-`firedShortcut`), so `binom` → Backspace → `binomial(…)`; symbol shortcuts (≤, ″) just delete.
+`core/decorate.ts`, call-only ones excluded) and defined names from `nameShortcuts`.
+
+**Built-in functions in input rows are commands** (`\lcm`, `\artanh`, `\erf`): the editor
+registers `functionMacros()` as MathLive macros with `captureSelection`, so a name is one unit
+(no typing inside it; Backspace deletes it whole). The lexer reads any unknown `\word` as such a
+name; the resolver rejects it unless it is defined (`Unknown command "\in"`). Decoration writes
+recognised built-ins as `\name` and turns unrecognised upright names (`\mathrm`, `\operatorname`,
+`\name`) back into letters. Results (`printLatex`) use `\cmd` only for commands LaTeX defines
+(`LATEX_FUNCTION_COMMANDS`), otherwise portable `\operatorname{…}`. MathLive's
+`\operatorname{\mathrm{lc}\mathrm{m}}` (typing inside an operator name) is unwrapped by the lexer.
+Functions of two or more arguments (gcd, lcm, binomial) are call-only like special functions
+(`needsBrackets` in `builtinScope.ts`).
+
+Word shortcuts are provisional while typing (`MathLiveEditor.tsx`): Backspace right after one
+fires undoes it (theta → Backspace → letters); another letter undoes it when the word goes on
+to spell a longer shortcut (binom → binomial, tan → artanh, which then fires) or when it needs
+brackets (`bracketOnly`: lcmab stays letters). Symbol shortcuts (≤, ″) are not affected.
 
 ### Evaluation (`core/engine.ts`)
 

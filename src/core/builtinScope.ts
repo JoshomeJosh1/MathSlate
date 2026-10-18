@@ -1,6 +1,6 @@
 import { FUNCTION_LATEX, SUBSCRIPT_FIRST, functionAliasKey } from '../parser/functionNames';
 import { SymbolTable, type SymbolInfo } from '../parser/symbols';
-import { builtinFunctions } from '../registries/builtins/functions';
+import { builtinFunctions, type BuiltinFunction } from '../registries/builtins/functions';
 
 /**
  * Root scope with the built-in functions. User definitions live in a child scope and shadow these.
@@ -16,7 +16,9 @@ export function createBuiltinScope(): SymbolTable {
     const info: SymbolInfo = { key: f.name, kind: 'builtinFunction', arity: f.arity };
     if (f.inverse) info.inverse = f.inverse;
     if (f.subscriptArg) info.subscriptArg = f.subscriptArg;
-    if (f.callOnly) info.callOnly = true;
+    // Functions of two or more arguments can only be called with brackets, so without them their
+    // letters keep their ordinary meaning (lcmab is l·c·m·a·b, not "lcm" next to ab).
+    if (needsBrackets(f)) info.callOnly = true;
     entries.push(info);
     const latex = FUNCTION_LATEX[f.name];
     if (latex) {
@@ -25,4 +27,9 @@ export function createBuiltinScope(): SymbolTable {
     }
   }
   return new SymbolTable(entries);
+}
+
+/** Whether a built-in function only means itself when followed by brackets. */
+export function needsBrackets(f: BuiltinFunction): boolean {
+  return f.callOnly === true || f.arity[0] >= 2;
 }

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRows } from './analyze';
 import { builtinFunctions } from '../registries/builtins/functions';
-import { decorateLatex, functionShortcuts, nameShortcuts } from './decorate';
+import { LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
+import {
+  bracketOnlyShortcuts,
+  decorateLatex,
+  functionMacros,
+  functionShortcuts,
+  nameShortcuts,
+} from './decorate';
 
 /** Decorates every row in context, repeatedly until stable (as the app does), and returns them. */
 function decorate(...latex: string[]): string[] {
@@ -84,9 +91,29 @@ describe('upright display of recognised multi-letter names', () => {
     expect(decorate('2\\mathrm{speed}')).toEqual(['2speed']);
   });
 
-  it('writes built-in functions typed as letters as operator names', () => {
-    expect(decorate('lcm(4,6)')).toEqual(['\\operatorname{lcm}(4,6)']);
-    expect(decorate('\\operatorname{speed}+1')).toEqual(['\\operatorname{speed}+1']);
+  it('writes built-in functions as commands (one unit in the editor)', () => {
+    expect(decorate('lcm(4,6)')).toEqual(['\\lcm(4,6)']);
+    expect(decorate('\\operatorname{lcm}(4,6)')).toEqual(['\\lcm(4,6)']);
+    expect(decorate('artanh(x)+\\sin x')).toEqual(['\\artanh(x)+\\sin x']);
+    expect(decorate('erf(1)')).toEqual(['\\erf(1)']);
+    // Greek-named functions keep \operatorname (\gamma is the letter γ).
+    expect(decorate('\\operatorname{gamma}(x)')).toEqual(['\\operatorname{gamma}(x)']);
+  });
+
+  it('turns unrecognised upright names back into letters', () => {
+    expect(decorate('\\operatorname{speed}+1')).toEqual(['speed+1']);
+    // MathLive's spelling after typing inside \operatorname{artanh}
+    expect(decorate('\\operatorname{\\mathrm{ar}\\mathrm{da}\\mathrm{tanh}}(x)')).toEqual([
+      'arda\\tanh(x)',
+    ]);
+    // Functions of two or more arguments only stand with brackets.
+    expect(decorate('\\lcm ab')).toEqual(['lcm ab']);
+    expect(decorate('\\operatorname{binomial}x')).toEqual(['binomialx']);
+  });
+
+  it('rejects unknown commands', () => {
+    const [row] = analyzeRows([{ id: 'r', latex: 'x\\in A' }]);
+    expect(row?.error?.message).toBe('Unknown command "\\in"');
   });
 
   it('keeps the meaning unchanged', () => {
@@ -127,14 +154,22 @@ describe('upright display of recognised multi-letter names', () => {
   it("tidies MathLive's \\operatorname{\\mathrm{…}}", () => {
     const latex = '\\operatorname{\\mathrm{lcm}}\\left(4,6\\right)';
     const [row] = analyzeRows([{ id: 'r', latex }]);
-    expect(row && decorateLatex(latex, row.names)).toBe('\\operatorname{lcm}\\left(4,6\\right)');
+    expect(row && decorateLatex(latex, row.names)).toBe('\\lcm\\left(4,6\\right)');
   });
 
   it('offers inline shortcuts for built-in functions, except call-only ones', () => {
     const shortcuts = functionShortcuts();
     expect(shortcuts.sin).toBe('\\sin');
-    expect(shortcuts.sech).toBe('\\operatorname{sech}');
-    expect(shortcuts.lcm).toBe('\\operatorname{lcm}');
+    expect(shortcuts.sech).toBe('\\sech');
+    expect(shortcuts.lcm).toBe('\\lcm');
+    expect(shortcuts.binomial).toBe('\\binomial');
+    expect([...bracketOnlyShortcuts()].sort()).toEqual(['binomial', 'gcd', 'lcm']);
+    // Every command the shortcuts and decoration produce is one the editor can display.
+    const macros = functionMacros();
+    for (const latex of Object.values(shortcuts)) {
+      const name = latex.slice(1);
+      expect(LATEX_FUNCTION_COMMANDS.has(name) || name in macros, name).toBe(true);
+    }
     expect(shortcuts.Si).toBeUndefined();
     expect(shortcuts.erf).toBeUndefined();
     // Every shortcut parses back to a call of that function.

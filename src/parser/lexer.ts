@@ -14,7 +14,7 @@ export type Token =
   /** A single-letter identifier: Latin letter or Greek command name such as `\alpha`. */
   | { kind: 'letter'; name: string; span: Span }
   /** Multi-letter upright name: `\operatorname{gcd}`, `\mathrm{max}`, `\text{speed}`. */
-  | { kind: 'opname'; name: string; operator?: boolean; span: Span }
+  | { kind: 'opname'; name: string; operator?: boolean; command?: boolean; span: Span }
   /** LaTeX function operator such as `\sin`, `\log`, `\det` (name without backslash). */
   | { kind: 'fn'; name: string; span: Span }
   | { kind: 'special'; id: SpecialId; span: Span }
@@ -333,6 +333,12 @@ export function tokenize(src: string): Token[] {
         ['frac', 'dfrac', 'tfrac', 'cfrac', 'sqrt', 'binom', 'int', 'sum', 'prod'].includes(name)
       ) {
         push({ kind: 'cmd', name: name.endsWith('frac') ? 'frac' : name, span: span() });
+        continue;
+      }
+      // Any other \name is a function name written as a command (the editor shows built-in
+      // functions as \lcm, \erf, … so they stay one unit); the resolver rejects unknown ones.
+      if (/^[A-Za-z]{2,}$/.test(name)) {
+        push({ kind: 'opname', name, operator: true, command: true, span: span() });
         continue;
       }
       throw new MathError(`Unknown command "\\${name}"`, span());

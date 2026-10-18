@@ -12,7 +12,8 @@ export type Cst =
   | { type: 'num'; value: string; span: Span }
   | { type: 'letter'; name: string; span: Span } // x, \alpha
   /** \operatorname{gcd} (operator: true), \mathrm{speed}, or a bare \max with no argument. */
-  | { type: 'opname'; name: string; operator?: boolean; span: Span }
+  /** `command`: written `\name` (e.g. `\lcm`); an error unless `name` turns out to be known. */
+  | { type: 'opname'; name: string; operator?: boolean; command?: boolean; span: Span }
   | { type: 'special'; id: SpecialId; span: Span }
   | { type: 'sub'; base: Cst; sub: Cst; span: Span }
   | { type: 'pow'; base: Cst; exp: Cst; span: Span }

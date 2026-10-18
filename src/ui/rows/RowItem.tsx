@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Ref } from 'react';
+import { bracketOnlyShortcuts, functionMacros } from '../../core/decorate';
 import type { RowView } from '../../core/engine';
 import type { InputRow } from '../../document/model';
 import type { Command } from '../../registries/commands';
@@ -9,6 +10,10 @@ import { NoteEditor } from './NoteEditor';
 import { OutputRow } from './OutputRow';
 import { RowDebug, RowError } from './RowDiagnostics';
 import { SuggestionChips } from './SuggestionChips';
+
+// Built-in functions display as single units (\lcm) and lcm/gcd/binomial need brackets.
+const FUNCTION_MACROS = functionMacros();
+const BRACKET_ONLY = bracketOnlyShortcuts();
 
 interface Props {
   row: InputRow;
@@ -77,6 +82,8 @@ export function RowItem(props: Props) {
             onFocus={props.onFocus}
             onBlur={props.onBlur}
             shortcuts={props.shortcuts}
+            macros={FUNCTION_MACROS}
+            bracketOnly={BRACKET_ONLY}
             ariaLabel={`Input row ${index + 1}`}
           />
         )}

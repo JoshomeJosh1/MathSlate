@@ -31,6 +31,16 @@ export interface MathEditorProps {
    * defined multi-letter names → upright \mathrm{…}. Keep the object identity stable.
    */
   shortcuts?: Readonly<Record<string, string>>;
+  /**
+   * Commands without arguments the editor should know, by name, with the LaTeX that displays
+   * them: `{ lcm: '\\operatorname{lcm}' }` makes `\lcm` one upright unit. Read once.
+   */
+  macros?: Readonly<Record<string, string>>;
+  /**
+   * Shortcut keys that only stand when brackets follow (lcm needs lcm(…)): typing another letter
+   * straight after one turns it back into plain letters. Read once.
+   */
+  bracketOnly?: ReadonlySet<string>;
   ariaLabel?: string;
   ref?: Ref<MathEditorHandle>;
 }

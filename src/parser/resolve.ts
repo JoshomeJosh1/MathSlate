@@ -358,7 +358,10 @@ class Resolver {
     scope: SymbolTable,
   ): { expr: Expr; consumedNext: boolean } {
     const span = spanOf(f.core.span, f.sub?.span ?? f.core.span);
-    if (/^[A-Za-z]{2,}$/.test(base)) this.recordName(base, f, scope);
+    if (f.core.type === 'opname' && f.core.command && !scope.lookup(base)) {
+      throw new MathError(`Unknown command "\\${base}"`, f.core.span);
+    }
+    if (/^[A-Za-z]{2,}$/.test(base)) this.recordName(base, f, next, scope);
     // Special functions by their LaTeX spelling: \operatorname{S}(x), \operatorname{J}_{n}(x).
     if (f.core.type === 'opname' && f.core.operator) {
       const alias = scope.lookup(functionAliasKey(`\\operatorname{${base}}`, f.sub !== undefined));
@@ -557,11 +560,13 @@ class Resolver {
       this.names.push({ key: text, span: sub.span, known: 'subscript' });
   }
 
-  private recordName(base: string, f: Factor, scope: SymbolTable): void {
+  private recordName(base: string, f: Factor, next: Factor | undefined, scope: SymbolTable): void {
     const subText = f.sub ? subscriptText(f.sub) : null;
-    const info =
+    const found =
       (subText !== null ? scope.lookup(nameKey(makeName(base, subText))) : undefined) ??
       scope.lookup(base);
+    // A call-only function without brackets is not that function (lcm alone is letters).
+    const info = isCallable(found) && found.callOnly && !isParenGroup(next) ? undefined : found;
     const known = !info ? 'none' : info.kind === 'builtinFunction' ? 'builtin' : 'user';
     this.names.push({ key: base, span: f.core.span, known });
   }

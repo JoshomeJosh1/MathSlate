@@ -53,7 +53,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { note: '# Built-in functions' },
   {
-    note: 'Every built-in function, with what it does, how to type it, and examples. Type a function name and MathLive turns it upright (sin → sin). Brackets are optional for one argument: sin 2x means sin(2x), and the argument stops at the next function, so sin x cos x is sin(x)·cos(x). A function you define yourself with the same name replaces the built-in one.',
+    note: 'Every built-in function, with what it does, how to type it, and examples. Type a function name and it turns upright (sin → sin), becoming a single unit you delete in one go. Functions of two or more arguments (gcd, lcm, binomial) need brackets: keep typing letters after one and it turns back into ordinary letters. Brackets are optional for one argument: sin 2x means sin(2x), and the argument stops at the next function, so sin x cos x is sin(x)·cos(x). A function you define yourself with the same name replaces the built-in one.',
   },
   {
     note: 'Powers of functions: sin^2 x means (sin x)², and f^{-1} means the inverse function where there is one (sin^{-1} = arcsin, exp^{-1} = ln).',
@@ -187,7 +187,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   'lcm(4,6)',
   'lcm(2,3,4,5,6)',
   {
-    note: 'binomial(n, k) — the binomial coefficient, "n choose k". Type binom for the stacked (n k) notation. For binomial(n, k), type binom, press Backspace to turn it back into letters, and carry on typing.',
+    note: 'binomial(n, k) — the binomial coefficient, "n choose k". Type binomial(n, k), or binom for the stacked (n k) notation.',
   },
   '\\binom{5}{2}',
   '\\binom{52}{5}',

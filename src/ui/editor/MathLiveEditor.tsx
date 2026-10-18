@@ -21,6 +21,8 @@ export function MathLiveEditor({
   onFocus,
   onBlur,
   shortcuts,
+  macros,
+  bracketOnly,
   ariaLabel,
   ref,
 }: MathEditorProps) {
@@ -55,33 +57,91 @@ export function MathLiveEditor({
     mf.mathVirtualKeyboardPolicy = 'manual';
     mf.menuItems = [];
     mf.smartFence = true;
+    // Commands such as \lcm display as one upright unit that cannot be typed into.
+    mf.macros = {
+      ...mf.macros,
+      ...Object.fromEntries(
+        Object.entries(macros ?? {}).map(([name, def]) => [
+          name,
+          { def, args: 0, captureSelection: true, expand: false },
+        ]),
+      ),
+    };
     mf.value = value;
     // Our own curated list replaces MathLive's defaults (see shortcuts.ts).
     mf.inlineShortcuts = { ...INLINE_SHORTCUTS, ...shortcuts };
 
-    // Backspace straight after an inline shortcut fired undoes the shortcut and leaves the typed
-    // letters (binom → \binom{}{}, Backspace → "binom", so binomial(…) can still be typed).
-    // MathLive's own version of this misses templates, whose empty box is selected.
+    // Word shortcuts (theta → θ, lcm → lcm, binom → (n k)) are provisional while you type:
+    // - Backspace straight after one fires turns it back into the typed letters. MathLive's own
+    //   version of this misses templates, whose empty box is selected.
+    // - Typing another letter straight after one turns it back into letters too when the word
+    //   goes on to spell a longer shortcut (binom → binomial) or when the shortcut only stands
+    //   with brackets (lcm, gcd, binomial: "lcma" is letters, so it should not look like lcm).
+    //   The longer shortcut then fires when its word is complete.
     let typed = ''; // printable characters typed since the last other key or click
     let pending: { char: string; before: string } | null = null;
-    let shortcutFired = false;
+    /** How the last keystroke's shortcut fired: by MathLive (undo reverts it) or by us. */
+    let fired: { key: string; by: 'mathlive' | 'us' } | null = null;
+    /** A word being spelled out after a shortcut was reverted (e.g. "binomi"). */
+    let spelling: string | null = null;
+    let applying = false;
+
+    const wordKeys = () => Object.keys(mf.inlineShortcuts).filter((k) => /^[A-Za-z]{2,}$/.test(k));
 
     const onInput = () => {
+      if (applying) return;
       if (pending) {
-        shortcutFired = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
+        const { char } = pending;
+        const key = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
+        fired = key ? { key, by: 'mathlive' } : null;
+        if (spelling !== null && !key) {
+          spelling += char;
+          const word = spelling;
+          if (!wordKeys().some((k) => k.startsWith(word))) spelling = null;
+          else if (word in mf.inlineShortcuts) {
+            // The longer shortcut is complete: replace its letters ourselves (MathLive forgot
+            // them when the shorter one was undone).
+            const def = mf.inlineShortcuts[word];
+            applying = true;
+            for (let k = 0; k < word.length; k++) mf.executeCommand('deleteBackward');
+            mf.insert(typeof def === 'string' ? def : (def?.value ?? word), {
+              selectionMode: 'placeholder',
+            });
+            applying = false;
+            fired = { key: word, by: 'us' };
+            spelling = null;
+          }
+        }
         pending = null;
       }
       callbacks.current.onChange(mf.value);
     };
     const onKeyDown = (ev: KeyboardEvent) => {
-      const justFired = shortcutFired;
-      shortcutFired = false;
-      if (ev.key === 'Backspace' && justFired) {
+      const last = fired;
+      fired = null;
+      if (last && ev.key === 'Backspace') {
         ev.preventDefault();
         ev.stopPropagation();
         typed = '';
-        mf.executeCommand('undo');
+        spelling = null;
+        revert(last);
         return;
+      }
+      const letter = /^[A-Za-z]$/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey;
+      if (last && letter) {
+        // The longest word ending in this letter that extends the shortcut and could still
+        // spell another one: "artanh" after "tan" fired (not just "tanh").
+        const run = /[A-Za-z]*$/.exec(typed + ev.key)?.[0] ?? '';
+        const keys = wordKeys();
+        let word: string | null = null;
+        for (let s = 0; s < run.length - last.key.length && !word; s++) {
+          const w = run.slice(s);
+          if (keys.some((k) => k.startsWith(w))) word = w;
+        }
+        if (word || bracketOnly?.has(last.key)) {
+          revert(last);
+          spelling = word ? word.slice(0, -1) : null; // MathLive types the letter itself next
+        }
       }
       if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
         typed += ev.key;
@@ -89,6 +149,7 @@ export function MathLiveEditor({
       } else if (!['Shift', 'Control', 'Alt', 'Meta'].includes(ev.key)) {
         typed = '';
         pending = null;
+        spelling = null;
       }
       if (ev.key === 'Enter' && !ev.shiftKey) {
         ev.preventDefault();
@@ -109,7 +170,20 @@ export function MathLiveEditor({
     };
     const onPointerDown = () => {
       typed = '';
-      shortcutFired = false;
+      fired = null;
+      spelling = null;
+    };
+    /** Turns a shortcut that just fired back into the letters that were typed. */
+    const revert = (last: { key: string; by: 'mathlive' | 'us' }) => {
+      applying = true;
+      if (last.by === 'mathlive') {
+        mf.executeCommand('undo');
+      } else {
+        mf.executeCommand('deleteBackward');
+        mf.insert(last.key);
+      }
+      applying = false;
+      callbacks.current.onChange(mf.value);
     };
     const onFocusIn = () => callbacks.current.onFocus?.();
     const onFocusOut = () => callbacks.current.onBlur?.();
@@ -150,24 +224,27 @@ export function MathLiveEditor({
 }
 
 /**
- * Whether the keystroke that turned `before` into `after` completed a word shortcut: the typed
- * characters end with a shortcut's key (letters only), and the field changed by more than inserting the
- * character, or the shortcut's output newly appeared ("sinh" after "sin" fired: \sin → \sinh).
+ * The word shortcut (if any) completed by the keystroke that turned `before` into `after`: the
+ * typed characters end with its key (letters only), and the field changed by more than inserting
+ * the character, or its output newly appeared ("sinh" after "sin" fired: \sin → \sinh).
  */
 function firedShortcut(
   shortcuts: InlineShortcutDefinitions,
   typed: string,
   { char, before }: { char: string; before: string },
   after: string,
-): boolean {
+): string | null {
   const rewritten = !isInsertion(before, after, char);
-  return Object.entries(shortcuts).some(([key, def]) => {
+  const candidates = Object.entries(shortcuts)
     // Only word shortcuts: Backspace after ≤ or ″ should just delete it.
-    if (!/^[A-Za-z]{2,}$/.test(key) || !typed.endsWith(key)) return false;
+    .filter(([key]) => /^[A-Za-z]{2,}$/.test(key) && typed.endsWith(key))
+    .sort(([a], [b]) => b.length - a.length);
+  const found = candidates.find(([, def]) => {
     if (rewritten) return true;
     const output = (typeof def === 'string' ? def : def.value).replace(/#\?/g, '\\placeholder{}');
     return count(after, output) > count(before, output);
   });
+  return found ? found[0] : null;
 }
 
 function count(text: string, part: string): number {

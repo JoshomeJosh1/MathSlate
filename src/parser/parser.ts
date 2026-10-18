@@ -315,10 +315,12 @@ class Parser {
         return { type: 'num', value: t.value, span: t.span };
       case 'letter':
         return { type: 'letter', name: t.name, span: t.span };
-      case 'opname':
-        return t.operator
-          ? { type: 'opname', name: t.name, operator: true, span: t.span }
-          : { type: 'opname', name: t.name, span: t.span };
+      case 'opname': {
+        const node: Cst = { type: 'opname', name: t.name, span: t.span };
+        if (t.operator) node.operator = true;
+        if (t.command) node.command = true;
+        return node;
+      }
       case 'special':
         return { type: 'special', id: t.id, span: t.span };
       case 'placeholder':
