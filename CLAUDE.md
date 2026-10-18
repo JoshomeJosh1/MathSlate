@@ -130,9 +130,16 @@ left-hand side defines `speedy`. The same mechanism makes the `d` of recognised 
 upright (`\int x^2\,\mathrm{d}x`, `\frac{\mathrm{d}}{\mathrm{d}x}`; an integral's dx also gets a
 thin space), while `d` elsewhere stays a variable.
 
-MathLive shortcut overrides live in `MathLiveEditor.tsx`: `''` → two ordinary primes (not
-`\doubleprime`), `int` → a bare `\int` (bounds optional), and the `dx`/`dy`/`dt` →
-`\differentialD` shortcuts are removed (the parser decides what is a differential).
+**Inline shortcuts** replace MathLive's defaults entirely (`ui/editor/shortcuts.ts`): its ~260
+included sets, logic, arrows and units that fired inside letter runs ("binom" → b∈om, "lt" → <).
+Ours: Greek letters (short ones only after a non-letter), structures (sqrt, frac, binom…),
+calculus (`int` → bare `\int`, `defint`, sum, prod, lim, partial; no `dx` → `\differentialD`,
+the parser decides what is a differential), `''` → ordinary primes (not `\doubleprime`), and
+operators/relations. Built-in function names come from the registry (`functionShortcuts` in
+`core/decorate.ts`, call-only ones excluded) and defined names from `nameShortcuts`. Only LaTeX
+commands MathLive defines (`LATEX_FUNCTION_COMMANDS`) are printed as `\cmd`; others as
+`\operatorname{…}`. MathLive re-serializes a typed `\operatorname{lcm}` as
+`\operatorname{\mathrm{lcm}}`: the lexer unwraps it and decoration tidies it.
 
 ### Evaluation (`core/engine.ts`)
 

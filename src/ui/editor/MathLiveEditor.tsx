@@ -1,10 +1,11 @@
 import { useEffect, useImperativeHandle, useRef } from 'react';
-import { MathfieldElement, type InlineShortcutDefinitions } from 'mathlive';
+import { MathfieldElement } from 'mathlive';
 // Importing the CSS lets Vite bundle the KaTeX fonts as hashed assets under the site's base path,
 // so MathLive must not try to load them itself.
 import 'mathlive/fonts.css';
 import './mathlive.css';
 import type { MathEditorProps } from './MathEditor';
+import { INLINE_SHORTCUTS } from './shortcuts';
 
 MathfieldElement.fontsDirectory = null;
 MathfieldElement.soundsDirectory = null;
@@ -25,7 +26,6 @@ export function MathLiveEditor({
 }: MathEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<MathfieldElement | null>(null);
-  const defaultShortcuts = useRef<InlineShortcutDefinitions>({});
 
   // Callbacks change identity on every render; keep the latest in a ref so the element's
   // listeners are attached once.
@@ -56,24 +56,8 @@ export function MathLiveEditor({
     mf.menuItems = [];
     mf.smartFence = true;
     mf.value = value;
-    const shortcuts: InlineShortcutDefinitions = {
-      ...mf.inlineShortcuts,
-      // MathLive turns '' into the single glyph \doubleprime (″) but ''' into three ordinary
-      // primes; use ordinary primes for '' too so every derivative order looks the same.
-      "''": '^{\\prime\\prime}',
-      // A bare integral sign: bounds are optional (type _ and ^ after it for a definite one).
-      int: '\\int',
-      '∂': '\\partial',
-      // Typing "partial" gives ∂, so partial/partial x makes ∂/∂x like d/dx makes d/dx.
-      partial: '\\partial',
-    };
-    // "dx" stays two letters: the parser recognises differentials in calculus notation and
-    // only those are shown upright (core/decorate.ts), so d·x elsewhere is not mangled.
-    delete shortcuts.dx;
-    delete shortcuts.dy;
-    delete shortcuts.dt;
-    defaultShortcuts.current = shortcuts;
-    mf.inlineShortcuts = defaultShortcuts.current;
+    // Our own curated list replaces MathLive's defaults (see shortcuts.ts).
+    mf.inlineShortcuts = { ...INLINE_SHORTCUTS, ...shortcuts };
 
     const onInput = () => {
       callbacks.current.onChange(mf.value);
@@ -126,7 +110,7 @@ export function MathLiveEditor({
 
   useEffect(() => {
     const mf = fieldRef.current;
-    if (mf) mf.inlineShortcuts = { ...defaultShortcuts.current, ...shortcuts };
+    if (mf) mf.inlineShortcuts = { ...INLINE_SHORTCUTS, ...shortcuts };
   }, [shortcuts]);
 
   return <div ref={containerRef} className="math-editor" />;

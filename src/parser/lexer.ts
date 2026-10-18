@@ -47,7 +47,17 @@ export const GREEK = new Set([
   'Xi', 'Pi', 'Sigma', 'Upsilon', 'Phi', 'Psi', 'Omega', 'ell',
 ]); // prettier-ignore
 
-/** Standard LaTeX operator names (rendered upright, take an argument). */
+/**
+ * The operator names standard LaTeX (and MathLive) define, so `\sin` renders. Others in
+ * FUNCTION_COMMANDS (`\sech`, `\arccot`, …) are accepted as input but printed as \operatorname.
+ */
+export const LATEX_FUNCTION_COMMANDS = new Set([
+  'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
+  'coth', 'ln', 'log', 'lg', 'exp', 'det', 'dim', 'gcd', 'max', 'min', 'sup', 'inf', 'lim', 'arg',
+  'deg', 'ker', 'hom', 'Pr',
+]); // prettier-ignore
+
+/** LaTeX operator commands we read as functions (rendered upright, take an argument). */
 export const FUNCTION_COMMANDS = new Set([
   'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'arccot', 'arcsec',
   'arccsc', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch', 'arsinh', 'arcosh', 'artanh', 'ln',
@@ -150,9 +160,20 @@ export function tokenize(src: string): Token[] {
     if (src.charAt(i) !== '{') {
       throw new MathError('Expected "{" after command', { start: cmdStart, end: i });
     }
-    const close = src.indexOf('}', i);
-    if (close === -1) throw new MathError('Missing "}"', { start: i, end: src.length });
-    const text = src.slice(i + 1, close);
+    let depth = 0;
+    let close = i;
+    for (; close < src.length; close++) {
+      const ch = src.charAt(close);
+      if (ch === '\\') close++;
+      else if (ch === '{') depth++;
+      else if (ch === '}' && --depth === 0) break;
+    }
+    if (close >= src.length) throw new MathError('Missing "}"', { start: i, end: src.length });
+    // MathLive re-serializes a typed \operatorname{erf} as \operatorname{\mathrm{erf}} once
+    // something follows it; unwrap such nested style commands.
+    const text = src
+      .slice(i + 1, close)
+      .replace(/\\(?:mathrm|text|textrm|mathit|mathsf)\s*\{([^{}]*)\}/g, '$1');
     i = close + 1;
     return text;
   };

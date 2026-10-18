@@ -35,6 +35,8 @@ describe('special functions', () => {
     ['\\operatorname{K}\\left(m\\right)', '(ellipticK m)'], // elliptic K: no subscript
     ['\\operatorname{Li}_{2}\\left(x\\right)', '(Li 2 x)'],
     ['\\operatorname{erf}\\left(x\\right)', '(erf x)'],
+    // MathLive's re-serialization of a typed \operatorname{erf} once "(" follows it
+    ['\\operatorname{\\mathrm{erf}}\\left(1\\right)', '(erf 1)'],
     // Without brackets the names are ordinary symbols
     ['2\\zeta', '(* 2 \\zeta)'],
     ['\\Gamma+1', '(+ \\Gamma 1)'],
@@ -78,5 +80,10 @@ describe('special functions', () => {
     expect(print('besselJ(0,x)')).toBe('\\operatorname{J}_{0}\\left(x\\right)');
     expect(print('gamma(x)')).toBe('\\Gamma\\left(x\\right)');
     expect(print('erf(x)')).toBe('\\operatorname{erf}\\left(x\\right)');
+    // Only commands LaTeX/MathLive define print as \cmd; the rest as operator names.
+    expect(print('\\cosh x')).toBe('\\cosh\\left(x\\right)');
+    expect(print('\\sech x+arsinh(x)')).toBe(
+      '\\operatorname{sech}\\left(x\\right)+\\operatorname{arsinh}\\left(x\\right)',
+    );
   });
 });

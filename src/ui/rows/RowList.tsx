@@ -14,12 +14,14 @@ import {
 } from '@dnd-kit/sortable';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEngine } from '../../app/services';
-import { decoratedRow, nameShortcuts } from '../../core/decorate';
+import { decoratedRow, functionShortcuts, nameShortcuts } from '../../core/decorate';
 import { docActions, docStore } from '../../document/docStore';
 import type { RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { RowItem } from './RowItem';
+
+const FUNCTION_SHORTCUTS = functionShortcuts();
 
 export function RowList({ showDebug }: { showDebug: boolean }) {
   const doc = useStore(docStore);
@@ -39,10 +41,12 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
     }
   }, [doc, engine, editingRow]);
 
-  // Typing a defined multi-letter name turns it upright immediately. Stable identity per name set.
-  const shortcutKey = JSON.stringify(
-    nameShortcuts([...engine.rows.values()].map((v) => v.analysis)),
-  );
+  // Typing a built-in function or a defined multi-letter name turns it upright immediately (a
+  // definition wins over a built-in of the same name). Stable identity per name set.
+  const shortcutKey = JSON.stringify({
+    ...FUNCTION_SHORTCUTS,
+    ...nameShortcuts([...engine.rows.values()].map((v) => v.analysis)),
+  });
   const shortcuts = useMemo(() => JSON.parse(shortcutKey) as Record<string, string>, [shortcutKey]);
   // A row to focus once it has been rendered (e.g. one that was just inserted).
   const pendingFocus = useRef<RowId | null>(null);

@@ -1,4 +1,6 @@
+import { LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
 import type { NameOccurrence } from '../parser/resolve';
+import { builtinFunctions } from '../registries/builtins/functions';
 import type { RowAnalysis } from './analyze';
 
 /**
@@ -35,8 +37,12 @@ export function decorateLatex(latex: string, names: readonly NameOccurrence[]): 
 }
 
 function desiredSpelling(n: NameOccurrence, current: string): string | null {
-  // An explicit \operatorname{…} typed (or pasted) by the user is left alone.
-  if (current.startsWith('\\operatorname')) return null;
+  // An explicit \operatorname{…} typed (or pasted) by the user is left alone, except that
+  // MathLive's \operatorname{\mathrm{lcm}} (its re-serialization of a typed shortcut) is tidied.
+  if (current.startsWith('\\operatorname')) {
+    const nested = /^\\operatorname\{\\mathrm\{([A-Za-z]+)\}\}$/.exec(current);
+    return nested ? `\\operatorname{${nested[1] ?? ''}}` : null;
+  }
   switch (n.known) {
     case 'user':
       return `\\mathrm{${n.key}}`;
@@ -57,6 +63,20 @@ export function decoratedRow(latex: string, analysis: RowAnalysis | undefined): 
   if (!analysis || analysis.latex !== latex) return null;
   const next = decorateLatex(latex, analysis.names);
   return next === latex ? null : next;
+}
+
+/**
+ * Inline shortcuts for the built-in functions, so typing "sinh" or "lcm" turns upright at once.
+ * Call-only functions (Si, Ci, li, …) are left out: without brackets their letters keep their
+ * ordinary meaning (Si = S·i), and they are made upright once recognised.
+ */
+export function functionShortcuts(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of builtinFunctions.values()) {
+    if (f.callOnly || !/^[A-Za-z]{2,}$/.test(f.name)) continue;
+    out[f.name] = LATEX_FUNCTION_COMMANDS.has(f.name) ? `\\${f.name}` : `\\operatorname{${f.name}}`;
+  }
+  return out;
 }
 
 /** Inline shortcuts so typing a defined multi-letter name turns it upright immediately. */

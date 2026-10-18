@@ -21,6 +21,9 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, and the number on the left drags a row.',
   },
   {
+    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y.',
+  },
+  {
     note: 'Type " in an empty row to turn it into a note like this one. Backspace in an empty note turns it back into math.',
   },
   {
@@ -184,11 +187,12 @@ export const DOCUMENTATION: readonly Entry[] = [
   'lcm(4,6)',
   'lcm(2,3,4,5,6)',
   {
-    note: 'binomial(n, k) — the binomial coefficient, "n choose k". Also typed as \\binom{n}{k}.',
+    note: 'binomial(n, k) — the binomial coefficient, "n choose k". Type binom for the stacked (n k) notation; binomial(5, 2) means the same.',
   },
-  'binomial(5,2)',
-  'binomial(52,5)',
-  '\\sum_{j=0}^{6}binomial(6,j)',
+  '\\binom{5}{2}',
+  '\\binom{52}{5}',
+  '\\sum_{j=0}^{6}\\binom{6}{j}',
+  'binomial(10,5)',
   { note: 'n! — factorial (an operator, not a function): type !.' },
   '10!',
 

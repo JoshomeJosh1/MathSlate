@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRows } from './analyze';
-import { decorateLatex, nameShortcuts } from './decorate';
+import { builtinFunctions } from '../registries/builtins/functions';
+import { decorateLatex, functionShortcuts, nameShortcuts } from './decorate';
 
 /** Decorates every row in context, repeatedly until stable (as the app does), and returns them. */
 function decorate(...latex: string[]): string[] {
@@ -121,5 +122,26 @@ describe('upright display of recognised multi-letter names', () => {
       ['speed=1', 'f(x)=x', 'area(r)=r', 'x_1=2'].map((latex, i) => ({ id: `r${i}`, latex })),
     );
     expect(nameShortcuts(analyses)).toEqual({ speed: '\\mathrm{speed}', area: '\\mathrm{area}' });
+  });
+
+  it("tidies MathLive's \\operatorname{\\mathrm{…}}", () => {
+    const latex = '\\operatorname{\\mathrm{lcm}}\\left(4,6\\right)';
+    const [row] = analyzeRows([{ id: 'r', latex }]);
+    expect(row && decorateLatex(latex, row.names)).toBe('\\operatorname{lcm}\\left(4,6\\right)');
+  });
+
+  it('offers inline shortcuts for built-in functions, except call-only ones', () => {
+    const shortcuts = functionShortcuts();
+    expect(shortcuts.sin).toBe('\\sin');
+    expect(shortcuts.sech).toBe('\\operatorname{sech}');
+    expect(shortcuts.lcm).toBe('\\operatorname{lcm}');
+    expect(shortcuts.Si).toBeUndefined();
+    expect(shortcuts.erf).toBeUndefined();
+    // Every shortcut parses back to a call of that function.
+    for (const [name, latex] of Object.entries(shortcuts)) {
+      const args = Array.from({ length: builtinFunctions.get(name)?.arity[0] ?? 1 }, () => '1');
+      const [row] = analyzeRows([{ id: 'r', latex: `${latex}\\left(${args.join(',')}\\right)` }]);
+      expect(row?.error?.message, name).toBeUndefined();
+    }
   });
 });

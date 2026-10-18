@@ -1,6 +1,6 @@
 import type { ConstantId, Expr, Name, RelOp, Statement } from './ast';
 import { FUNCTION_LATEX, SUBSCRIPT_FIRST } from './functionNames';
-import { FUNCTION_COMMANDS } from './lexer';
+import { LATEX_FUNCTION_COMMANDS } from './lexer';
 
 /**
  * AST → canonical LaTeX that our own parser reads back to the same tree (in the same document
@@ -52,7 +52,7 @@ function printFunctionName(name: Name): string {
   if (name.sub !== undefined) return printName(name);
   const special = FUNCTION_LATEX[name.base];
   if (special) return special;
-  if (FUNCTION_COMMANDS.has(name.base)) return `\\${name.base}`;
+  if (LATEX_FUNCTION_COMMANDS.has(name.base)) return `\\${name.base}`;
   // Multi-letter function names are upright operator names: \operatorname{erf}, \operatorname{lcm}.
   return /^[A-Za-z]{2,}$/.test(name.base) ? `\\operatorname{${name.base}}` : printName(name);
 }
