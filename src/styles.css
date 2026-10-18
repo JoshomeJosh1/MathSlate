@@ -278,7 +278,12 @@ button {
   align-items: baseline;
   gap: 4px 12px;
   font-size: 1.05rem;
+  /* Very wide results scroll sideways; MathLive's struts reach a pixel or two below the box,
+     which must not produce a vertical scrollbar (the padding keeps descenders visible). */
   overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: 6px;
+  padding-bottom: 8px;
 }
 
 .output-title {
