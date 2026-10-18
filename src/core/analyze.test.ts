@@ -103,6 +103,9 @@ describe('functions', () => {
     [['f(x)=x^2', '2f(3)'], '(* 2 (f 3))'],
     [['f(x)=x^2', 'f^{\\prime}\\left(x\\right)'], "(f' x)"],
     [['f(x)=x^2', "f''(x)"], "(f'' x)"],
+    [['f(x)=x^2', 'f^{\\doubleprime}\\left(x\\right)'], "(f'' x)"], // MathLive's default for ''
+    [['f(x)=x^2', 'f^{\\prime\\prime\\prime}\\left(x\\right)'], "(f''' x)"],
+    [['f(x)=x^2', 'f^{\\tripleprime}(x)'], "(f''' x)"],
     [['speed(t)=2t', 'speed(3)'], '(speed 3)'],
     ['x(y)', '(* x y)'],
     // A parameter shadows a global of the same name; locals never merge into longer names.

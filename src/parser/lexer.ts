@@ -280,6 +280,12 @@ export function tokenize(src: string): Token[] {
         push({ kind: 'prime', span: span() });
         continue;
       }
+      // Multi-prime glyphs (MathLive's default for typing '' is \doubleprime).
+      const primeCount = { doubleprime: 2, tripleprime: 3, qprime: 4 }[name];
+      if (primeCount) {
+        for (let k = 0; k < primeCount; k++) push({ kind: 'prime', span: span() });
+        continue;
+      }
       if (name === 'to' || name === 'rightarrow' || name === 'longrightarrow') {
         push({ kind: 'to', span: span() });
         continue;

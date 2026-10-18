@@ -56,7 +56,13 @@ export function MathLiveEditor({
     mf.menuItems = [];
     mf.smartFence = true;
     mf.value = value;
-    defaultShortcuts.current = mf.inlineShortcuts;
+    defaultShortcuts.current = {
+      ...mf.inlineShortcuts,
+      // MathLive turns '' into the single glyph \doubleprime (″) but ''' into three ordinary
+      // primes; use ordinary primes for '' too so every derivative order looks the same.
+      "''": '^{\\prime\\prime}',
+    };
+    mf.inlineShortcuts = defaultShortcuts.current;
 
     const onInput = () => {
       callbacks.current.onChange(mf.value);

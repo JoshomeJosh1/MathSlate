@@ -82,7 +82,10 @@ export const DOCUMENTATION: readonly Entry[] = [
   'f\\left(3\\right)+f\\left(r\\right)',
   'g\\left(x,y\\right)=\\sqrt{x^2+y^2}',
   'g\\left(3,4\\right)',
-  'f^{\\prime}\\left(2\\right)',
+  'f^{\\prime}\\left(2\\right)+f^{\\prime\\prime}\\left(2\\right)',
+  {
+    note: "Type f' for the derivative of your function f, f'' for the second derivative, and so on.",
+  },
 
   { note: '# Sequences' },
   { note: 'Define a sequence with a subscript; add base cases for recursion.' },
