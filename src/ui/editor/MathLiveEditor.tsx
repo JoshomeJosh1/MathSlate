@@ -6,7 +6,7 @@ import 'mathlive/fonts.css';
 import './mathlive.css';
 import { CommandMenu } from './CommandMenu';
 import { menuLayout, moveInGrid } from './matchCompletions';
-import type { CommandCompletion, MathEditorProps } from './MathEditor';
+import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
 import { emptyStructureRange } from './emptyStructure';
 import { INLINE_SHORTCUTS } from './shortcuts';
 
@@ -237,10 +237,11 @@ export function MathLiveEditor({
         ev.preventDefault();
         ev.stopPropagation();
         callbacks.current.onKeyAction?.('enter');
-      } else if (ev.key === '"' && mf.value === '') {
+      } else if (ev.key in EMPTY_ROW_KEYS && mf.value === '') {
         ev.preventDefault();
         ev.stopPropagation();
-        callbacks.current.onKeyAction?.('toNote');
+        const action = EMPTY_ROW_KEYS[ev.key];
+        if (action) callbacks.current.onKeyAction?.(action);
       } else if (ev.key === 'Backspace' && mf.value === '') {
         ev.preventDefault();
         callbacks.current.onKeyAction?.('backspaceEmpty');
@@ -341,6 +342,13 @@ export function MathLiveEditor({
     </>
   );
 }
+
+/** Keys that turn an empty math row into something else: " a note, # a heading, @ a folder. */
+const EMPTY_ROW_KEYS: Partial<Record<string, EditorKeyAction>> = {
+  '"': 'toNote',
+  '#': 'toHeading',
+  '@': 'toFolder',
+};
 
 const ARROWS: Partial<Record<string, 'left' | 'right' | 'up' | 'down'>> = {
   ArrowLeft: 'left',

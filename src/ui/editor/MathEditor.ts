@@ -12,6 +12,8 @@ export type EditorKeyAction =
   | 'moveUp' // caret tried to leave the field upwards
   | 'moveDown'
   | 'toNote' // `"` typed into an empty field: turn the row into a note
+  | 'toHeading' // `#` typed into an empty field: turn the row into a heading note
+  | 'toFolder' // `@` typed into an empty field: turn the row into a folder
   | 'toMath'; // Backspace in an empty note: turn it back into a math row
 
 export interface MathEditorHandle {

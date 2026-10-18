@@ -1,4 +1,4 @@
-import { addOutput, insertRowAfter, type Doc } from './model';
+import { addOutput, insertRowAfter, setCollapsed, type Doc } from './model';
 
 /**
  * The documentation slate: shown on first visit and via the Documentation button. It is a working
@@ -6,17 +6,26 @@ import { addOutput, insertRowAfter, type Doc } from './model';
  * built-in function, sequence, constant, command or calculus operator is missing from it, or if any
  * row has an error that is not intentional — so add an example whenever you add a feature.
  *
- * Each entry is a note (`# heading` or text), a math row, or a math row with commands attached.
+ * Each entry is a note (`# heading` or text), a math row, a math row with commands attached, or
+ * the start of a folder: the entries after it go in the folder, up to the next folder. Folders
+ * start collapsed unless `open`, so the slate reads as a table of contents.
  */
-type Entry = { note: string } | string | [latex: string, ...commandIds: string[]];
+type Entry =
+  | { note: string }
+  | { folder: string; open?: boolean }
+  | string
+  | [latex: string, ...commandIds: string[]];
 
 export const DOCUMENTATION: readonly Entry[] = [
   { note: '# MathSlate' },
   {
     note: 'A notebook for exact, symbolic math. Every row below is live: edit anything and the results update. Click New for an empty slate; this page comes back with the Documentation button.',
   },
+  {
+    note: 'Each section below is a folder: click ▸ beside its title to open it.',
+  },
 
-  { note: '# Typing' },
+  { folder: 'Typing', open: true },
   {
     note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, and the number on the left drags a row.',
   },
@@ -27,13 +36,28 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type \\ for a menu of everything MathSlate understands — structures, symbols, Greek letters and every function, in groups (hover over one for its name and description). Keep typing to filter it (\\fr, \\root), use the arrow keys to choose, and Enter, Tab or Space to insert; Esc closes it.',
   },
   {
-    note: 'Type " in an empty row to turn it into a note like this one. Backspace in an empty note turns it back into math.',
+    note: 'Type " in an empty row to turn it into a note like this one, or # for a heading. Backspace in an empty note turns it back into math.',
   },
   {
     note: 'Results appear in tinted output rows. Under the row you are editing, suggested commands appear: click one to add it as an output row (labelled out1, out2, …). ↧ copies a result into a new row; × removes an output.',
   },
 
-  { note: '# Arithmetic is exact' },
+  { folder: 'Folders and notes' },
+  {
+    note: 'Folders group rows and notes. Make one with New folder, by typing @ in an empty row, or by Shift+clicking row numbers and choosing Group into folder.',
+  },
+  {
+    note: 'Click the arrow beside a folder to collapse or expand it. Folders only organise: rows in a collapsed folder still compute, and their definitions are used everywhere.',
+  },
+  {
+    note: 'Drag rows by their number. Dropped over the right half of a row in a folder, a row joins that folder; drag it into the indent on the left to take it out. Dragging a folder moves everything in it. Deleting a folder keeps its rows.',
+  },
+  '\\mathrm{side}=3',
+  '\\mathrm{side}^2',
+  { note: '## A heading (type # in an empty row)' },
+  { note: 'Notes can be headings: ## for a smaller one, like the one above.' },
+
+  { folder: 'Arithmetic is exact' },
   '\\frac13+\\frac16',
   '0.1+0.2',
   '\\sqrt{72}',
@@ -46,7 +70,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   ['\\sqrt2+\\pi', 'numeric'],
   { note: 'Decimals like 0.1 are exact fractions; a ≈ decimal is shown alongside exact numbers.' },
 
-  { note: '# Constants' },
+  { folder: 'Constants' },
   { note: 'π, e and i are recognised automatically unless you define them yourself.' },
   '\\pi',
   'e',
@@ -54,7 +78,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\sqrt{-4}',
   '\\lim_{x\\to\\infty}\\frac{1}{x}',
 
-  { note: '# Built-in functions' },
+  { folder: 'Built-in functions' },
   {
     note: 'Every built-in function, with what it does, how to type it, and examples. Type a function name and it turns upright (sin → sin), becoming a single unit you delete in one go. Functions of two or more arguments (gcd, lcm, binomial) need brackets: keep typing letters after one and it turns back into ordinary letters. Brackets are optional for one argument: sin 2x means sin(2x), and the argument stops at the next function, so sin x cos x is sin(x)·cos(x). A function you define yourself with the same name replaces the built-in one.',
   },
@@ -221,7 +245,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\max\\left(\\pi,\\sqrt{10},\\frac{22}{7}\\right)',
   '\\min\\left(\\sin1,\\cos1\\right)',
 
-  { note: '# Special functions' },
+  { folder: 'Special functions' },
   {
     note: 'Special functions appear in exact answers and can be typed. Their names only count when followed by brackets, so 2ζ, Γ, or Si without brackets stay ordinary symbols (Si is S·i), and C(x+1) is still C times (x+1).',
   },
@@ -362,7 +386,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   },
   '\\int_0^1\\sqrt{1+x^3}\\,dx',
 
-  { note: '# Your own names and functions' },
+  { folder: 'Your own names and functions' },
   'r=5',
   'A_{circle}=\\pi r^2',
   'v_{max}=30',
@@ -381,7 +405,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: "Type f' for the derivative of your function f, f'' for the second derivative, and so on.",
   },
 
-  { note: '# Sequences' },
+  { folder: 'Sequences' },
   { note: 'Define a sequence with a subscript; add base cases for recursion.' },
   'u_n=u_{n-1}+3',
   'u_1=2',
@@ -394,7 +418,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   'p_{100}',
   'F_{30}',
 
-  { note: '# Algebra' },
+  { folder: 'Algebra' },
   { note: 'These rows have commands attached. Click a row to see more suggestions.' },
   ['x^3-6x^2+11x-6', 'factor'],
   ['360', 'factor'],
@@ -405,7 +429,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   ['\\sin x=\\frac12', 'solve'],
   ['x^2<4', 'solve'],
 
-  { note: '# Calculus' },
+  { folder: 'Calculus' },
   {
     note: 'Write calculus directly. Indefinite integrals give an antiderivative. Definite integrals show a number straight away, then the exact value when one exists (like 1/3 ≈ 0.333); without a closed form the number stays.',
   },
@@ -431,7 +455,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   ['\\frac{e^x-1}{x}', 'limit'],
   ['\\cos x', 'series'],
 
-  { note: '# Matrices and sets' },
+  { folder: 'Matrices and sets' },
   'M=\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}',
   'M^2',
   'M^{-1}',
@@ -439,21 +463,21 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\begin{bmatrix}1&2&3\\end{bmatrix}\\begin{bmatrix}4\\\\5\\\\6\\end{bmatrix}',
   '\\left\\lbrace3,1,2,1\\right\\rbrace',
 
-  { note: '# Live dependencies' },
+  { folder: 'Live dependencies' },
   { note: 'Change k and watch every row that depends on it update.' },
   'k=2',
   'm=k^2+1',
   'q=m\\cdot k',
   'f\\left(q\\right)',
 
-  { note: '# Errors' },
+  { folder: 'Errors' },
   { note: 'Mistakes are reported on their row, with the problem highlighted.' },
   'b=c+1',
   'c=b+1',
   '\\frac{1}{\\placeholder{}}',
   '2^3^4',
 
-  { note: '# Computer algebra systems' },
+  { folder: 'Computer algebra systems' },
   {
     note: 'Results come from SymPy, running in your browser. While it loads (a few seconds on first visit), Nerdamer answers instantly; those results are marked "via Nerdamer" and upgrade automatically. Choose the preferred system with the CAS menu.',
   },
@@ -461,15 +485,28 @@ export const DOCUMENTATION: readonly Entry[] = [
 
 export function documentationDoc(): Doc {
   let doc: Doc = { version: 1, rows: [], interpretations: {}, nextOutputLabel: 1 };
+  // The last row added: inserting after it keeps later entries in the same folder.
+  let last: string | null = null;
+  const folders: { id: string; open: boolean }[] = [];
+  const add = (text: string, kind?: 'note' | 'folder') => {
+    const inserted = insertRowAfter(doc, kind === 'folder' ? null : last, text, kind);
+    doc = inserted.doc;
+    last = inserted.id;
+    return inserted.id;
+  };
   for (const entry of DOCUMENTATION) {
+    if (typeof entry === 'object' && 'folder' in entry) {
+      folders.push({ id: add(entry.folder, 'folder'), open: entry.open ?? false });
+      continue;
+    }
     if (typeof entry === 'object' && !Array.isArray(entry)) {
-      doc = insertRowAfter(doc, null, entry.note, 'note').doc;
+      add(entry.note, 'note');
       continue;
     }
     const [latex, ...commandIds] = Array.isArray(entry) ? entry : [entry];
-    const inserted = insertRowAfter(doc, null, latex);
-    doc = inserted.doc;
-    for (const id of commandIds) doc = addOutput(doc, inserted.id, id);
+    const id = add(latex);
+    for (const commandId of commandIds) doc = addOutput(doc, id, commandId);
   }
+  for (const f of folders) if (!f.open) doc = setCollapsed(doc, f.id, true);
   return doc;
 }

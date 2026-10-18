@@ -70,7 +70,7 @@ function children(e: Expr): Expr[] {
 
 describe('documentation slate', () => {
   const doc = documentationDoc();
-  const math = doc.rows.filter((r) => r.kind !== 'note');
+  const math = doc.rows.filter((r) => !r.kind);
   const analyses = analyzeRows(math.map((r) => ({ id: r.id, latex: r.latex })));
   const deps = buildDependencies(analyses);
   const statements = analyses.flatMap((a) => (a.statement ? [a.statement] : []));
@@ -145,6 +145,16 @@ describe('documentation slate', () => {
       'index',
     ];
     expect(required.filter((k) => !seen.kinds.has(k))).toEqual([]);
+  });
+
+  it('is organised in folders, all but the first collapsed', () => {
+    const folders = doc.rows.filter((r) => r.kind === 'folder');
+    expect(folders.length).toBeGreaterThan(10);
+    expect(folders.map((f) => !!f.collapsed)).toEqual(folders.map((_, i) => i > 0));
+    // Everything after the introduction is in a folder.
+    const firstFolder = doc.rows.findIndex((r) => r.kind === 'folder');
+    const loose = doc.rows.slice(firstFolder).filter((r) => r.kind !== 'folder' && !r.folder);
+    expect(loose).toEqual([]);
   });
 
   it('has notes explaining it', () => {

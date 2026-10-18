@@ -6,6 +6,8 @@ interface Props {
   onChange: (text: string) => void;
   onKeyAction: (action: EditorKeyAction) => void;
   onFocus?: () => void;
+  /** 'folder': a folder's title (no headings, "Folder" placeholder). */
+  variant?: 'note' | 'folder';
   ref?: Ref<MathEditorHandle>;
 }
 
@@ -13,12 +15,25 @@ interface Props {
  * Plain-text row for headings and explanations. Wraps and grows to fit its text. Lines starting
  * with "#" render as headings ("##" as subheadings). Enter starts a new math row; Shift+Enter inserts a line break.
  */
-export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props) {
+export function NoteEditor({
+  value,
+  onChange,
+  onKeyAction,
+  onFocus,
+  variant = 'note',
+  ref,
+}: Props) {
   const area = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(
     ref,
     () => ({
-      focus: () => area.current?.focus(),
+      // Caret at the end, e.g. after the "# " of a new heading.
+      focus: () => {
+        const el = area.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      },
       getLatex: () => area.current?.value ?? '',
     }),
     [],
@@ -40,15 +55,23 @@ export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props
     };
   }, [value]);
 
-  const heading = value.startsWith('##') ? ' subheading' : value.startsWith('#') ? ' heading' : '';
+  const style =
+    variant === 'folder'
+      ? ' folder-title'
+      : value.startsWith('##')
+        ? ' subheading'
+        : value.startsWith('#')
+          ? ' heading'
+          : '';
+  const label = variant === 'folder' ? 'Folder' : 'Note';
   return (
     <textarea
       ref={area}
-      className={`note-editor${heading}`}
+      className={`note-editor${style}`}
       value={value}
       rows={1}
-      placeholder="Note"
-      aria-label="Note"
+      placeholder={label}
+      aria-label={label}
       onFocus={onFocus}
       onChange={(e) => {
         onChange(e.target.value);

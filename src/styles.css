@@ -180,6 +180,62 @@ button {
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
 }
 
+/* Folders: a title row, then its rows indented with a guide line. The indent is also the drop
+   zone for taking a row out of a folder (ui/rows/dropTarget.ts). */
+.row-item.folder .row-gutter {
+  font-size: 1.1rem;
+  padding-top: 0.45rem;
+  cursor: pointer;
+}
+
+.row-item.in-folder {
+  margin-left: 28px;
+  border-left: 2px solid var(--chip-bg);
+}
+
+.row-item.dragging.in-folder {
+  border-left-color: var(--accent);
+}
+
+.row-item.moving-with-folder {
+  opacity: 0.4;
+}
+
+.row-item.selected .row-gutter,
+.row-item.selected:focus-within .row-gutter {
+  background: var(--selection);
+  color: var(--text);
+}
+
+.note-editor.folder-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.folder-size {
+  align-self: center;
+  flex: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.selection-bar {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 6px 8px 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 .input-row {
   display: flex;
   align-items: stretch;

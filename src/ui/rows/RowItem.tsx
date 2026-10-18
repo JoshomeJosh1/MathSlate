@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Ref } from 'react';
+import type { MouseEvent, Ref } from 'react';
 import { latexCompletions } from '../../core/completions';
 import { bracketOnlyShortcuts, functionMacros } from '../../core/decorate';
 import type { RowView } from '../../core/engine';
@@ -21,9 +21,17 @@ const COMPLETIONS = latexCompletions();
 interface Props {
   row: InputRow;
   view: RowView | undefined;
-  index: number;
+  /** Math rows' number (counting math rows only). */
+  number: number;
   showDebug: boolean;
   focused: boolean;
+  /** Shown indented, as a row of a folder (while dragged: where it would land). */
+  inFolder: boolean;
+  /** Folders: how many rows they hold (shown when collapsed). */
+  folderSize: number;
+  selected: boolean;
+  /** Rows of a folder that is being dragged (they move with it). */
+  movingWithFolder: boolean;
   editorRef: Ref<MathEditorHandle>;
   onChange: (latex: string) => void;
   onKeyAction: (action: EditorKeyAction) => void;
@@ -31,15 +39,20 @@ interface Props {
   onBlur: () => void;
   /** Inline shortcuts for the math editor (defined multi-letter names → upright). */
   shortcuts: Readonly<Record<string, string>>;
+  /** Click on the row number: Shift selects; on a folder, a plain click collapses/expands. */
+  onGutterClick: (event: MouseEvent) => void;
   onDelete: () => void;
   onAddCommand: (command: Command) => void;
   onRemoveOutput: (outputId: string) => void;
   onPromote: (latexRows: string[]) => void;
 }
 
-/** One input row (math or note) with its diagnostics, output rows and suggestions; drags as a unit. */
+/**
+ * One input row (math, note or folder title) with its diagnostics, output rows and suggestions;
+ * drags as a unit.
+ */
 export function RowItem(props: Props) {
-  const { row, view, index, showDebug, focused, editorRef } = props;
+  const { row, view, number, showDebug, focused, editorRef } = props;
   const {
     attributes,
     listeners,
@@ -50,11 +63,27 @@ export function RowItem(props: Props) {
     isDragging,
   } = useSortable({ id: row.id, transition: { duration: 150, easing: 'ease-out' } });
   const isNote = row.kind === 'note';
+  const isFolder = row.kind === 'folder';
+  const isMath = !row.kind;
+  const classes = [
+    'row-item',
+    isDragging && 'dragging',
+    isNote && 'note',
+    isFolder && 'folder',
+    isFolder && row.collapsed && 'collapsed',
+    props.inFolder && 'in-folder',
+    props.selected && 'selected',
+    props.movingWithFolder && 'moving-with-folder',
+  ].filter(Boolean);
+
+  const gutterLabel = isFolder
+    ? `Folder: ${row.collapsed ? 'expand' : 'collapse'} (click), drag to reorder`
+    : `${isNote ? 'Note' : `Row ${number}`}, drag to reorder, Shift+click to select`;
 
   return (
     <div
       ref={setNodeRef}
-      className={`row-item${isDragging ? ' dragging' : ''}${isNote ? ' note' : ''}`}
+      className={classes.join(' ')}
       // Translate only: dnd-kit's transform also scales a row to the size of the row it is over,
       // which stretches rows of different heights.
       style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -63,22 +92,16 @@ export function RowItem(props: Props) {
         <button
           ref={setActivatorNodeRef}
           className="row-gutter"
-          title="Drag to reorder"
-          aria-label={`Row ${index + 1}, drag to reorder`}
+          title={gutterLabel}
+          aria-label={gutterLabel}
+          aria-expanded={isFolder ? !row.collapsed : undefined}
           {...attributes}
           {...listeners}
+          onClick={props.onGutterClick}
         >
-          {isNote ? '"' : index + 1}
+          {isFolder ? (row.collapsed ? '▸' : '▾') : isNote ? '"' : number}
         </button>
-        {isNote ? (
-          <NoteEditor
-            ref={editorRef}
-            value={row.latex}
-            onChange={props.onChange}
-            onKeyAction={props.onKeyAction}
-            onFocus={props.onFocus}
-          />
-        ) : (
+        {isMath ? (
           <MathEditor
             ref={editorRef}
             value={row.latex}
@@ -90,27 +113,41 @@ export function RowItem(props: Props) {
             macros={FUNCTION_MACROS}
             bracketOnly={BRACKET_ONLY}
             completions={COMPLETIONS}
-            ariaLabel={`Input row ${index + 1}`}
+            ariaLabel={`Input row ${number}`}
           />
+        ) : (
+          <NoteEditor
+            ref={editorRef}
+            value={row.latex}
+            onChange={props.onChange}
+            onKeyAction={props.onKeyAction}
+            onFocus={props.onFocus}
+            variant={isFolder ? 'folder' : 'note'}
+          />
+        )}
+        {isFolder && row.collapsed && (
+          <span className="folder-size">
+            {props.folderSize} {props.folderSize === 1 ? 'row' : 'rows'}
+          </span>
         )}
         <button
           className="row-delete"
-          title="Delete row"
-          aria-label="Delete row"
+          title={isFolder ? 'Delete folder (keeps its rows)' : 'Delete row'}
+          aria-label={isFolder ? 'Delete folder' : 'Delete row'}
           onClick={props.onDelete}
         >
           ×
         </button>
       </div>
-      {!isNote && view?.error && row.latex !== '' && (
+      {isMath && view?.error && row.latex !== '' && (
         <RowError
           latex={row.latex}
           message={view.error.message}
           {...(view.error.span ? { span: view.error.span } : {})}
         />
       )}
-      {!isNote && showDebug && <RowDebug latex={row.latex} analysis={view?.analysis} />}
-      {!isNote &&
+      {isMath && showDebug && <RowDebug latex={row.latex} analysis={view?.analysis} />}
+      {isMath &&
         view?.outputs.map((o) => (
           <OutputRow
             key={o.id}
@@ -125,7 +162,7 @@ export function RowItem(props: Props) {
                 })}
           />
         ))}
-      {!isNote && focused && view && (
+      {isMath && focused && view && (
         <SuggestionChips suggestions={view.suggestions.slice(0, 5)} onPick={props.onAddCommand} />
       )}
     </div>

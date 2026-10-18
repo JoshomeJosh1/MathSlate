@@ -134,7 +134,8 @@ export class Engine {
     const generation = ++this.generation;
 
     const analyses = analyzeRows(
-      doc.rows.map((r) => ({ id: r.id, latex: r.kind === 'note' ? '' : r.latex })),
+      // Notes and folder titles are not math.
+      doc.rows.map((r) => ({ id: r.id, latex: r.kind ? '' : r.latex })),
       { interpretationChoices: doc.interpretations },
     );
     const deps = buildDependencies(analyses);

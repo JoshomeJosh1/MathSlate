@@ -22,6 +22,7 @@ starting `#` are headings, `##` subheadings.
 | 3b        | Nerdamer backend (instant, provisional while SymPy loads), per-document CAS choice    | done    |
 | 3c        | Calculus notation: ∫ (indefinite → symbolic, definite → numeric), d/dx, ∂, lim, Σ, Π  | done    |
 | —         | Upright recognised names and subscripts; notes (`"`); documentation slate             | done    |
+| —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
 | 4         | `/` command palette, `ans` / `out_k` references, promote by drag                      | planned |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrix commands (det, inverse, transpose, eigenvalues, dot, cross)                    | planned |
@@ -215,6 +216,15 @@ Definite integrals keep any closed form SymPy finds, special functions included.
 - **Results round-trip.** CAS results come back as our AST → `printLatex`, so "copy to input"
   always yields LaTeX our parser accepts.
 - **Output rows are derived.** The document stores only `OutputSpec`s (command, stable label).
+- **Folders are a flat list.** A folder is a row (`kind: 'folder'`, title in `latex`,
+  `collapsed`); its rows carry `folder: <id>` and sit directly after it. One level only, and
+  folders only organise (definitions stay global; collapsed rows still compute). Every model
+  update ends with `normalizeFolders`, which drops a row's folder when it is no longer next to
+  it. `moveRow(id, overId, into)` moves a folder with its rows and snaps a row headed outside
+  folders to the nearer end of a folder it would land in. In the UI (`RowList`), the drop target
+  comes from `ui/rows/dropTarget.ts`: right half of a row in a folder → join it, left of the row
+  (the indent) → leave, in between (the drag handle) → keep. Typing `@` in an empty row makes a
+  folder, `#` a heading note, `"` a note; Shift+click on row numbers selects rows to group.
 
 ## Conventions
 
