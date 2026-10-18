@@ -32,6 +32,7 @@ function prec(e: Expr): number {
     case 'neg':
       return 2;
     case 'factorial':
+    case 'integral': // ends in "dx": parenthesise it when raised to a power
       return 4;
     default:
       return 5;
@@ -114,6 +115,23 @@ export function printLatex(e: Expr): string {
       if (e.delim === 'bracket') return `\\left\\lbrack ${items}\\right\\rbrack`;
       return `\\left\\lbrace ${items}\\right\\rbrace`;
     }
+    case 'integral': {
+      const bounds = e.lower && e.upper ? `_{${printLatex(e.lower)}}^{${printLatex(e.upper)}}` : '';
+      // The space keeps "\int x" from reading as the command "\intx".
+      return `\\int${bounds} ${printLatex(e.integrand)}\\,\\mathrm{d}${printName(e.variable)}`;
+    }
+    case 'diff': {
+      const d = e.partial ? '\\partial' : '\\mathrm{d}';
+      const n = e.order === 1 ? '' : `^{${e.order}}`;
+      const sep = e.partial ? ' ' : '';
+      return `\\frac{${d}${n}}{${d}${sep}${printName(e.variable)}${n}}${paren(printLatex(e.operand))}`;
+    }
+    case 'limit': {
+      const dir = e.direction ? `^{${e.direction}}` : '';
+      return `\\lim_{${printName(e.variable)}\\to ${printLatex(e.point)}${dir}}${paren(printLatex(e.operand))}`;
+    }
+    case 'bigop':
+      return `\\${e.op}_{${printName(e.index)}=${printLatex(e.lower)}}^{${printLatex(e.upper)}}${paren(printLatex(e.operand))}`;
     case 'relation': {
       let out = wrap(e.operands[0] ?? e, 1);
       e.ops.forEach((op, k) => {
@@ -138,6 +156,8 @@ function mulSeparator(e: Expr & { kind: 'binary' }, left: string, right: string)
     // cannot merge with the letters before it into a longer name.
     if (e.left.kind === 'num' && !/^[0-9.]/.test(right) && !left.endsWith('.')) return '';
     if (right.startsWith('\\') && !right.startsWith('\\cdot')) return '';
+    // After a power, subscript or bracket (x^{2}y, (x+1)y): the letters cannot merge into a name.
+    if ((left.endsWith('}') || left.endsWith(')')) && /^[A-Za-z]/.test(right)) return '';
   }
   return '\\cdot ';
 }

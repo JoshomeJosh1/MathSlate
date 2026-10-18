@@ -29,7 +29,25 @@ export type Cst =
   | { type: 'matrix'; env: string; rows: Cst[][]; span: Span }
   /** LaTeX operator like \sin or \log_2, with optional power (\sin^2 x). `arg` absent = bare name. */
   | { type: 'fnapp'; name: string; sub?: Cst; power?: Cst; arg?: Cst; span: Span }
-  | { type: 'relation'; ops: RelSymbol[]; operands: Cst[]; span: Span };
+  | { type: 'relation'; ops: RelSymbol[]; operands: Cst[]; span: Span }
+  /** \int f\,dx or \int_a^b f\,dx; `variable` is the letter after the differential. */
+  | { type: 'integral'; integrand: Cst; variable: Cst; lower?: Cst; upper?: Cst; span: Span }
+  /** \frac{d}{dx} f, \frac{d^2}{dx^2} f, \frac{dy}{dx}, \frac{\partial}{\partial x} f */
+  | { type: 'deriv'; operand: Cst; variable: Cst; order: number; partial: boolean; span: Span }
+  /** \lim_{x\to a} f, with optional one-sided approach a^{+} / a^{-} */
+  | { type: 'limit'; operand: Cst; variable: Cst; point: Cst; direction?: '+' | '-'; span: Span }
+  /** \sum_{n=a}^{b} f, \prod_{n=a}^{b} f */
+  | {
+      type: 'bigop';
+      op: 'sum' | 'prod';
+      index: Cst;
+      lower: Cst;
+      upper: Cst;
+      operand: Cst;
+      span: Span;
+    }
+  /** A lone + or − in a script, as in a one-sided limit point 0^{+}. */
+  | { type: 'sign'; sign: '+' | '-'; span: Span };
 
 export type GroupDelim = 'paren' | 'bracket' | 'set';
 export type BinaryOp = 'add' | 'sub' | 'mul' | 'div';

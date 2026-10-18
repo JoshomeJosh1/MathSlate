@@ -215,6 +215,58 @@ class Resolver {
           operands: cst.operands.map((c) => this.expr(c, scope)),
           span,
         };
+      case 'integral': {
+        const variable = boundName(cst.variable);
+        const inner = scope.withLocals([nameKey(variable)]);
+        const node: Expr = {
+          kind: 'integral',
+          integrand: this.expr(cst.integrand, inner),
+          variable,
+          span,
+        };
+        if (cst.lower && cst.upper) {
+          node.lower = this.expr(cst.lower, scope);
+          node.upper = this.expr(cst.upper, scope);
+        }
+        return node;
+      }
+      case 'deriv': {
+        const variable = boundName(cst.variable);
+        return {
+          kind: 'diff',
+          operand: this.expr(cst.operand, scope.withLocals([nameKey(variable)])),
+          variable,
+          order: cst.order,
+          partial: cst.partial,
+          span,
+        };
+      }
+      case 'limit': {
+        const variable = boundName(cst.variable);
+        const node: Expr = {
+          kind: 'limit',
+          operand: this.expr(cst.operand, scope.withLocals([nameKey(variable)])),
+          variable,
+          point: this.expr(cst.point, scope),
+          span,
+        };
+        if (cst.direction) node.direction = cst.direction;
+        return node;
+      }
+      case 'bigop': {
+        const index = boundName(cst.index);
+        return {
+          kind: 'bigop',
+          op: cst.op,
+          operand: this.expr(cst.operand, scope.withLocals([nameKey(index)])),
+          index,
+          lower: this.expr(cst.lower, scope),
+          upper: this.expr(cst.upper, scope),
+          span,
+        };
+      }
+      case 'sign':
+        throw new MathError(`Unexpected "${cst.sign}"`, span);
     }
   }
 
@@ -518,6 +570,12 @@ function unwrap(item: Cst): Factor {
     throw new MathError('A subscript must follow a name', node.sub.span);
   }
   return { core: node, wrappers, span: item.span };
+}
+
+/** The variable of an integral, derivative, limit or sum: a single letter (Latin or Greek). */
+function boundName(cst: Cst): Name {
+  if (cst.type === 'letter') return makeName(cst.name);
+  throw new MathError('Expected a single-letter variable', cst.span);
 }
 
 function isLatinLetter(f: Factor): boolean {

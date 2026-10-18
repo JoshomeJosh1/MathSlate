@@ -39,7 +39,7 @@ export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props
           onKeyAction('enter');
         } else if (e.key === 'Backspace' && el.value === '') {
           e.preventDefault();
-          onKeyAction('backspaceEmpty');
+          onKeyAction('toMath');
         } else if (e.key === 'ArrowUp') {
           onKeyAction('moveUp');
         } else if (e.key === 'ArrowDown') {

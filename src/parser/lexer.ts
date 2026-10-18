@@ -32,6 +32,7 @@ export type Token =
   | { kind: 'bang'; span: Span } // ! factorial
   | { kind: 'prime'; span: Span } // ' or \prime
   | { kind: 'percent'; span: Span } // \%
+  | { kind: 'to'; span: Span } // \to (limits)
   | { kind: 'placeholder'; span: Span } // \placeholder{} (empty MathLive box)
   | { kind: 'eof'; span: Span };
 
@@ -279,11 +280,26 @@ export function tokenize(src: string): Token[] {
         push({ kind: 'prime', span: span() });
         continue;
       }
+      if (name === 'to' || name === 'rightarrow' || name === 'longrightarrow') {
+        push({ kind: 'to', span: span() });
+        continue;
+      }
+      // Differentials: \differentialD (MathLive's upright d) is the letter d; \partial is ∂.
+      if (name === 'differentialD') {
+        push({ kind: 'letter', name: 'd', span: span() });
+        continue;
+      }
+      if (name === 'partial') {
+        push({ kind: 'letter', name: '\\partial', span: span() });
+        continue;
+      }
       if (name === '%') {
         push({ kind: 'percent', span: span() });
         continue;
       }
-      if (['frac', 'dfrac', 'tfrac', 'cfrac', 'sqrt', 'binom'].includes(name)) {
+      if (
+        ['frac', 'dfrac', 'tfrac', 'cfrac', 'sqrt', 'binom', 'int', 'sum', 'prod'].includes(name)
+      ) {
         push({ kind: 'cmd', name: name.endsWith('frac') ? 'frac' : name, span: span() });
         continue;
       }

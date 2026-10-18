@@ -58,7 +58,7 @@ export function RowItem(props: Props) {
           {...attributes}
           {...listeners}
         >
-          {isNote ? '¶' : index + 1}
+          {isNote ? '"' : index + 1}
         </button>
         {isNote ? (
           <NoteEditor

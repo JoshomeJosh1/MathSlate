@@ -10,7 +10,9 @@ export type EditorKeyAction =
   | 'enter' // commit row / create a new row below
   | 'backspaceEmpty' // Backspace pressed while the field is empty
   | 'moveUp' // caret tried to leave the field upwards
-  | 'moveDown';
+  | 'moveDown'
+  | 'toNote' // `"` typed into an empty field: turn the row into a note
+  | 'toMath'; // Backspace in an empty note: turn it back into a math row
 
 export interface MathEditorHandle {
   focus: () => void;

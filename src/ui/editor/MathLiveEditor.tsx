@@ -66,6 +66,10 @@ export function MathLiveEditor({
         ev.preventDefault();
         ev.stopPropagation();
         callbacks.current.onKeyAction?.('enter');
+      } else if (ev.key === '"' && mf.value === '') {
+        ev.preventDefault();
+        ev.stopPropagation();
+        callbacks.current.onKeyAction?.('toNote');
       } else if (ev.key === 'Backspace' && mf.value === '') {
         ev.preventDefault();
         callbacks.current.onKeyAction?.('backspaceEmpty');

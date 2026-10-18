@@ -94,6 +94,12 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
       case 'moveDown':
         focusRow(next?.id);
         break;
+      case 'toNote':
+      case 'toMath':
+        // The row's editor component is replaced, so focus the new one after rendering.
+        docActions.setRowKind(id, action === 'toNote' ? 'note' : 'math');
+        focusRow(id, true);
+        break;
     }
   };
 

@@ -46,6 +46,8 @@ class Parser {
   private pos = 0;
   /** Depth of open |…| without an explicit \left| — a bare | then closes instead of opening. */
   private absDepth = 0;
+  /** > 0 while parsing an integrand, where "d x" is the differential that ends it. */
+  private integrandDepth = 0;
 
   constructor(src: string) {
     this.tokens = tokenize(src);
@@ -131,6 +133,8 @@ class Parser {
         if (info.form) node.form = info.form;
         left = node;
       } else if (this.startsPrimary(t)) {
+        // Inside an integrand, "dx" ends the expression instead of multiplying it.
+        if (this.atDifferential()) break;
         // Implicit multiplication: collect a flat juxtaposition so the resolver can see letter runs.
         if (JUXT_BP <= rbp) break;
         const right = this.parseExpr(JUXT_BP);
@@ -247,6 +251,20 @@ class Parser {
       this.next();
       // MathLive quirk: typing "log_2" yields \log_{_2}.
       if (owner.kind === 'sub' && this.peek().kind === 'sub') this.next();
+      // A lone sign, as in the one-sided limit point 0^{+}.
+      const sign = this.peek();
+      if (
+        sign.kind === 'op' &&
+        (sign.op === '+' || sign.op === '-') &&
+        this.isDelim(this.peek(1), '}')
+      ) {
+        this.pos += 2;
+        return {
+          type: 'sign',
+          sign: sign.op,
+          span: spanOf(t.span, this.tokens[this.pos - 1]?.span ?? sign.span),
+        };
+      }
       if (this.isDelim(this.peek(), '}')) {
         throw new MathError('Empty group', spanOf(t.span, this.peek().span));
       }
@@ -336,7 +354,9 @@ class Parser {
     const info = OPENERS[open.delim];
     if (!info) throw new MathError(`Unexpected ${describe(open)}`, open.span);
     const saved = this.absDepth;
+    const savedIntegrand = this.integrandDepth;
     this.absDepth = 0;
+    this.integrandDepth = 0; // a "d x" inside parentheses is not the integral's differential
     const items: Cst[] = [];
     if (!this.isDelim(this.peek(), info.close)) {
       for (;;) {
@@ -347,6 +367,7 @@ class Parser {
     }
     const close = this.expectDelim(info.close, info.label, open.span);
     this.absDepth = saved;
+    this.integrandDepth = savedIntegrand;
     const span = spanOf(open.span, close.span);
     // SymPy prints matrices as \left[\begin{matrix}…\end{matrix}\right]; fold the brackets in.
     const only = items.length === 1 ? items[0] : undefined;
@@ -378,8 +399,29 @@ class Parser {
       case 'frac': {
         const num = this.parseScriptArg(t);
         const den = this.parseScriptArg(t);
+        const derivative = derivativeOperator(num, den);
+        if (derivative) {
+          // \frac{d}{dx} f: the operand follows (like a function argument); \frac{dy}{dx} has it inside.
+          const operand = derivative.operand ?? this.parseOperatorArgument();
+          if (!operand) {
+            throw new MathError('Write what to differentiate after d/dx', spanOf(t.span, den.span));
+          }
+          return {
+            type: 'deriv',
+            operand,
+            variable: derivative.variable,
+            order: derivative.order,
+            partial: derivative.partial,
+            span: spanOf(t.span, operand.span),
+          };
+        }
         return { type: 'frac', num, den, span: spanOf(t.span, den.span) };
       }
+      case 'int':
+        return this.parseIntegral(t);
+      case 'sum':
+      case 'prod':
+        return this.parseBigOperator(t, t.name);
       case 'binom': {
         const n = this.parseScriptArg(t);
         const k = this.parseScriptArg(t);
@@ -452,6 +494,7 @@ class Parser {
    * implicitly multiplied factors that stops at the next function: \sin 2x \cos x = sin(2x)·cos(x).
    */
   private parseFunction(t: Token & { kind: 'fn' }): Cst {
+    if (t.name === 'lim') return this.parseLimit(t);
     let sub: Cst | undefined;
     let power: Cst | undefined;
     for (let s = this.peek(); s.kind === 'sub' || s.kind === 'sup'; s = this.peek()) {
@@ -464,24 +507,7 @@ class Parser {
         power = this.parseScriptArg(s);
       }
     }
-    let arg: Cst | undefined;
-    const a = this.peek();
-    if (this.isDelim(a, '(')) {
-      // No postfix here: \sin(x)^2 is (sin x)^2, applied by the caller's parsePostfix.
-      arg = this.parsePrimary();
-    } else if (this.startsPrimary(a) || (a.kind === 'op' && a.op === '-')) {
-      const factors: Cst[] = [this.parsePrefix()];
-      while (this.startsPrimary(this.peek()) && this.peek().kind !== 'fn') {
-        factors.push(this.parsePostfix(this.parsePrimary()));
-      }
-      const first = factors[0];
-      const last = factors[factors.length - 1];
-      if (!first || !last) throw new Error('unreachable');
-      arg =
-        factors.length === 1
-          ? first
-          : { type: 'juxt', items: factors, span: spanOf(first.span, last.span) };
-    }
+    const arg = this.parseOperatorArgument('function');
     const end = arg ?? power ?? sub;
     const node: Cst = {
       type: 'fnapp',
@@ -493,6 +519,250 @@ class Parser {
     if (arg) node.arg = arg;
     return node;
   }
+
+  /**
+   * The operand of a function or operator: a run of implicitly multiplied factors, ending at
+   * + − = etc. (and at an integral's dx). Undefined if nothing operand-like follows.
+   *
+   * - 'function' (\sin, \ln): a parenthesised argument stands alone — \sin(x)^2 is (sin x)^2 —
+   *   and the run stops at the next function: \sin x\cos x = sin(x)·cos(x).
+   * - 'operator' (d/dx, \lim, \sum, \prod): the whole run, through functions and powers of
+   *   parentheses: \lim_{x\to0} x\ln x, \lim_{x\to\infty}(1+1/x)^x.
+   */
+  private parseOperatorArgument(mode: 'function' | 'operator' = 'operator'): Cst | undefined {
+    const a = this.peek();
+    if (mode === 'function' && this.isDelim(a, '(')) {
+      // No postfix here: \sin(x)^2 is (sin x)^2, applied by the caller's parsePostfix.
+      return this.parsePrimary();
+    }
+    if (!(this.startsPrimary(a) || (a.kind === 'op' && a.op === '-')) || this.atDifferential()) {
+      return undefined;
+    }
+    const factors: Cst[] = [this.parsePrefix()];
+    while (
+      this.startsPrimary(this.peek()) &&
+      (mode === 'operator' || this.peek().kind !== 'fn') &&
+      !this.atDifferential()
+    ) {
+      factors.push(this.parsePostfix(this.parsePrimary()));
+    }
+    const first = factors[0];
+    const last = factors[factors.length - 1];
+    if (!first || !last) throw new Error('unreachable');
+    return factors.length === 1
+      ? first
+      : { type: 'juxt', items: factors, span: spanOf(first.span, last.span) };
+  }
+
+  /** Inside an integrand, is the next thing the differential "d x" (or \mathrm{d}x, \differentialD x)? */
+  private atDifferential(): boolean {
+    if (this.integrandDepth === 0) return false;
+    const d = this.peek();
+    if (d.kind === 'opname') return /^d[A-Za-z]$/.test(d.name); // \mathrm{dx}
+    return d.kind === 'letter' && d.name === 'd' && this.peek(1).kind === 'letter';
+  }
+
+  /** Consumes the integral's differential and returns its variable. */
+  private parseDifferential(owner: Token): Cst {
+    const d = this.peek();
+    if (this.atDifferential()) {
+      if (d.kind === 'opname') {
+        this.next();
+        return {
+          type: 'letter',
+          name: d.name.slice(1),
+          span: { start: d.span.start, end: d.span.end },
+        };
+      }
+      this.next();
+      const v = this.next();
+      if (v.kind === 'letter') return { type: 'letter', name: v.name, span: v.span };
+    }
+    throw new MathError(
+      'Missing "dx" at the end of the integral',
+      spanOf(owner.span, d.kind === 'eof' ? d.span : d.span),
+    );
+  }
+
+  /** A bound in _{…} or ^{…}; an empty MathLive box (\placeholder{}) means "no bound". */
+  private parseBound(owner: Token): Cst | undefined {
+    const t = this.peek();
+    if (t.kind === 'placeholder') {
+      this.next();
+      return undefined;
+    }
+    if (
+      this.isDelim(t, '{') &&
+      this.peek(1).kind === 'placeholder' &&
+      this.isDelim(this.peek(2), '}')
+    ) {
+      this.pos += 3;
+      return undefined;
+    }
+    return this.parseScriptArg(owner);
+  }
+
+  /** Reads optional _{…} and ^{…} (either order) after an operator. */
+  private parseBounds(): { lower?: Cst; upper?: Cst; lowerToken?: Token } {
+    const out: { lower?: Cst; upper?: Cst; lowerToken?: Token } = {};
+    for (let s = this.peek(); s.kind === 'sub' || s.kind === 'sup'; s = this.peek()) {
+      this.next();
+      const bound = this.parseBound(s);
+      if (s.kind === 'sub') {
+        out.lowerToken = s;
+        if (bound) out.lower = bound;
+      } else if (bound) {
+        out.upper = bound;
+      }
+    }
+    return out;
+  }
+
+  /** \int f\,dx (antiderivative) or \int_a^b f\,dx (definite). */
+  private parseIntegral(t: Token & { kind: 'cmd' }): Cst {
+    const { lower, upper } = this.parseBounds();
+    if ((lower === undefined) !== (upper === undefined)) {
+      throw new MathError('A definite integral needs both a lower and an upper bound', t.span);
+    }
+    this.integrandDepth++;
+    let integrand: Cst;
+    try {
+      integrand = this.atDifferential()
+        ? { type: 'num', value: '1', span: t.span }
+        : this.parseExpr(0);
+    } finally {
+      this.integrandDepth--;
+    }
+    this.integrandDepth++;
+    let variable: Cst;
+    try {
+      variable = this.parseDifferential(t);
+    } finally {
+      this.integrandDepth--;
+    }
+    const node: Cst = {
+      type: 'integral',
+      integrand,
+      variable,
+      span: spanOf(t.span, variable.span),
+    };
+    if (lower && upper) {
+      node.lower = lower;
+      node.upper = upper;
+    }
+    return node;
+  }
+
+  /** \sum_{n=1}^{N} f and \prod_{k=1}^{n} f. */
+  private parseBigOperator(t: Token & { kind: 'cmd' }, op: 'sum' | 'prod'): Cst {
+    const { lower, upper } = this.parseBounds();
+    const symbol = op === 'sum' ? '\\sum' : '\\prod';
+    const lowerOk =
+      lower?.type === 'relation' &&
+      lower.ops.length === 1 &&
+      lower.ops[0] === '=' &&
+      lower.operands[0]?.type === 'letter';
+    if (!lower || !upper || !lowerOk) {
+      throw new MathError(`Write ${symbol} with bounds, e.g. ${symbol}_{n=1}^{10}`, t.span);
+    }
+    const [index, from] = lower.operands;
+    if (!index || !from) throw new Error('unreachable');
+    const operand = this.parseOperatorArgument();
+    if (!operand)
+      throw new MathError(
+        `Write what to ${op === 'sum' ? 'add up' : 'multiply'} after ${symbol}`,
+        t.span,
+      );
+    return {
+      type: 'bigop',
+      op,
+      index,
+      lower: from,
+      upper,
+      operand,
+      span: spanOf(t.span, operand.span),
+    };
+  }
+
+  /** \lim_{x\to a} f, \lim_{x\to 0^{+}} f */
+  private parseLimit(t: Token & { kind: 'fn' }): Cst {
+    const sub = this.peek();
+    const open = this.peek(1);
+    if (sub.kind !== 'sub' || !this.isDelim(open, '{')) {
+      throw new MathError('Write the limit as \\lim_{x\\to a}', t.span);
+    }
+    this.pos += 2;
+    const v = this.next();
+    if (v.kind !== 'letter')
+      throw new MathError('Expected the limit variable, e.g. x\\to 0', v.span);
+    const to = this.next();
+    if (to.kind !== 'to') throw new MathError('Expected "\\to" after the limit variable', to.span);
+    let point = this.parseExpr(0);
+    this.expectDelim('}', '}', open.span);
+    let direction: '+' | '-' | undefined;
+    if (point.type === 'pow' && point.exp.type === 'sign') {
+      direction = point.exp.sign;
+      point = point.base;
+    }
+    const operand = this.parseOperatorArgument();
+    if (!operand) throw new MathError('Write what to take the limit of after \\lim', t.span);
+    const node: Cst = {
+      type: 'limit',
+      operand,
+      variable: { type: 'letter', name: v.name, span: v.span },
+      point,
+      span: spanOf(t.span, operand.span),
+    };
+    if (direction) node.direction = direction;
+    return node;
+  }
+}
+
+/** Recognises \frac{d}{dx}, \frac{d^2}{dx^2}, \frac{dy}{dx}, \frac{\partial}{\partial x}. */
+function derivativeOperator(
+  num: Cst,
+  den: Cst,
+): { variable: Cst; order: number; partial: boolean; operand?: Cst } | null {
+  const isD = (c: Cst | undefined): c is Cst & { type: 'letter' } =>
+    c?.type === 'letter' && (c.name === 'd' || c.name === '\\partial');
+  const integer = (c: Cst) =>
+    c.type === 'num' && /^[0-9]+$/.test(c.value) ? Number(c.value) : null;
+
+  let d: (Cst & { type: 'letter' }) | null = null;
+  let order = 1;
+  let operand: Cst | undefined;
+  if (isD(num)) {
+    d = num;
+  } else if (num.type === 'pow' && isD(num.base) && integer(num.exp) !== null) {
+    d = num.base;
+    order = integer(num.exp) ?? 1;
+  } else if (num.type === 'juxt' && isD(num.items[0]) && num.items.length >= 2) {
+    d = num.items[0];
+    const rest = num.items.slice(1);
+    const first = rest[0];
+    const last = rest[rest.length - 1];
+    if (!first || !last) return null;
+    operand =
+      rest.length === 1
+        ? first
+        : { type: 'juxt', items: rest, span: spanOf(first.span, last.span) };
+  }
+  if (!d) return null;
+
+  if (den.type !== 'juxt' || den.items.length !== 2) return null;
+  const [dd, v] = den.items;
+  if (!isD(dd) || dd.name !== d.name || !v) return null;
+  let variable: Cst | null = null;
+  if (v.type === 'letter' && order === 1) variable = v;
+  if (v.type === 'pow' && v.base.type === 'letter' && integer(v.exp) === order) variable = v.base;
+  if (!variable) return null;
+  const result: { variable: Cst; order: number; partial: boolean; operand?: Cst } = {
+    variable,
+    order,
+    partial: d.name === '\\partial',
+  };
+  if (operand) result.operand = operand;
+  return result;
 }
 
 function binaryInfo(op: OpSymbol): { op: BinaryOp; bp: number; form?: MulForm } | null {

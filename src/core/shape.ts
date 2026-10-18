@@ -26,6 +26,8 @@ export interface ShapeFacts {
   /** No free variables at all: evaluates to a number (or matrix of numbers). */
   isConstant: boolean;
   hasFunctions: boolean;
+  /** Contains calculus operators or sequence terms: evaluating it computes something. */
+  hasOperators: boolean;
 }
 
 export interface Target {
@@ -57,15 +59,49 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
   const free = new Map<string, Name>();
   let hasFunctions = false;
   let hasExpandableProduct = false;
+  let hasOperators = false;
+  const bound: string[] = [];
+  const within = (name: Name, body: Expr) => {
+    bound.push(nameKey(name));
+    visit(body);
+    bound.pop();
+  };
 
   const visit = (e: Expr): void => {
     switch (e.kind) {
-      case 'var':
-        if (!defined.has(nameKey(e.name))) free.set(nameKey(e.name), e.name);
+      case 'var': {
+        const key = nameKey(e.name);
+        if (!defined.has(key) && !bound.includes(key)) free.set(key, e.name);
+        return;
+      }
+      case 'integral':
+        hasOperators = true;
+        within(e.variable, e.integrand);
+        if (e.lower) visit(e.lower);
+        if (e.upper) visit(e.upper);
+        return;
+      case 'diff':
+        hasOperators = true;
+        within(e.variable, e.operand);
+        return;
+      case 'limit':
+        hasOperators = true;
+        within(e.variable, e.operand);
+        visit(e.point);
+        return;
+      case 'bigop':
+        hasOperators = true;
+        within(e.index, e.operand);
+        visit(e.lower);
+        visit(e.upper);
         return;
       case 'call':
+        hasFunctions = true;
+        e.args.forEach(visit);
+        return;
       case 'derivative':
         hasFunctions = true;
+        hasOperators = true;
         e.args.forEach(visit);
         return;
       case 'binary':
@@ -86,6 +122,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
         return;
       case 'index':
         hasFunctions = true;
+        hasOperators = true;
         visit(e.index);
         return;
       case 'matrix':
@@ -116,6 +153,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
     hasExpandableProduct,
     isConstant: freeVars.length === 0,
     hasFunctions,
+    hasOperators,
   };
 }
 

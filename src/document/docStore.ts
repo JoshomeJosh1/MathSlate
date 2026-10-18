@@ -4,6 +4,7 @@ import {
   insertRowAfter,
   moveRow,
   removeOutput,
+  setRowKind,
   updateLatex,
   type Doc,
   type RowId,
@@ -39,6 +40,9 @@ export const docActions = {
   },
   removeOutput(rowId: RowId, outputId: string) {
     docStore.set((doc) => removeOutput(doc, rowId, outputId));
+  },
+  setRowKind(id: RowId, kind: 'note' | 'math') {
+    docStore.set((doc) => setRowKind(doc, id, kind));
   },
   replace(doc: Doc) {
     docStore.set(doc);

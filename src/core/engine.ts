@@ -55,7 +55,7 @@ interface Job {
   key: string;
   run: () => Promise<CasResult>;
   /** Automatic evaluation: hide results that add nothing (see `addsNothing`). */
-  auto?: { inputLatex: string; usesDefinitions: boolean };
+  auto?: { inputLatex: string; computes: boolean };
 }
 
 export interface EngineOptions {
@@ -202,7 +202,7 @@ export class Engine {
             run: () => evaluate.run(ctx, this.cas),
             auto: {
               inputLatex: printLatex(target.expr),
-              usesDefinitions: analysis.refs.length > 0,
+              computes: analysis.refs.length > 0 || ctx.facts.hasOperators,
             },
           },
         );
@@ -271,10 +271,10 @@ export class Engine {
  */
 function addsNothing(
   value: CasValue,
-  { inputLatex, usesDefinitions }: { inputLatex: string; usesDefinitions: boolean },
+  { inputLatex, computes }: { inputLatex: string; computes: boolean },
 ): boolean {
   if (value.kind !== 'expr' || value.numeric !== null) return false;
   if (value.latex === inputLatex) return true;
   const symbolic = value.expr !== null && shapeOf(value.expr, []).freeVars.length > 0;
-  return symbolic && !usesDefinitions;
+  return symbolic && !computes;
 }

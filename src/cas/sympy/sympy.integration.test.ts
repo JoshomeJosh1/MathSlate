@@ -150,3 +150,46 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
     for (const line of results[0] ?? []) expect(line).not.toContain('!');
   });
 });
+
+describe('calculus notation end to end', { timeout: 60_000 }, () => {
+  it('integrates: indefinite symbolically, definite numerically', async () => {
+    expect(await last(['\\int x^2\\,dx'])).toEqual(['\\frac{x^{3}}{3}']);
+    expect(await last(['\\int x\\exponentialE^{x}\\,dx'])).toEqual([
+      '\\left(x-1\\right)\\exponentialE^{x}',
+    ]);
+    expect(await last(['\\int_0^1x^2\\,dx'])).toEqual(['0.333333333333333']);
+    expect(await last(['\\int_0^1\\sin\\left(x^2\\right)dx'])).toEqual(['0.310268301723381']);
+    expect(await last(['\\int_0^{\\infty}\\exponentialE^{-x^2}dx'])).toEqual(['0.886226925452758']);
+    // Symbolic bounds or parameters: exact.
+    expect(await last(['\\int_0^ax\\,dx'])).toEqual(['\\frac{a^{2}}{2}']);
+  });
+
+  it('keeps the variable bound inside the operator', async () => {
+    expect(await outputs(['x=3', '\\int x^2\\,dx', '\\frac{d}{dx}x^3'])).toEqual([
+      [],
+      ['\\frac{x^{3}}{3}'],
+      ['3x^{2}'],
+    ]);
+    expect(await last(['a=2', '\\int_0^ax\\,dx'])).toEqual(['2']);
+  });
+
+  it('differentiates, takes limits, sums and multiplies', async () => {
+    expect(await last(['\\frac{d}{dx}x^2\\sin x'])).toEqual([
+      'x^{2}\\cos\\left(x\\right)+2x\\sin\\left(x\\right)',
+    ]);
+    expect(await last(['\\frac{d^2}{dx^2}x^5'])).toEqual(['20x^{3}']);
+    expect(await last(['\\frac{\\partial}{\\partial y}x^2y^3'])).toEqual(['3x^{2}y^{2}']);
+    expect(await last(['f(x)=x^3', '\\frac{d}{dx}f(x)'])).toEqual(['3x^{2}']);
+    expect(await last(['\\lim_{x\\to0}\\frac{\\sin x}{x}'])).toEqual(['1']);
+    expect(await last(['\\lim_{x\\to\\infty}\\left(1+\\frac1x\\right)^x'])).toEqual([
+      '\\exponentialE ≈ 2.71828182845905',
+    ]);
+    expect(await last(['\\lim_{x\\to0^{+}}\\frac1x'])).toEqual(['\\infty']);
+    expect(await last(['\\sum_{k=1}^{n}k'])).toEqual(['\\frac{n^{2}}{2}+\\frac{n}{2}']);
+    expect(await last(['\\sum_{k=1}^{100}k'])).toEqual(['5050']);
+    expect(await last(['\\sum_{n=1}^{\\infty}\\frac{1}{n^2}'])).toEqual([
+      '\\frac{\\pi^{2}}{6} ≈ 1.64493406684823',
+    ]);
+    expect(await last(['\\prod_{k=1}^{5}k'])).toEqual(['120']);
+  });
+});

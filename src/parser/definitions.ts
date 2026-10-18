@@ -249,5 +249,15 @@ export function children(cst: Cst): Cst[] {
       return [cst.sub, cst.power, cst.arg].filter((c): c is Cst => c !== undefined);
     case 'relation':
       return cst.operands;
+    case 'integral':
+      return [cst.integrand, cst.variable, cst.lower, cst.upper].filter((c): c is Cst => !!c);
+    case 'deriv':
+      return [cst.operand, cst.variable];
+    case 'limit':
+      return [cst.operand, cst.variable, cst.point];
+    case 'bigop':
+      return [cst.index, cst.lower, cst.upper, cst.operand];
+    case 'sign':
+      return [];
   }
 }

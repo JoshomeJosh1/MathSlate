@@ -71,6 +71,19 @@ export function updateLatex(doc: Doc, id: RowId, latex: string): Doc {
   return { ...doc, rows: doc.rows.map((r) => (r.id === id ? { ...r, latex } : r)) };
 }
 
+/** Turns a row into a note or back into a math row (keeping its text). */
+export function setRowKind(doc: Doc, id: RowId, kind: 'note' | 'math'): Doc {
+  return {
+    ...doc,
+    rows: doc.rows.map((r) => {
+      if (r.id !== id) return r;
+      if (kind === 'note') return { ...r, kind: 'note' as const };
+      const math: InputRow = { id: r.id, latex: r.latex, outputs: r.outputs };
+      return math;
+    }),
+  };
+}
+
 /** Attaches a command's output row to an input row, with the next stable out_k label. */
 export function addOutput(doc: Doc, rowId: RowId, commandId: string): Doc {
   const spec: OutputSpec = { id: newId(), label: doc.nextOutputLabel, commandId };

@@ -195,6 +195,30 @@ class Serializer {
         const items = e.items.map(go).join(', ');
         return e.delim === 'set' ? `FiniteSet(${items})` : `Tuple(${items})`;
       }
+      case 'integral': {
+        const inner = new Set([...locals, nameKey(e.variable)]);
+        const body = this.expr(e.integrand, inner);
+        const x = this.symbol(e.variable);
+        if (e.lower && e.upper) {
+          // Definite integrals evaluate numerically (exactly when the bounds are symbolic).
+          return `_defint(${body}, ${x}, ${go(e.lower)}, ${go(e.upper)})`;
+        }
+        return `integrate(${body}, ${x})`;
+      }
+      case 'diff': {
+        const body = this.expr(e.operand, new Set([...locals, nameKey(e.variable)]));
+        return `diff(${body}, ${this.symbol(e.variable)}, ${e.order})`;
+      }
+      case 'limit': {
+        const body = this.expr(e.operand, new Set([...locals, nameKey(e.variable)]));
+        const dir = pyString(e.direction ?? '+-');
+        return `limit(${body}, ${this.symbol(e.variable)}, ${go(e.point)}, ${dir})`;
+      }
+      case 'bigop': {
+        const body = this.expr(e.operand, new Set([...locals, nameKey(e.index)]));
+        const fn = e.op === 'sum' ? 'summation' : 'product';
+        return `${fn}(${body}, (${this.symbol(e.index)}, ${go(e.lower)}, ${go(e.upper)}))`;
+      }
       case 'relation': {
         const parts = e.ops.map((op, k) => {
           const l = e.operands[k];

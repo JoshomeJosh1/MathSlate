@@ -73,6 +73,18 @@ def _derivative(fn, order, *args):
     return diff(fn(t), t, order).subs(t, args[0])
 
 
+def _defint(f, x, a, b):
+    """Definite integral: a number via numerical quadrature (works without a closed form),
+    or the exact result when the integrand or bounds have free parameters."""
+    params = (sympify(f).free_symbols - {x}) | sympify(a).free_symbols | sympify(b).free_symbols
+    if params:
+        return integrate(f, (x, a, b))
+    value = Integral(f, (x, a, b)).evalf(15)
+    if value.has(Integral):
+        raise MathSlateError("Could not evaluate this integral numerically")
+    return value
+
+
 def _evaluate(e):
     return e.doit() if isinstance(e, Basic) else e
 

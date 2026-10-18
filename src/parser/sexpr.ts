@@ -38,6 +38,16 @@ export function exprToSexpr(e: Expr): string {
       const tag = { paren: 'tuple', bracket: 'list', set: 'set' }[e.delim];
       return `(${tag}${e.items.map((a) => ` ${exprToSexpr(a)}`).join('')})`;
     }
+    case 'integral': {
+      const bounds = e.lower && e.upper ? ` ${exprToSexpr(e.lower)} ${exprToSexpr(e.upper)}` : '';
+      return `(int ${exprToSexpr(e.integrand)} ${nameKey(e.variable)}${bounds})`;
+    }
+    case 'diff':
+      return `(${e.partial ? 'pdiff' : 'diff'} ${exprToSexpr(e.operand)} ${nameKey(e.variable)} ${e.order})`;
+    case 'limit':
+      return `(lim ${exprToSexpr(e.operand)} ${nameKey(e.variable)} ${exprToSexpr(e.point)}${e.direction ? ` ${e.direction}` : ''})`;
+    case 'bigop':
+      return `(${e.op} ${exprToSexpr(e.operand)} ${nameKey(e.index)} ${exprToSexpr(e.lower)} ${exprToSexpr(e.upper)})`;
     case 'relation': {
       const parts = [exprToSexpr(e.operands[0] ?? e)];
       e.ops.forEach((op, k) => {

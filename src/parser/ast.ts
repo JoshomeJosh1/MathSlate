@@ -44,7 +44,23 @@ export type Expr =
   | { kind: 'abs'; arg: Expr; span: Span }
   | { kind: 'root'; arg: Expr; degree?: Expr; span: Span }
   | { kind: 'list'; delim: 'paren' | 'bracket' | 'set'; items: Expr[]; span: Span }
-  | { kind: 'relation'; ops: RelOp[]; operands: Expr[]; span: Span };
+  | { kind: 'relation'; ops: RelOp[]; operands: Expr[]; span: Span }
+  /**
+   * Calculus operators. `variable`/`index` is bound inside the operand (a document-level x = 3
+   * does not leak into \int x^2 dx).
+   */
+  | { kind: 'integral'; integrand: Expr; variable: Name; lower?: Expr; upper?: Expr; span: Span }
+  | { kind: 'diff'; operand: Expr; variable: Name; order: number; partial: boolean; span: Span }
+  | { kind: 'limit'; operand: Expr; variable: Name; point: Expr; direction?: '+' | '-'; span: Span }
+  | {
+      kind: 'bigop';
+      op: 'sum' | 'prod';
+      operand: Expr;
+      index: Name;
+      lower: Expr;
+      upper: Expr;
+      span: Span;
+    };
 
 /** What a row means, after classification of its top-level `=`. */
 export type Statement =
