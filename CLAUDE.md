@@ -124,7 +124,13 @@ names (`v_{max}`) are always upright; sequence indices (`a_{nk}`) are not. The r
 occurrences with source spans (`RowAnalysis.names`); `decorateLatex` rewrites them. `RowList`
 applies it to every row except the one being edited (no caret jumps), and passes defined names
 to the editor as inline shortcuts so they turn upright while typing. `\mathrm{speed}y` on a
-left-hand side defines `speedy`.
+left-hand side defines `speedy`. The same mechanism makes the `d` of recognised calculus notation
+upright (`\int x^2\,\mathrm{d}x`, `\frac{\mathrm{d}}{\mathrm{d}x}`; an integral's dx also gets a
+thin space), while `d` elsewhere stays a variable.
+
+MathLive shortcut overrides live in `MathLiveEditor.tsx`: `''` → two ordinary primes (not
+`\doubleprime`), `int` → a bare `\int` (bounds optional), and the `dx`/`dy`/`dt` →
+`\differentialD` shortcuts are removed (the parser decides what is a differential).
 
 ### Evaluation (`core/engine.ts`)
 

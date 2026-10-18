@@ -49,9 +49,10 @@ export interface NameOccurrence {
   /**
    * 'user': defined in the document (or a local); 'builtin': a built-in function; 'none':
    * unknown; 'subscript': a multi-letter subscript that is part of a name (v_{max}), always
-   * shown upright as typographic convention.
+   * shown upright as typographic convention; 'differential': the d of dx / d/dx in recognised
+   * calculus notation, shown upright.
    */
-  known: 'user' | 'builtin' | 'none' | 'subscript';
+  known: 'user' | 'builtin' | 'none' | 'subscript' | 'differential';
 }
 
 export interface ResolvedRow {

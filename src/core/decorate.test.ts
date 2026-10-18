@@ -45,6 +45,36 @@ describe('upright display of recognised multi-letter names', () => {
     expect(decorate('a_n=n^2', 'a_{nk}')).toEqual(['a_n=n^2', 'a_{nk}']); // n·k is an index
   });
 
+  it('shows the d of recognised calculus notation upright, and only there', () => {
+    // An integral's dx also gets a thin space before it (unless there is one already).
+    expect(decorate('\\int x^2dx')).toEqual(['\\int x^2\\,\\mathrm{d}x']);
+    expect(decorate('\\int_0^1x^2dx')).toEqual(['\\int_0^1x^2\\,\\mathrm{d}x']);
+    expect(decorate('\\frac{d}{dx}x^3')).toEqual(['\\frac{\\mathrm{d}}{\\mathrm{d}x}x^3']);
+    expect(decorate('\\frac{d^2}{dx^2}x^3')).toEqual(['\\frac{\\mathrm{d}^2}{\\mathrm{d}x^2}x^3']);
+    expect(decorate('\\int\\int xy\\,dx\\,dy')).toEqual([
+      '\\int\\int xy\\,\\mathrm{d}x\\,\\mathrm{d}y',
+    ]);
+    // Not calculus: d is an ordinary variable.
+    expect(decorate('2dx+1')).toEqual(['2dx+1']);
+    expect(decorate('\\frac{d}{x}')).toEqual(['\\frac{d}{x}']);
+    // Already upright spellings are kept.
+    expect(decorate('\\int x\\,\\differentialD x')).toEqual(['\\int x\\,\\differentialD x']);
+    expect(decorate('\\frac{\\partial}{\\partial x}x^2y')).toEqual([
+      '\\frac{\\partial}{\\partial x}x^2y',
+    ]);
+  });
+
+  it('keeps calculus meaning unchanged when the d turns upright', () => {
+    for (const latex of ['\\int_0^1x^2dx', '\\frac{d}{dx}x^3', '\\int\\int xy\\,dx\\,dy']) {
+      const [before] = analyzeRows([{ id: 'r', latex }]);
+      const [after] = analyzeRows([{ id: 'r', latex: decorate(latex)[0] ?? '' }]);
+      expect(after?.statement).toMatchObject({ kind: before?.statement?.kind });
+      expect(JSON.stringify(after?.statement).replace(/"span":\{[^}]*\}/g, '')).toBe(
+        JSON.stringify(before?.statement).replace(/"span":\{[^}]*\}/g, ''),
+      );
+    }
+  });
+
   it('leaves single letters and undefined runs alone', () => {
     expect(decorate('xy+2ab', 'x=1')).toEqual(['xy+2ab', 'x=1']);
   });

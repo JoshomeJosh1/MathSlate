@@ -56,12 +56,21 @@ export function MathLiveEditor({
     mf.menuItems = [];
     mf.smartFence = true;
     mf.value = value;
-    defaultShortcuts.current = {
+    const shortcuts: InlineShortcutDefinitions = {
       ...mf.inlineShortcuts,
       // MathLive turns '' into the single glyph \doubleprime (″) but ''' into three ordinary
       // primes; use ordinary primes for '' too so every derivative order looks the same.
       "''": '^{\\prime\\prime}',
+      // A bare integral sign: bounds are optional (type _ and ^ after it for a definite one).
+      int: '\\int',
+      '∂': '\\partial',
     };
+    // "dx" stays two letters: the parser recognises differentials in calculus notation and
+    // only those are shown upright (core/decorate.ts), so d·x elsewhere is not mangled.
+    delete shortcuts.dx;
+    delete shortcuts.dy;
+    delete shortcuts.dt;
+    defaultShortcuts.current = shortcuts;
     mf.inlineShortcuts = defaultShortcuts.current;
 
     const onInput = () => {

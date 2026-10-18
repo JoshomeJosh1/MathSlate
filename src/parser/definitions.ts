@@ -227,6 +227,17 @@ function mentionsLetter(cst: Cst, letter: string): boolean {
   return children(cst).some((c) => mentionsLetter(c, letter));
 }
 
+/** The "d"s in recognised calculus notation: an integral's dx, and the d's of d/dx. */
+export function differentialSpans(cst: Cst): { span: Span; integral: boolean }[] {
+  const own =
+    cst.type === 'integral' && cst.dSpan
+      ? [{ span: cst.dSpan, integral: true }]
+      : cst.type === 'deriv'
+        ? cst.dSpans.map((span) => ({ span, integral: false }))
+        : [];
+  return [...own, ...children(cst).flatMap(differentialSpans)];
+}
+
 export function children(cst: Cst): Cst[] {
   switch (cst.type) {
     case 'num':

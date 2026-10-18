@@ -115,6 +115,9 @@ export const DOCUMENTATION: readonly Entry[] = [
   {
     note: 'Write calculus directly. Indefinite integrals give an antiderivative; definite integrals give a number.',
   },
+  {
+    note: 'Type int for ∫, then the integrand and dx. For a definite integral, type _ and ^ right after ∫ to add the bounds. Type d/dx for a derivative and lim for a limit. The d of dx turns upright once it is recognised as calculus; elsewhere d is an ordinary variable.',
+  },
   '\\int x^2\\,dx',
   '\\int xe^{x}\\,dx',
   '\\int_0^1x^2\\,dx',

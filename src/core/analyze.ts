@@ -2,6 +2,7 @@ import { nameKey, type Statement } from '../parser/ast';
 import type { Cst } from '../parser/cst';
 import {
   definitionShape,
+  differentialSpans,
   settleHeads,
   type DefinitionHead,
   type DefinitionShape,
@@ -109,7 +110,18 @@ export function analyzeRows(
           defines: head ? nameKey(head.name) : null,
           refs: [...r.refs],
           interpretations: r.interpretations,
-          names: definedNameOccurrence(shape).concat(r.names),
+          names: [
+            // key 'dx' marks an integral's differential (it also gets a thin space before it).
+            ...(p.cst ? differentialSpans(p.cst) : []).map(
+              ({ span, integral }): NameOccurrence => ({
+                key: integral ? 'dx' : 'd',
+                span,
+                known: 'differential',
+              }),
+            ),
+            ...definedNameOccurrence(shape),
+            ...r.names,
+          ],
         };
       } catch (e) {
         if (!(e instanceof MathError)) throw e;

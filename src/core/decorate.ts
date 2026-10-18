@@ -13,7 +13,11 @@ export function decorateLatex(latex: string, names: readonly NameOccurrence[]): 
   const edits: { start: number; end: number; text: string }[] = [];
   for (const n of names) {
     const current = latex.slice(n.span.start, n.span.end);
-    const desired = desiredSpelling(n, current);
+    let desired = desiredSpelling(n, current);
+    // An integral's dx is set off from the integrand by a thin space: x^2\,dx.
+    if (desired && n.key === 'dx' && !/\\[,;: ]\s*$/.test(latex.slice(0, n.span.start))) {
+      desired = `\\,${desired}`;
+    }
     if (desired !== null && desired !== current) {
       edits.push({ start: n.span.start, end: n.span.end, text: desired });
     }
@@ -42,6 +46,9 @@ function desiredSpelling(n: NameOccurrence, current: string): string | null {
       return /^\\mathrm\{[A-Za-z]+\}$/.test(current) ? n.key : null;
     case 'subscript':
       return `\\mathrm{${n.key}}`;
+    case 'differential':
+      // A plain d becomes upright; \mathrm{d}, \differentialD and \partial are left as they are.
+      return current === 'd' ? '\\mathrm{d}' : null;
   }
 }
 

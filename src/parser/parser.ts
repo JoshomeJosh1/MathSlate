@@ -412,6 +412,7 @@ class Parser {
             variable: derivative.variable,
             order: derivative.order,
             partial: derivative.partial,
+            dSpans: derivative.dSpans,
             span: spanOf(t.span, operand.span),
           };
         }
@@ -563,20 +564,24 @@ class Parser {
   }
 
   /** Consumes the integral's differential and returns its variable. */
-  private parseDifferential(owner: Token): Cst {
+  private parseDifferential(owner: Token): { variable: Cst; dSpan?: Span } {
     const d = this.peek();
     if (this.atDifferential()) {
       if (d.kind === 'opname') {
         this.next();
         return {
-          type: 'letter',
-          name: d.name.slice(1),
-          span: { start: d.span.start, end: d.span.end },
+          variable: {
+            type: 'letter',
+            name: d.name.slice(1),
+            span: { start: d.span.start, end: d.span.end },
+          },
         };
       }
       this.next();
       const v = this.next();
-      if (v.kind === 'letter') return { type: 'letter', name: v.name, span: v.span };
+      if (v.kind === 'letter') {
+        return { variable: { type: 'letter', name: v.name, span: v.span }, dSpan: d.span };
+      }
     }
     throw new MathError(
       'Missing "dx" at the end of the integral',
@@ -634,18 +639,20 @@ class Parser {
       this.integrandDepth--;
     }
     this.integrandDepth++;
-    let variable: Cst;
+    let differential: { variable: Cst; dSpan?: Span };
     try {
-      variable = this.parseDifferential(t);
+      differential = this.parseDifferential(t);
     } finally {
       this.integrandDepth--;
     }
+    const { variable, dSpan } = differential;
     const node: Cst = {
       type: 'integral',
       integrand,
       variable,
       span: spanOf(t.span, variable.span),
     };
+    if (dSpan) node.dSpan = dSpan;
     if (lower && upper) {
       node.lower = lower;
       node.upper = upper;
@@ -722,7 +729,7 @@ class Parser {
 function derivativeOperator(
   num: Cst,
   den: Cst,
-): { variable: Cst; order: number; partial: boolean; operand?: Cst } | null {
+): { variable: Cst; order: number; partial: boolean; dSpans: Span[]; operand?: Cst } | null {
   const isD = (c: Cst | undefined): c is Cst & { type: 'letter' } =>
     c?.type === 'letter' && (c.name === 'd' || c.name === '\\partial');
   const integer = (c: Cst) =>
@@ -756,10 +763,17 @@ function derivativeOperator(
   if (v.type === 'letter' && order === 1) variable = v;
   if (v.type === 'pow' && v.base.type === 'letter' && integer(v.exp) === order) variable = v.base;
   if (!variable) return null;
-  const result: { variable: Cst; order: number; partial: boolean; operand?: Cst } = {
+  const result: {
+    variable: Cst;
+    order: number;
+    partial: boolean;
+    dSpans: Span[];
+    operand?: Cst;
+  } = {
     variable,
     order,
     partial: d.name === '\\partial',
+    dSpans: [d.span, dd.span],
   };
   if (operand) result.operand = operand;
   return result;
