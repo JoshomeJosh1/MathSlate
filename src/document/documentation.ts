@@ -27,7 +27,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Typing', open: true },
   {
-    note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, and the number on the left drags a row.',
+    note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, Esc leaves the row, and the number on the left drags a row.',
   },
   {
     note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
@@ -50,7 +50,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Click the arrow beside a folder to collapse or expand it. Folders only organise: rows in a collapsed folder still compute, and their definitions are used everywhere.',
   },
   {
-    note: 'Drag rows by their number. Dropped over the right half of a row in a folder, a row joins that folder; drag it into the indent on the left to take it out. Dragging a folder moves everything in it. Deleting a folder keeps its rows.',
+    note: 'Drag rows by their number. Dropped over the right half of a row in a folder, a row joins that folder (the folder lights up); over the right half of a row in no folder, the two make a new folder (outlined). Drag into the indent on the left to take a row out. A label by the pointer says what will happen. Dragging a folder moves everything in it; deleting a folder keeps its rows.',
   },
   '\\mathrm{side}=3',
   '\\mathrm{side}^2',

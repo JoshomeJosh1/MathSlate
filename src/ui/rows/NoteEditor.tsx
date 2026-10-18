@@ -80,7 +80,11 @@ export function NoteEditor({
         const el = e.currentTarget;
         const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
         const atEnd = el.selectionStart === el.value.length;
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          el.blur();
+          onKeyAction('escape');
+        } else if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           onKeyAction('enter');
         } else if (e.key === 'Backspace' && el.value === '') {

@@ -25,8 +25,10 @@ interface Props {
   number: number;
   showDebug: boolean;
   focused: boolean;
-  /** Shown indented, as a row of a folder (while dragged: where it would land). */
+  /** Shown indented, as a row of a folder. */
   inFolder: boolean;
+  /** While dragging: part of the folder the row would join, or the row it would group with. */
+  dropHighlight: 'folder' | 'new' | null;
   /** Folders: how many rows they hold (shown when collapsed). */
   folderSize: number;
   selected: boolean;
@@ -74,6 +76,8 @@ export function RowItem(props: Props) {
     props.inFolder && 'in-folder',
     props.selected && 'selected',
     props.movingWithFolder && 'moving-with-folder',
+    props.dropHighlight === 'folder' && 'drop-into',
+    props.dropHighlight === 'new' && 'drop-new-folder',
   ].filter(Boolean);
 
   const gutterLabel = isFolder

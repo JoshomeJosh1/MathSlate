@@ -37,11 +37,45 @@ const rowUnderPointer: CollisionDetection = (args) => {
   return under.length > 0 ? under : closestCenter(args);
 };
 
+/**
+ * Drop feedback, shown without changing any row's size (a size change would move the drop zones
+ * under the pointer and make the target flicker): the folder a row would join is highlighted
+ * (title and rows), and the row it would make a new folder with is outlined.
+ */
+function dropHighlight(row: InputRow, target: DropTarget | undefined): 'folder' | 'new' | null {
+  if (!target) return null;
+  if ('newFolderWith' in target) return target.newFolderWith === row.id ? 'new' : null;
+  return row.id === target.folder || row.folder === target.folder ? 'folder' : null;
+}
+
+/** What dropping will do, shown on the dragged row; null when it stays where it is. */
+function dragLabel(
+  row: InputRow,
+  target: DropTarget | undefined,
+  byId: ReadonlyMap<RowId, InputRow>,
+): string | null {
+  if (target === undefined) return null;
+  if (target === null) return row.folder ? 'Out of folder' : null;
+  if ('newFolderWith' in target) return 'New folder';
+  if (target.folder === row.folder) return null;
+  const title = byId.get(target.folder)?.latex.trim();
+  return title ? `Into ${title}` : 'Into folder';
+}
+
+/**
+ * The pointer's position, tracked separately from the drag events: the drop target and the label
+ * that follows the pointer are updated on every pointer move.
+ */
+let lastPointer: { x: number; y: number } | undefined;
+window.addEventListener('pointermove', (e) => {
+  lastPointer = { x: e.clientX, y: e.clientY };
+});
+
 /** The pointer's x during a drag, or undefined for keyboard dragging. */
-function pointerX({ activatorEvent, delta }: DragMoveEvent | DragEndEvent): number | undefined {
-  return 'clientX' in activatorEvent && typeof activatorEvent.clientX === 'number'
-    ? activatorEvent.clientX + delta.x
-    : undefined;
+function pointerX({ activatorEvent }: DragMoveEvent | DragEndEvent): number | undefined {
+  // Pointer events are mouse events; keyboard dragging has no pointer.
+  if (!(activatorEvent instanceof MouseEvent)) return undefined;
+  return lastPointer?.x ?? activatorEvent.clientX;
 }
 
 export function RowList({ showDebug }: { showDebug: boolean }) {
@@ -138,7 +172,40 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
     return dropTarget(active, over, pointerX(event), event.over.rect);
   };
 
+  // The latest drag event (what the row is over); the feedback is recomputed from it on every
+  // pointer move, and the label follows the pointer.
+  const lastDrag = useRef<DragMoveEvent | null>(null);
+  const label = useRef<HTMLDivElement>(null);
+  const placeLabel = () => {
+    if (label.current && lastPointer) {
+      label.current.style.transform = `translate(${lastPointer.x + 14}px, ${lastPointer.y + 16}px)`;
+    }
+  };
+  const showLanding = (event: DragMoveEvent) => {
+    lastDrag.current = event;
+    const target = landing(event);
+    setDragging((current) =>
+      current && !sameTarget(current.target, target)
+        ? { id: current.id, ...(target === undefined ? {} : { target }) }
+        : current,
+    );
+  };
+  const isDragging = dragging !== null;
+  useEffect(() => {
+    if (!isDragging) return;
+    placeLabel();
+    const onMove = () => {
+      placeLabel();
+      if (lastDrag.current) showLanding(lastDrag.current);
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+    };
+  });
+
   const onDragEnd = (event: DragEndEvent) => {
+    lastDrag.current = null;
     setDragging(null);
     const target = landing(event);
     if (!event.over || target === undefined) return;
@@ -185,6 +252,10 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
         docActions.setRowKind(row.id, action === 'toNote' ? 'note' : 'folder');
         focusRow(row.id, true);
         break;
+      case 'escape':
+        // The row has been left: hide its suggested commands too.
+        setFocusedRow(null);
+        break;
       case 'toHeading':
         docActions.setRowKind(row.id, 'note');
         docActions.updateLatex(row.id, '# ');
@@ -210,7 +281,9 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
     if (id) focusRow(id, true);
   };
 
-  const draggedFolder = dragging && byId.get(dragging.id)?.kind === 'folder' ? dragging.id : null;
+  const draggedRow = dragging ? byId.get(dragging.id) : undefined;
+  const draggedFolder = draggedRow?.kind === 'folder' ? draggedRow.id : null;
+  const labelText = draggedRow ? dragLabel(draggedRow, dragging?.target, byId) : null;
 
   return (
     <div className="row-list">
@@ -220,29 +293,16 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
         onDragStart={({ active }) => {
           setDragging({ id: String(active.id) });
         }}
-        onDragMove={(event) => {
-          const target = landing(event);
-          setDragging((current) =>
-            current && !sameTarget(current.target, target)
-              ? { id: current.id, ...(target === undefined ? {} : { target }) }
-              : current,
-          );
-        }}
+        onDragMove={showLanding}
         onDragEnd={onDragEnd}
         onDragCancel={() => {
+          lastDrag.current = null;
           setDragging(null);
         }}
       >
         <SortableContext items={visible.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {visible.map((row, index) => {
-            // While dragging, the dragged row shows the indent it will get, and a row it would
-            // make a new folder with shows its indent too.
             const target = dragging?.target;
-            const inFolder =
-              dragging?.id === row.id && target !== undefined
-                ? target !== null
-                : (target && 'newFolderWith' in target && target.newFolderWith === row.id) ||
-                  !!row.folder;
             return (
               <RowItem
                 key={row.id}
@@ -251,7 +311,8 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
                 number={numbers.get(row.id) ?? 0}
                 showDebug={showDebug}
                 focused={focusedRow === row.id}
-                inFolder={inFolder}
+                inFolder={!!row.folder}
+                dropHighlight={dropHighlight(row, target)}
                 folderSize={folderSizes.get(row.id) ?? 0}
                 selected={selected.has(row.id)}
                 movingWithFolder={draggedFolder !== null && row.folder === draggedFolder}
@@ -335,6 +396,12 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
           >
             Clear
           </button>
+        </div>
+      )}
+      {labelText && (
+        // What dropping will do, next to the pointer (positioned by placeLabel).
+        <div ref={label} className="drag-label" role="status">
+          {labelText}
         </div>
       )}
     </div>

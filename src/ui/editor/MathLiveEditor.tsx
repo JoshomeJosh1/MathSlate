@@ -182,6 +182,14 @@ export function MathLiveEditor({
         ev.stopPropagation();
         return;
       }
+      if (ev.key === 'Escape') {
+        // Leave the row (the `\` menu, when open, took Esc above).
+        ev.preventDefault();
+        ev.stopPropagation();
+        mf.blur();
+        callbacks.current.onKeyAction?.('escape');
+        return;
+      }
       if (ev.key === '\\' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
         ev.preventDefault();
         ev.stopPropagation();
