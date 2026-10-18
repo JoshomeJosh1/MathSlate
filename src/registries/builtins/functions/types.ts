@@ -16,6 +16,8 @@ export interface BuiltinFunction {
    * means what it would otherwise (Si → S·i, \zeta → the variable ζ).
    */
   callOnly?: boolean;
+  /** Other names for the same function (arccosh for arcosh); results use `name`. */
+  aliases?: readonly string[];
   /** Heading it is listed under in the `\` menu, e.g. 'Trigonometry'. Default 'Functions'. */
   group?: string;
 }

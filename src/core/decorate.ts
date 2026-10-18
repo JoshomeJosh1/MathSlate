@@ -1,6 +1,6 @@
 import { GREEK, LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
 import type { NameOccurrence } from '../parser/resolve';
-import { builtinFunctions } from '../registries/builtins/functions';
+import { builtinFunctions, type BuiltinFunction } from '../registries/builtins/functions';
 import type { RowAnalysis } from './analyze';
 import { needsBrackets } from './builtinScope';
 
@@ -76,15 +76,18 @@ export function functionLatex(name: string): string {
 const multiLetterFunctions = () =>
   [...builtinFunctions.values()].filter((f) => /^[A-Za-z]{2,}$/.test(f.name));
 
+/** A function's name and its other spellings (arcosh, arccosh). */
+const spellings = (f: BuiltinFunction) => [f.name, ...(f.aliases ?? [])];
+
 /**
  * Editor macros for the built-in function commands LaTeX itself does not define (`\lcm`,
  * `\artanh`, `\erf`, …), each displayed as an upright operator name.
  */
 export function functionMacros(): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const f of multiLetterFunctions()) {
-    if (!LATEX_FUNCTION_COMMANDS.has(f.name) && !GREEK.has(f.name)) {
-      out[f.name] = `\\operatorname{${f.name}}`;
+  for (const name of multiLetterFunctions().flatMap(spellings)) {
+    if (!LATEX_FUNCTION_COMMANDS.has(name) && !GREEK.has(name)) {
+      out[name] = `\\operatorname{${name}}`;
     }
   }
   return out;
@@ -98,7 +101,8 @@ export function functionMacros(): Record<string, string> {
 export function functionShortcuts(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const f of multiLetterFunctions()) {
-    if (!f.callOnly) out[f.name] = functionLatex(f.name);
+    if (f.callOnly) continue;
+    for (const name of spellings(f)) out[name] = functionLatex(name);
   }
   return out;
 }
@@ -111,7 +115,7 @@ export function bracketOnlyShortcuts(): Set<string> {
   return new Set(
     multiLetterFunctions()
       .filter((f) => !f.callOnly && needsBrackets(f))
-      .map((f) => f.name),
+      .flatMap(spellings),
   );
 }
 

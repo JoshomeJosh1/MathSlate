@@ -135,6 +135,9 @@ export const DOCUMENTATION: readonly Entry[] = [
   'csch(\\ln2)',
 
   { note: '## Inverse hyperbolic functions' },
+  {
+    note: 'Named with "ar" (area sine, …); the "arc" spellings arcsinh, arccosh, arctanh, arccoth, arcsech and arccsch work too.',
+  },
   { note: 'arsinh(x) — inverse hyperbolic sine, ln(x + √(x² + 1)). Also sinh^{-1}.' },
   'arsinh(0)',
   'arsinh(1)',
@@ -146,6 +149,18 @@ export const DOCUMENTATION: readonly Entry[] = [
   'artanh(0)',
   'artanh(\\frac{1}{2})',
   '\\frac{d}{dx}artanh(x)',
+  'arctanh(\\frac{1}{2})',
+  { note: 'arcoth(x) — inverse hyperbolic cotangent, for |x| > 1. Also coth^{-1}.' },
+  'arcoth(2)',
+  '\\coth^{-1}\\left(3\\right)',
+  '\\frac{d}{dx}arcoth(x)',
+  { note: 'arsech(x) — inverse hyperbolic secant, for 0 < x ≤ 1. Also sech^{-1}.' },
+  'arsech(1)',
+  'arsech(\\frac{1}{2})',
+  'arcsech(\\frac{1}{2})',
+  { note: 'arcsch(x) — inverse hyperbolic cosecant, for x ≠ 0. Also csch^{-1}.' },
+  'arcsch(1)',
+  'arccsch(1)',
 
   { note: '## Exponentials and logarithms' },
   { note: 'exp(x) — the exponential function eˣ. Type exp, or e^x.' },

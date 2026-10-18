@@ -161,7 +161,8 @@ def _solve(e, var):
 
 _FUNCTION_NAMES = {
     "asin": "arcsin", "acos": "arccos", "atan": "arctan", "acot": "arccot", "asec": "arcsec",
-    "acsc": "arccsc", "asinh": "arsinh", "acosh": "arcosh", "atanh": "artanh", "log": "ln",
+    "acsc": "arccsc", "asinh": "arsinh", "acosh": "arcosh", "atanh": "artanh", "acoth": "arcoth",
+    "asech": "arsech", "acsch": "arcsch", "log": "ln",
     "ceiling": "ceil", "Max": "max", "Min": "min",
     # Special functions (MathSlate names are in registries/builtins/functions/defs/special.ts).
     "uppergamma": "gamma", "beta": "Beta", "polygamma": "digamma", "fresnels": "fresnelS",

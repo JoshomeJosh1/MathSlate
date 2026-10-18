@@ -60,7 +60,8 @@ export const LATEX_FUNCTION_COMMANDS = new Set([
 /** LaTeX operator commands we read as functions (rendered upright, take an argument). */
 export const FUNCTION_COMMANDS = new Set([
   'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'arccot', 'arcsec',
-  'arccsc', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch', 'arsinh', 'arcosh', 'artanh', 'ln',
+  'arccsc', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch', 'arsinh', 'arcosh', 'artanh',
+  'arcoth', 'arsech', 'arcsch', 'ln',
   'log', 'lg', 'lb', 'exp', 'det', 'dim', 'gcd', 'max', 'min', 'sup', 'inf', 'lim', 'arg', 'deg',
   'ker', 'hom', 'Pr', 'tr', 'rank', 'mod',
 ]); // prettier-ignore

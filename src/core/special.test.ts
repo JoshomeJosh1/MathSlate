@@ -44,6 +44,10 @@ describe('special functions', () => {
     ['C\\left(x+1\\right)', '(* C (+ x 1))'],
     ['S\\left(x\\right)', '(* S x)'],
     ['\\operatorname{S}', 'S'],
+    // Inverse hyperbolic functions: ISO names, "arc" spellings, and ^{-1}
+    ['arcoth(2)+arsech(x)+arcsch(x)', '(+ (+ (arcoth 2) (arsech x)) (arcsch x))'],
+    ['arccosh(2)+\\arcsech\\left(x\\right)', '(+ (arcosh 2) (arsech x))'],
+    ['\\coth^{-1}\\left(3\\right)', '(arcoth 3)'],
     // A user definition still shadows a built-in name
     [['erf(t)=t^2', 'erf(3)'], '(erf 3)'],
   ])('%j → %s', (input, expected) => {

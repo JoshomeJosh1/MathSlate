@@ -20,6 +20,7 @@ export function createBuiltinScope(): SymbolTable {
     // letters keep their ordinary meaning (lcmab is l·c·m·a·b, not "lcm" next to ab).
     if (needsBrackets(f)) info.callOnly = true;
     entries.push(info);
+    for (const alias of f.aliases ?? []) entries.push({ ...info, key: alias, canonical: f.name });
     const latex = FUNCTION_LATEX[f.name];
     if (latex) {
       const key = functionAliasKey(latex, SUBSCRIPT_FIRST.has(f.name));
