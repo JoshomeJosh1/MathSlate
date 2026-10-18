@@ -4,18 +4,27 @@ import { MathLiveView } from './MathLiveView';
 import type { CommandCompletion } from './MathEditor';
 import type { MenuLayout } from './matchCompletions';
 
+/** Where the menu belongs: the caret's x, and the top and bottom of the math field (viewport). */
+export interface MenuAnchor {
+  x: number;
+  top: number;
+  bottom: number;
+}
+
 interface Props {
   query: string;
   layout: MenuLayout;
   active: number;
-  /** Viewport position under the caret. */
-  anchor: { x: number; y: number };
+  anchor: MenuAnchor;
   /** LaTeX that displays each editor macro (`\lcm` → \operatorname{lcm}) for the previews. */
   macros: Readonly<Record<string, string>> | undefined;
   onPick: (item: CommandCompletion) => void;
 }
 
 const WIDTH = 400;
+/** Space between the menu and the math field, and kept free at the window's edges. */
+const GAP = 6;
+const MARGIN = 8;
 
 /**
  * The `\` menu: the commands MathSlate understands as a grid of tiles in groups, filtered by what
@@ -24,17 +33,38 @@ const WIDTH = 400;
  * <body> so a transformed (dragged) row cannot offset its fixed position.
  */
 export function CommandMenu({ query, layout, active, anchor, macros, onPick }: Props) {
+  const box = useRef<HTMLDivElement>(null);
   const grid = useRef<HTMLDivElement>(null);
+
+  // Below the field if it fits, else on whichever side has more room (above, near the bottom of
+  // the window), shrinking the list to fit. Measured before painting, on every render (the
+  // height changes as the list is filtered).
+  useLayoutEffect(() => {
+    const menu = box.current;
+    if (!menu) return;
+    if (grid.current) grid.current.style.maxHeight = '';
+    const below = window.innerHeight - anchor.bottom - GAP - MARGIN;
+    const above = anchor.top - GAP - MARGIN;
+    const natural = menu.offsetHeight;
+    const placeBelow = natural <= below || below >= above;
+    const room = placeBelow ? below : above;
+    if (natural > room && grid.current) {
+      grid.current.style.maxHeight = `${Math.max(80, grid.current.offsetHeight - (natural - room))}px`;
+    }
+    menu.style.top = `${placeBelow ? anchor.bottom + GAP : anchor.top - GAP - menu.offsetHeight}px`;
+  });
+
   useLayoutEffect(() => {
     grid.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
   }, [active, query]);
 
   const current = layout.items[active];
-  const left = Math.max(8, Math.min(anchor.x, window.innerWidth - WIDTH - 8));
+  const left = Math.max(MARGIN, Math.min(anchor.x, window.innerWidth - WIDTH - MARGIN));
   return createPortal(
     <div
+      ref={box}
       className="command-menu"
-      style={{ left, top: anchor.y + 6, width: WIDTH }}
+      style={{ left, width: WIDTH }}
       // Keep focus in the math field when the menu is clicked.
       onMouseDown={(e) => {
         e.preventDefault();

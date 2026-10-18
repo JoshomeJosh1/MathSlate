@@ -4,7 +4,7 @@ import { MathfieldElement, type InlineShortcutDefinitions } from 'mathlive';
 // so MathLive must not try to load them itself.
 import 'mathlive/fonts.css';
 import './mathlive.css';
-import { CommandMenu } from './CommandMenu';
+import { CommandMenu, type MenuAnchor } from './CommandMenu';
 import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
 import { emptyStructureRange } from './emptyStructure';
@@ -138,7 +138,7 @@ export function MathLiveEditor({
       const caret = mf.shadowRoot?.querySelector('.ML__caret') ?? null;
       const field = mf.getBoundingClientRect();
       const x = caret ? caret.getBoundingClientRect().left : field.left;
-      setMenu({ query: '', active: 0, anchor: { x, y: field.bottom } });
+      setMenu({ query: '', active: 0, anchor: { x, top: field.top, bottom: field.bottom } });
     };
     const pick = (item: CommandCompletion) => {
       setMenu(null);
@@ -368,7 +368,7 @@ const ARROWS: Partial<Record<string, 'left' | 'right' | 'up' | 'down'>> = {
 interface MenuState {
   query: string;
   active: number;
-  anchor: { x: number; y: number };
+  anchor: MenuAnchor;
 }
 
 /**

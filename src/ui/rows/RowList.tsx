@@ -154,17 +154,23 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
     }
   });
 
-  // Escape clears the selection.
+  // Esc anywhere in the slate lets go: it clears the selection, leaves whatever has focus (e.g. a
+  // folder's arrow after clicking it; the editors handle Esc themselves first), and hides the
+  // suggested commands.
+  const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (selected.size === 0) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelected(new Set());
+      if (e.key !== 'Escape') return;
+      setSelected((current) => (current.size > 0 ? new Set() : current));
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && list.current?.contains(focused)) focused.blur();
+      setFocusedRow(null);
     };
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [selected]);
+  }, []);
 
   // `afterRender` defers focusing until the next commit; needed when the focused field is about
   // to be removed, otherwise MathLive cancels its (asynchronous) focus when the old field goes.
@@ -303,7 +309,7 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
   const outline = dropOutline(visible, dragging?.id, dragging?.target);
 
   return (
-    <div className="row-list">
+    <div className="row-list" ref={list}>
       <DndContext
         sensors={sensors}
         collisionDetection={rowUnderPointer}
