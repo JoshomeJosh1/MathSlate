@@ -15,7 +15,11 @@ export interface SymbolInfo {
   /** For builtin functions: what `name^{-1}` means (sin → arcsin). */
   inverse?: string;
   /** For builtin functions written with a subscript argument (\log_2 x → log(x, 2)). */
-  subscriptArg?: boolean;
+  subscriptArg?: 'first' | 'last';
+  /** Only callable when followed by parentheses; otherwise the name is an ordinary symbol. */
+  callOnly?: boolean;
+  /** For alias symbols (\Gamma, \operatorname{S}): the built-in function they name. */
+  canonical?: string;
 }
 
 const CALLABLE: ReadonlySet<SymbolKind> = new Set(['function', 'builtinFunction']);

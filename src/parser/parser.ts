@@ -316,7 +316,9 @@ class Parser {
       case 'letter':
         return { type: 'letter', name: t.name, span: t.span };
       case 'opname':
-        return { type: 'opname', name: t.name, span: t.span };
+        return t.operator
+          ? { type: 'opname', name: t.name, operator: true, span: t.span }
+          : { type: 'opname', name: t.name, span: t.span };
       case 'special':
         return { type: 'special', id: t.id, span: t.span };
       case 'placeholder':

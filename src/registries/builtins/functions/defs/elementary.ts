@@ -31,7 +31,7 @@ const functions: BuiltinFunction[] = [
     name: 'log',
     arity: [1, 2],
     description: 'Logarithm (base 10, or \\log_b x)',
-    subscriptArg: true,
+    subscriptArg: 'last',
   },
   unary('floor', 'Round down'),
   unary('ceil', 'Round up'),

@@ -11,6 +11,7 @@ import type { Cst } from './cst';
 import type { DefinitionShape } from './definitions';
 import { subscriptText } from './definitions';
 import { MathError, spanOf, type Span } from './errors';
+import { functionAliasKey } from './functionNames';
 import { isCallable, isSequence, type SymbolInfo, type SymbolTable } from './symbols';
 
 /**
@@ -327,7 +328,9 @@ class Resolver {
           const found =
             (subText !== null && scope.lookup(nameKey(makeName(key, subText)))) ||
             scope.lookup(key);
-          if (found) {
+          // Special functions only claim their letters when called: Si(x) yes, Si alone is S·i.
+          const blocked = isCallable(found) && found.callOnly && !isParenGroup(factors[j]);
+          if (found && !blocked) {
             merged = {
               core: { type: 'opname', name: key, span: spanOf(start.core.span, last.core.span) },
               wrappers: last.wrappers,
@@ -356,6 +359,13 @@ class Resolver {
   ): { expr: Expr; consumedNext: boolean } {
     const span = spanOf(f.core.span, f.sub?.span ?? f.core.span);
     if (/^[A-Za-z]{2,}$/.test(base)) this.recordName(base, f, scope);
+    // Special functions by their LaTeX spelling: \operatorname{S}(x), \operatorname{J}_{n}(x).
+    if (f.core.type === 'opname' && f.core.operator) {
+      const alias = scope.lookup(functionAliasKey(`\\operatorname{${base}}`, f.sub !== undefined));
+      if (isCallable(alias) && isParenGroup(next)) {
+        return this.finishName(makeName(base), alias, f, next, scope, span, f.sub);
+      }
+    }
     if (f.sub) {
       const subText = subscriptText(f.sub);
       if (subText !== null) {
@@ -367,6 +377,10 @@ class Resolver {
         }
       }
       const baseInfo = scope.lookup(base);
+      // besselJ_0(x): a function whose first argument is written as a subscript.
+      if (isCallable(baseInfo) && baseInfo.subscriptArg === 'first' && isParenGroup(next)) {
+        return this.finishName(makeName(base), baseInfo, f, next, scope, span, f.sub);
+      }
       const interpreted = baseInfo ? undefined : this.interpret(base, 'subscripted');
       if (isSequence(baseInfo) || interpreted?.kind === 'sequence') {
         if (baseInfo) this.ref(base, baseInfo);
@@ -393,13 +407,17 @@ class Resolver {
 
   private finishName(
     name: Name,
-    info: SymbolInfo | undefined,
+    symbol: SymbolInfo | undefined,
     f: Factor,
     next: Factor | undefined,
     scope: SymbolTable,
     span: Span,
+    /** A subscript that is the function's first argument (J_n(x)). */
+    leadingArg?: Cst,
   ): { expr: Expr; consumedNext: boolean } {
     const display = displayName(nameKey(name));
+    // A special function without parentheses is just a name (\zeta alone is the variable ζ).
+    const info = isCallable(symbol) && symbol.callOnly && !isParenGroup(next) ? undefined : symbol;
     if (info && isCallable(info)) {
       const primes = f.wrappers.filter((w): w is Wrapper & { kind: 'prime' } => w.kind === 'prime');
       const other = f.wrappers.find((w) => w.kind !== 'prime');
@@ -429,7 +447,14 @@ class Resolver {
           span: callSpan,
         };
       } else {
-        node = this.call(name, argsCst, scope, callSpan, info);
+        const fn = info.canonical ? makeName(info.canonical) : name;
+        node = this.call(
+          fn,
+          leadingArg ? [leadingArg, ...argsCst] : argsCst,
+          scope,
+          callSpan,
+          info,
+        );
       }
       return { expr: this.applyWrappers(node, next.wrappers, scope), consumedNext: true };
     }
@@ -585,6 +610,10 @@ function unwrap(item: Cst): Factor {
     throw new MathError('A subscript must follow a name', node.sub.span);
   }
   return { core: node, wrappers, span: item.span };
+}
+
+function isParenGroup(f: Factor | undefined): boolean {
+  return f?.core.type === 'group' && f.core.delim === 'paren' && f.sub === undefined;
 }
 
 /** The variable of an integral, derivative, limit or sum: a single letter (Latin or Greek). */

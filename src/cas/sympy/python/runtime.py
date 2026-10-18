@@ -7,7 +7,7 @@ import time
 from functools import reduce
 
 from sympy import *  # noqa: F401,F403  (generated programs use SymPy names directly)
-from sympy.core.function import AppliedUndef
+from sympy.core.function import Application, AppliedUndef
 from sympy.core.relational import Relational
 from sympy.matrices import MatrixBase
 from sympy.sets.sets import EmptySet as _EmptySetClass
@@ -126,7 +126,9 @@ def _defint(f, x, a, b):
         exact = _with_time_limit(_EXACT_INTEGRAL_SECONDS, lambda: integrate(f, (x, a, b)))
     except Exception:  # noqa: BLE001 - _Timeout, or SymPy giving up: fall back to numbers
         exact = None
-    if exact is not None and not exact.has(Integral) and not _has_unknown(_tree(exact)):
+    # Any closed form counts, special functions included (Fresnel, erf, hypergeometric…); only an
+    # unevaluated integral means there is none.
+    if exact is not None and not exact.has(Integral):
         return exact
     value = Integral(f, (x, a, b)).evalf(15)
     if value.has(Integral):
@@ -161,10 +163,17 @@ _FUNCTION_NAMES = {
     "asin": "arcsin", "acos": "arccos", "atan": "arctan", "acot": "arccot", "asec": "arcsec",
     "acsc": "arccsc", "asinh": "arsinh", "acosh": "arcosh", "atanh": "artanh", "log": "ln",
     "ceiling": "ceil", "Max": "max", "Min": "min",
+    # Special functions (MathSlate names are in registries/builtins/functions/defs/special.ts).
+    "uppergamma": "gamma", "beta": "Beta", "polygamma": "digamma", "fresnels": "fresnelS",
+    "fresnelc": "fresnelC", "polylog": "Li", "besselj": "besselJ", "bessely": "besselY",
+    "besseli": "besselI", "besselk": "besselK", "airyai": "Ai", "airybi": "Bi",
+    "elliptic_k": "ellipticK", "elliptic_e": "ellipticE",
 }
 _KNOWN_FUNCTIONS = {
     "sin", "cos", "tan", "cot", "sec", "csc", "sinh", "cosh", "tanh", "coth", "sech", "csch",
     "floor", "sign", "binomial", "exp", "gcd", "lcm",
+    "erf", "erfc", "erfi", "gamma", "lowergamma", "zeta", "digamma", "Si", "Ci", "Shi", "Chi",
+    "Ei", "li", "LambertW",
 }
 _RELATIONS = {"==": "=", "<": "<", ">": ">", "<=": "<=", ">=": ">=", "!=": "!="}
 
@@ -245,6 +254,9 @@ def _tree(e):
         return {"t": "and", "items": [_tree(a) for a in e.args]}
     if isinstance(e, AppliedUndef) and len(e.args) == 1:
         return {"t": "index", "seq": e.func.__name__, "i": _tree(e.args[0])}
+    if isinstance(e, polygamma) and e.args[0] == 0:
+        # SymPy writes digamma(x) as polygamma(0, x).
+        return {"t": "call", "fn": "digamma", "args": [_tree(e.args[1])]}
     if isinstance(e, Function) or isinstance(e, Application):
         name = type(e).__name__
         name = _FUNCTION_NAMES.get(name, name)
@@ -276,22 +288,46 @@ def _value(e):
 def _numeric_value(e):
     """Decimal approximation for exact, non-integer numbers (shown as ≈ …)."""
     try:
-        if not isinstance(e, Basic) or not e.is_number or e.is_Integer or e.is_Float:
+        # free_symbols, not is_number: SymPy says hyper(...) is not a number though it evaluates.
+        if not isinstance(e, Basic) or isinstance(e, MatrixBase) or e.free_symbols:
+            return None
+        if e.is_Integer or e.is_Float:
             return None
         if e.has(S.Infinity, S.NegativeInfinity, S.ComplexInfinity, S.NaN):
             return None
         n = N(e, 15)
-        if n.has(S.NaN):
+        if not n.is_number or n.has(S.NaN):
             return None
         return _value(n)
     except Exception:  # noqa: BLE001 - approximation is best-effort
         return None
 
 
+def _tidy(e):
+    """Presentation clean-ups that keep the value: drop SymPy's internal polar numbers
+    (polylog(2, x*exp_polar(2*I*pi)) → polylog(2, x)) and cancel gamma ratios
+    (Γ(3/4)/Γ(7/4) → 4/3), which special-function results are full of."""
+    if not isinstance(e, Basic):
+        return e
+    try:
+        if e.has(exp_polar):
+            # exp_polar(2πi) is SymPy's branch bookkeeping; as an ordinary number it is 1.
+            e = unpolarify(e).replace(exp_polar, exp)
+        if e.has(gamma):
+            e = _with_time_limit(2.0, lambda: gammasimp(e))
+    except Exception:  # noqa: BLE001 - tidying is optional
+        pass
+    return e
+
+
 def _describe(result):
     if isinstance(result, tuple) and result and result[0] == "solutions":
         _, var, sols = result
-        return {"kind": "solutions", "variable": var.name, "solutions": [_value(s) for s in sols]}
+        return {
+            "kind": "solutions",
+            "variable": var.name,
+            "solutions": [_value(_tidy(s)) for s in sols],
+        }
     if isinstance(result, tuple) and result and result[0] == "inequality":
         return {"kind": "expr", **_value(result[1]), "numeric": None}
     if isinstance(result, tuple) and result and result[0] == "factorint":
@@ -310,6 +346,7 @@ def _describe(result):
         return {"kind": "expr", "tree": node, "latex": text, "numeric": None}
     if result is S.true or result is S.false or isinstance(result, bool):
         return {"kind": "boolean", "value": bool(result)}
+    result = _tidy(result)
     return {"kind": "expr", **_value(result), "numeric": _numeric_value(result)}
 
 

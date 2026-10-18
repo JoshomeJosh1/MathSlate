@@ -11,7 +11,8 @@ import type { RelSymbol, SpecialId } from './lexer';
 export type Cst =
   | { type: 'num'; value: string; span: Span }
   | { type: 'letter'; name: string; span: Span } // x, \alpha
-  | { type: 'opname'; name: string; span: Span } // \operatorname{gcd}, or a bare \max with no argument
+  /** \operatorname{gcd} (operator: true), \mathrm{speed}, or a bare \max with no argument. */
+  | { type: 'opname'; name: string; operator?: boolean; span: Span }
   | { type: 'special'; id: SpecialId; span: Span }
   | { type: 'sub'; base: Cst; sub: Cst; span: Span }
   | { type: 'pow'; base: Cst; exp: Cst; span: Span }

@@ -14,7 +14,7 @@ export type Token =
   /** A single-letter identifier: Latin letter or Greek command name such as `\alpha`. */
   | { kind: 'letter'; name: string; span: Span }
   /** Multi-letter upright name: `\operatorname{gcd}`, `\mathrm{max}`, `\text{speed}`. */
-  | { kind: 'opname'; name: string; span: Span }
+  | { kind: 'opname'; name: string; operator?: boolean; span: Span }
   /** LaTeX function operator such as `\sin`, `\log`, `\det` (name without backslash). */
   | { kind: 'fn'; name: string; span: Span }
   | { kind: 'special'; id: SpecialId; span: Span }
@@ -258,11 +258,16 @@ export function tokenize(src: string): Token[] {
         if (!/^[A-Za-z]+$/.test(text)) {
           throw new MathError(`Unsupported name "${text}"`, span());
         }
-        push(
-          text.length === 1
-            ? { kind: 'letter', name: text, span: span() }
-            : { kind: 'opname', name: text, span: span() },
-        );
+        if (name === 'operatorname') {
+          // Always an operator name, even a single letter: \operatorname{S}(x) is Fresnel S.
+          push({ kind: 'opname', name: text, operator: true, span: span() });
+        } else {
+          push(
+            text.length === 1
+              ? { kind: 'letter', name: text, span: span() }
+              : { kind: 'opname', name: text, span: span() },
+          );
+        }
         continue;
       }
       if (name === 'begin' || name === 'end') {

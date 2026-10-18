@@ -163,6 +163,18 @@ next one answers (**fallback**, shown "via sympy").
   sequences, built-in sequences, inequalities, one-sided limits or integer factorisation — those
   are declined so SymPy answers.
 
+### Special functions
+
+`registries/builtins/functions/defs/special.ts` (erf, Γ, ζ, Fresnel S/C, Si/Ci, Li_s, Lambert W,
+Bessel J/Y/I/K, Airy, elliptic…) are `callOnly`: only functions when followed by brackets, so
+`2\zeta`, `Si` (S·i) and `C(x+1)` keep their ordinary meaning. Conventional spellings
+(`\Gamma`, `\operatorname{S}`, `\operatorname{J}_{n}`) live in `parser/functionNames.ts`; the
+builtin scope adds alias symbols for them, and `printLatex` prints them, so results round-trip.
+`\operatorname{X}` is always an operator name (even one letter); a subscript can be a function's
+first argument (`subscriptArg: 'first'`). SymPy results are tidied (`_tidy`: `gammasimp`,
+`exp_polar` removed); anything we do not model (₂F₁, Euler's γ) is shown with SymPy's LaTeX.
+Definite integrals keep any closed form SymPy finds, special functions included.
+
 ### Key design decisions
 
 - **The AST is CAS-agnostic.** Backend knowledge lives only in `src/cas/<backend>/`.
@@ -184,6 +196,8 @@ next one answers (**fallback**, shown "via sympy").
   and `core/calculus.test.ts` (rows → S-expression or `!message`); round-trips in
   `parser/printLatex.test.ts`; Nerdamer end to end in `cas/nerdamer/nerdamer.test.ts` (fast);
   SymPy end to end in `cas/sympy/sympy.integration.test.ts` (including the whole documentation).
+- Vitest's on-disk module cache is disabled (`fsModuleCache: false`): it does not notice new
+  files matched by a registry's `import.meta.glob`, so new entries went missing in tests.
 - Editing files: LaTeX is full of backslashes — use the Edit/Write tools, not shell/Python string
   replacement (escape sequences like `\t`, `\f`, `\p` get mangled).
 - Prettier formats everything (single quotes, width 100). Commit after each working step.

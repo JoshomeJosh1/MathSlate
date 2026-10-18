@@ -13,5 +13,9 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     // Integration tests load real SymPy (Pyodide) and are run separately: npm run test:integration
     exclude: process.env.INTEGRATION ? [] : ['src/**/*.integration.test.ts'],
+    // The on-disk transform cache is keyed by file contents, so a registry index's
+    // import.meta.glob result goes stale when a file is added to defs/ — new registry entries
+    // would silently be missing from tests.
+    fsModuleCache: false,
   },
 });

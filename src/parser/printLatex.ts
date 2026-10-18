@@ -1,4 +1,5 @@
 import type { ConstantId, Expr, Name, RelOp, Statement } from './ast';
+import { FUNCTION_LATEX, SUBSCRIPT_FIRST } from './functionNames';
 import { FUNCTION_COMMANDS } from './lexer';
 
 /**
@@ -48,8 +49,12 @@ export function printName(name: Name): string {
 }
 
 function printFunctionName(name: Name): string {
-  if (name.sub === undefined && FUNCTION_COMMANDS.has(name.base)) return `\\${name.base}`;
-  return printName(name);
+  if (name.sub !== undefined) return printName(name);
+  const special = FUNCTION_LATEX[name.base];
+  if (special) return special;
+  if (FUNCTION_COMMANDS.has(name.base)) return `\\${name.base}`;
+  // Multi-letter function names are upright operator names: \operatorname{erf}, \operatorname{lcm}.
+  return /^[A-Za-z]{2,}$/.test(name.base) ? `\\operatorname{${name.base}}` : printName(name);
 }
 
 export function printLatex(e: Expr): string {
@@ -95,6 +100,11 @@ export function printLatex(e: Expr): string {
       }
       if (e.fn.base === 'binomial' && e.args.length === 2 && e.args[0] && e.args[1]) {
         return `\\binom{${printLatex(e.args[0])}}{${printLatex(e.args[1])}}`;
+      }
+      if (SUBSCRIPT_FIRST.has(e.fn.base) && e.args.length >= 2 && e.args[0]) {
+        // J_n(x), Li_s(x): the first argument is a subscript.
+        const [first, ...rest] = e.args;
+        return `${printFunctionName(e.fn)}_{${printLatex(first)}}${paren(rest.map(printLatex).join(','))}`;
       }
       return `${printFunctionName(e.fn)}${paren(e.args.map(printLatex).join(','))}`;
     case 'derivative':

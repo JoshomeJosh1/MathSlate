@@ -1,5 +1,5 @@
 export interface BuiltinFunction {
-  /** Name as typed or as its LaTeX command without backslash: 'sin', 'gcd', 'floor'. */
+  /** Name as typed or as its LaTeX command without backslash: 'sin', 'gcd', 'erf', 'besselJ'. */
   name: string;
   /** Allowed argument counts [min, max]; max may be Infinity. */
   arity: readonly [number, number];
@@ -7,8 +7,13 @@ export interface BuiltinFunction {
   /** Function that `name^{-1}` denotes, e.g. sin → arcsin. */
   inverse?: string;
   /**
-   * For functions written with a subscript, e.g. \log_2 x: the subscript becomes this extra
-   * trailing argument (log(x, 2)).
+   * A subscript supplies an argument: 'last' for \log_2 x → log(x, 2), 'first' for
+   * J_n(x) → besselJ(n, x).
    */
-  subscriptArg?: boolean;
+  subscriptArg?: 'first' | 'last';
+  /**
+   * Only a function when followed by parentheses (special functions): without them the name
+   * means what it would otherwise (Si → S·i, \zeta → the variable ζ).
+   */
+  callOnly?: boolean;
 }

@@ -64,6 +64,8 @@ export function MathLiveEditor({
       // A bare integral sign: bounds are optional (type _ and ^ after it for a definite one).
       int: '\\int',
       '∂': '\\partial',
+      // Typing "partial" gives ∂, so partial/partial x makes ∂/∂x like d/dx makes d/dx.
+      partial: '\\partial',
     };
     // "dx" stays two letters: the parser recognises differentials in calculus notation and
     // only those are shown upright (core/decorate.ts), so d·x elsewhere is not mangled.

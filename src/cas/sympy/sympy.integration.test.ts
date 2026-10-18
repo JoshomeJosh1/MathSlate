@@ -163,8 +163,11 @@ describe('calculus notation end to end', { timeout: 60_000 }, () => {
       '\\frac{\\sqrt{\\pi}}{2} ≈ 0.886226925452758',
     ]);
     expect(await last(['\\int_0^{\\pi}x\\sin x\\,dx'])).toEqual(['\\pi ≈ 3.14159265358979']);
-    // Only special functions (Fresnel) or no closed form at all: the number.
-    expect(await last(['\\int_0^1\\sin\\left(x^2\\right)dx'])).toEqual(['0.310268301723381']);
+    // Special-function closed forms are exact too.
+    expect(await last(['\\int_0^1\\sin\\left(x^2\\right)dx'])).toEqual([
+      '\\frac{\\sqrt{2}\\sqrt{\\pi}\\operatorname{S}\\left(\\frac{\\sqrt{2}}{\\sqrt{\\pi}}\\right)}{2} ≈ 0.310268301723381',
+    ]);
+    // No closed form at all: the number.
     expect(await last(['\\int_0^1\\exponentialE^{x}\\tan x\\,dx'])).toHaveLength(1);
     // Symbolic bounds or parameters: exact.
     expect(await last(['\\int_0^ax\\,dx'])).toEqual(['\\frac{a^{2}}{2}']);
@@ -197,6 +200,45 @@ describe('calculus notation end to end', { timeout: 60_000 }, () => {
       '\\frac{\\pi^{2}}{6} ≈ 1.64493406684823',
     ]);
     expect(await last(['\\prod_{k=1}^{5}k'])).toEqual(['120']);
+  });
+});
+
+describe('special functions with SymPy', { timeout: 60_000 }, () => {
+  it('evaluates them exactly, with decimals', async () => {
+    expect(await last(['\\Gamma\\left(5\\right)+\\Gamma\\left(\\frac12\\right)'])).toEqual([
+      '\\sqrt{\\pi}+24 ≈ 25.7724538509055',
+    ]);
+    expect(await last(['\\zeta\\left(2\\right)'])).toEqual([
+      '\\frac{\\pi^{2}}{6} ≈ 1.64493406684823',
+    ]);
+    expect(await last(['Beta(2,3)'])).toEqual(['\\frac{1}{12} ≈ 0.0833333333333333']);
+    expect(await last(['Li_2(1)'])).toEqual(['\\frac{\\pi^{2}}{6} ≈ 1.64493406684823']);
+    expect(await last(['ellipticK(0)+ellipticE(0)'])).toEqual(['\\pi ≈ 3.14159265358979']);
+  });
+
+  it('shows special functions in results, in conventional notation, re-parseable', async () => {
+    expect(await last(['\\int\\frac{\\sin x}{x}dx'])).toEqual([
+      '\\operatorname{Si}\\left(x\\right)',
+    ]);
+    expect(await last(['\\int_0^1\\exponentialE^{-x^2}dx'])).toEqual([
+      '\\frac{\\sqrt{\\pi}\\operatorname{erf}\\left(1\\right)}{2} ≈ 0.746824132812427',
+    ]);
+    expect(await last(['\\int\\frac{\\ln\\left(1-x\\right)}{x}dx'])).toEqual([
+      '-\\operatorname{Li}_{2}\\left(x\\right)',
+    ]);
+    expect(await last(['LambertW(1)'])).toEqual([
+      '\\operatorname{W}\\left(1\\right) ≈ 0.567143290409784',
+    ]);
+  });
+
+  it('shows rarer functions with SymPy notation', async () => {
+    const [hyper] = await last(['\\int_0^1\\sqrt{1+x^3}\\,dx']);
+    expect(hyper).toContain('{}_{2}F_{1}');
+    expect(hyper).toContain('≈ 1.11144');
+    // ψ(1) = −γ (Euler–Mascheroni constant), shown with SymPy's notation.
+    const [eulerGamma] = await last(['\\psi\\left(1\\right)']);
+    expect(eulerGamma).toContain('\\gamma');
+    expect(eulerGamma).toContain('≈ -0.577215664901533');
   });
 });
 
