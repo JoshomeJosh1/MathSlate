@@ -35,6 +35,8 @@ export interface OutputView {
   provisional?: boolean;
   /** The preferred backend could not do this, so another one answered. */
   fallback?: boolean;
+  /** A quick first answer (e.g. a definite integral numerically); the full one is on its way. */
+  refining?: boolean;
   /** True while a recomputation is pending and `value` is from the previous version. */
   stale?: boolean;
 }
@@ -57,6 +59,8 @@ interface Job {
   outputId: string;
   key: string;
   run: () => Promise<CasResult>;
+  /** A quick first pass shown while `run` (which may be slow) is in progress. */
+  preview?: () => Promise<CasResult>;
   /** Automatic evaluation: hide results that add nothing (see `addsNothing`). */
   auto?: { inputLatex: string; computes: boolean };
 }
@@ -185,7 +189,7 @@ export class Engine {
                 ...(old?.value ? { value: old.value, stale: true } : {}),
               },
         );
-        if (!unchanged || old.provisional)
+        if (!unchanged || old.provisional || old.refining)
           jobs.push({ ...job, rowId: row.id, outputId: output.id, key });
       };
 
@@ -205,10 +209,21 @@ export class Engine {
               locals: c.target.locals,
             }),
         };
+        // Definite integrals: show a quick numeric value first, then the exact one if it exists.
+        const preview = ctx.facts.hasDefiniteIntegral
+          ? () =>
+              this.cas.run({
+                operation: { op: 'evaluate', numericIntegrals: true },
+                target: target.expr,
+                env,
+                locals: target.locals,
+              })
+          : undefined;
         addJob(
           { id: `${row.id}:auto`, commandId: 'auto', title: '', label: null },
           {
             run: () => evaluate.run(ctx, this.cas),
+            ...(preview ? { preview } : {}),
             auto: {
               inputLatex: printLatex(target.expr),
               computes: analysis.refs.length > 0 || ctx.facts.hasOperators,
@@ -236,46 +251,62 @@ export class Engine {
     this.keys = keys;
     this.publish(rows);
 
+    // Quick first passes for every row before any slow full evaluation, so one hard row never
+    // holds up the rest of the document.
+    for (const job of jobs) {
+      if (!job.preview) continue;
+      if (generation !== this.generation) return;
+      const result = await job.preview();
+      if (generation !== this.generation) return;
+      if (result.ok) this.apply(job, result, true);
+    }
     for (const job of jobs) {
       if (generation !== this.generation) return;
       const result = await job.run();
       if (generation !== this.generation) return;
-      const current = new Map(this.snapshot.rows);
-      const view = current.get(job.rowId);
-      if (!view) continue;
-      const outputs = view.outputs.flatMap((o): OutputView[] => {
-        if (o.id !== job.outputId) return [o];
-        if (!result.ok) {
-          const failed: OutputView = {
-            ...o,
-            state: 'error',
-            error: result.error,
-            backend: result.backend,
-            stale: false,
-          };
-          // A fallback backend's failure is retried once the preferred backend is ready.
-          if (result.provisional) failed.provisional = true;
-          else delete failed.provisional;
-          return [failed];
-        }
-        if (job.auto && addsNothing(result.value, job.auto)) return [];
-        const next: OutputView = {
+      this.apply(job, result, false);
+    }
+  }
+
+  /** Publishes one job's result into its output row. */
+  private apply(job: Job, result: CasResult, refining: boolean): void {
+    const current = new Map(this.snapshot.rows);
+    const view = current.get(job.rowId);
+    if (!view) return;
+    const outputs = view.outputs.flatMap((o): OutputView[] => {
+      if (o.id !== job.outputId) return [o];
+      if (!result.ok) {
+        const failed: OutputView = {
           ...o,
-          state: 'ok',
-          value: result.value,
+          state: 'error',
+          error: result.error,
           backend: result.backend,
           stale: false,
         };
-        if (result.provisional) next.provisional = true;
-        else delete next.provisional;
-        if (result.fallback) next.fallback = true;
-        else delete next.fallback;
-        delete next.error;
-        return [next];
-      });
-      current.set(job.rowId, { ...view, outputs });
-      this.publish(current);
-    }
+        // A fallback backend's failure is retried once the preferred backend is ready.
+        if (result.provisional) failed.provisional = true;
+        else delete failed.provisional;
+        return [failed];
+      }
+      if (job.auto && addsNothing(result.value, job.auto)) return [];
+      const next: OutputView = {
+        ...o,
+        state: 'ok',
+        value: result.value,
+        backend: result.backend,
+        stale: false,
+      };
+      if (result.provisional) next.provisional = true;
+      else delete next.provisional;
+      if (result.fallback) next.fallback = true;
+      else delete next.fallback;
+      if (refining) next.refining = true;
+      else delete next.refining;
+      delete next.error;
+      return [next];
+    });
+    current.set(job.rowId, { ...view, outputs });
+    this.publish(current);
   }
 
   private publish(rows: Map<RowId, RowView>): void {

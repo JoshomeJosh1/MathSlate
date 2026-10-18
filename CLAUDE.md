@@ -151,8 +151,12 @@ next one answers (**fallback**, shown "via sympy").
 
 - **SymPy** turns each request into a self-contained Python program (`serialize.ts`): constants
   become variables, functions Python defs, sequences memoised `_Sequence` objects filled
-  bottom-up (no recursion limit). Definite integrals are numeric via `_defint` (exact if the
-  bounds/integrand have parameters). Results return as a JSON tree shaped for display and become
+  bottom-up (no recursion limit). Definite integrals are evaluated in **two passes**: the engine
+  first sends `{ op: 'evaluate', numericIntegrals: true }` (`_defint_numeric`: quadrature,
+  milliseconds; shown with "finding exact value…"), and only after every row's quick pass the
+  full request (`_defint`: exact `integrate` under a 12 s soft time limit — a `sys.settrace` hook,
+  since Pyodide cannot interrupt Python — kept only if it is elementary, i.e. our result tree can
+  represent it; otherwise the number). Results return as a JSON tree shaped for display and become
   our AST. A request over 20 s kills and replaces the worker.
 - **Nerdamer** (pure JS, instant): definitions are inlined (`cas/inline.ts`), symbols renamed to
   `sym0…`, results parsed from Nerdamer's text output (`parseText.ts`). No series, recursive

@@ -2,6 +2,8 @@
 # (see serialize.ts) in a fresh namespace that starts from this module's globals, then calls
 # _run_program(), which returns a JSON string.
 import json
+import sys
+import time
 from functools import reduce
 
 from sympy import *  # noqa: F401,F403  (generated programs use SymPy names directly)
@@ -73,12 +75,59 @@ def _derivative(fn, order, *args):
     return diff(fn(t), t, order).subs(t, args[0])
 
 
-def _defint(f, x, a, b):
-    """Definite integral: a number via numerical quadrature (works without a closed form),
-    or the exact result when the integrand or bounds have free parameters."""
+class _Timeout(Exception):
+    pass
+
+
+def _with_time_limit(seconds, fn):
+    """Runs fn, raising _Timeout once `seconds` have passed. Pyodide cannot interrupt Python from
+    outside, so a trace hook checks the clock on every function call (SymPy is pure Python, so
+    long computations make plenty of calls); line-level tracing stays off to keep it cheap."""
+    deadline = time.monotonic() + seconds
+
+    def tracer(frame, event, arg):
+        if time.monotonic() > deadline:
+            raise _Timeout()
+        return None
+
+    sys.settrace(tracer)
+    try:
+        return fn()
+    finally:
+        sys.settrace(None)
+
+
+# The quick numeric answer is already on screen (see _defint_numeric), so the exact attempt can
+# take a while; it stays under the worker's 20 s request timeout.
+_EXACT_INTEGRAL_SECONDS = 12.0
+
+
+def _defint_numeric(f, x, a, b):
+    """Fast first pass for definite integrals: numerical quadrature only (exact when there are
+    free parameters, as no number exists then)."""
     params = (sympify(f).free_symbols - {x}) | sympify(a).free_symbols | sympify(b).free_symbols
     if params:
         return integrate(f, (x, a, b))
+    value = Integral(f, (x, a, b)).evalf(15)
+    if value.has(Integral):
+        raise MathSlateError("Could not evaluate this integral numerically")
+    return value
+
+
+def _defint(f, x, a, b):
+    """Definite integral. The exact value when SymPy finds one in elementary terms (shown with a
+    decimal approximation); otherwise a number by numerical quadrature, which works even without a
+    closed form (sin(x^2)) where the exact form would be special functions. With free parameters
+    in the integrand or bounds the result can only be exact."""
+    params = (sympify(f).free_symbols - {x}) | sympify(a).free_symbols | sympify(b).free_symbols
+    if params:
+        return integrate(f, (x, a, b))
+    try:
+        exact = _with_time_limit(_EXACT_INTEGRAL_SECONDS, lambda: integrate(f, (x, a, b)))
+    except Exception:  # noqa: BLE001 - _Timeout, or SymPy giving up: fall back to numbers
+        exact = None
+    if exact is not None and not exact.has(Integral) and not _has_unknown(_tree(exact)):
+        return exact
     value = Integral(f, (x, a, b)).evalf(15)
     if value.has(Integral):
         raise MathSlateError("Could not evaluate this integral numerically")

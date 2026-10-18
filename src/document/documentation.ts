@@ -113,7 +113,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { note: '# Calculus' },
   {
-    note: 'Write calculus directly. Indefinite integrals give an antiderivative; definite integrals give a number.',
+    note: 'Write calculus directly. Indefinite integrals give an antiderivative. Definite integrals show a number straight away, then the exact value when one exists (like 1/3 ≈ 0.333); without a closed form the number stays.',
   },
   {
     note: 'Type int for ∫, then the integrand and dx. For a definite integral, type _ and ^ right after ∫ to add the bounds. Type d/dx for a derivative and lim for a limit. The d of dx turns upright once it is recognised as calculus; elsewhere d is an ordinary variable.',

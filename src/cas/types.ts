@@ -7,7 +7,11 @@ import type { Definition, Expr, Name } from '../parser/ast';
 
 /** Operations a backend may support. Variables are chosen by the caller, never guessed by backends. */
 export type CasOperation =
-  | { op: 'evaluate' }
+  /**
+   * `numericIntegrals`: evaluate definite integrals numerically only — a fast first pass shown
+   * while the exact evaluation (the default) is still running.
+   */
+  | { op: 'evaluate'; numericIntegrals?: boolean }
   | { op: 'simplify' }
   | { op: 'factor' }
   | { op: 'expand' }

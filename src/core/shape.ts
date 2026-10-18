@@ -28,6 +28,8 @@ export interface ShapeFacts {
   hasFunctions: boolean;
   /** Contains calculus operators or sequence terms: evaluating it computes something. */
   hasOperators: boolean;
+  /** Contains a definite integral (evaluated in two passes: quick numeric, then exact). */
+  hasDefiniteIntegral: boolean;
 }
 
 export interface Target {
@@ -60,6 +62,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
   let hasFunctions = false;
   let hasExpandableProduct = false;
   let hasOperators = false;
+  let hasDefiniteIntegral = false;
   const bound: string[] = [];
   const within = (name: Name, body: Expr) => {
     bound.push(nameKey(name));
@@ -76,6 +79,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
       }
       case 'integral':
         hasOperators = true;
+        if (e.lower) hasDefiniteIntegral = true;
         within(e.variable, e.integrand);
         if (e.lower) visit(e.lower);
         if (e.upper) visit(e.upper);
@@ -154,6 +158,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
     isConstant: freeVars.length === 0,
     hasFunctions,
     hasOperators,
+    hasDefiniteIntegral,
   };
 }
 

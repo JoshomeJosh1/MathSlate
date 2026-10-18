@@ -64,6 +64,14 @@ export function OutputRow({ output, onPromote, onRemove }: Props) {
             via {output.backend}
           </span>
         )}
+        {output.state === 'ok' && output.refining && (
+          <span
+            className="output-backend"
+            title="A quick numerical answer; looking for an exact one"
+          >
+            finding exact value…
+          </span>
+        )}
         {output.state === 'ok' && output.fallback && output.backend && (
           <span className="output-backend" title="The preferred CAS could not do this">
             via {output.backend}

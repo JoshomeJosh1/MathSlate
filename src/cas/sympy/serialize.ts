@@ -81,7 +81,11 @@ class Serializer {
   private readonly symbols = new Set<string>();
   private readonly defined = new Map<string, DefKind>();
 
-  constructor(env: readonly Definition[]) {
+  constructor(
+    env: readonly Definition[],
+    /** Fast first pass: definite integrals numerically only. */
+    private readonly numericIntegrals = false,
+  ) {
     for (const d of env) {
       const key = nameKey(d.name);
       const kind: DefKind = d.kind === 'defConst' ? 'const' : d.kind === 'defFunc' ? 'func' : 'seq';
@@ -200,8 +204,10 @@ class Serializer {
         const body = this.expr(e.integrand, inner);
         const x = this.symbol(e.variable);
         if (e.lower && e.upper) {
-          // Definite integrals evaluate numerically (exactly when the bounds are symbolic).
-          return `_defint(${body}, ${x}, ${go(e.lower)}, ${go(e.upper)})`;
+          // Exact when SymPy finds an elementary closed form, else numeric (see runtime.py);
+          // the quick first pass is numeric only.
+          const fn = this.numericIntegrals ? '_defint_numeric' : '_defint';
+          return `${fn}(${body}, ${x}, ${go(e.lower)}, ${go(e.upper)})`;
         }
         return `integrate(${body}, ${x})`;
       }
@@ -274,7 +280,8 @@ class Serializer {
 
 /** Full Python program for a request; the runtime reads `_result`. */
 export function serializeRequest(request: CasRequest): string {
-  const s = new Serializer(request.env);
+  const op = request.operation;
+  const s = new Serializer(request.env, op.op === 'evaluate' && op.numericIntegrals === true);
   const env = s.environment(request.env);
   const target = s.expr(request.target, new Set(request.locals ?? []));
   const result = `_result = ${s.operation(request.operation, target)}`;

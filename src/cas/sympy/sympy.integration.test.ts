@@ -152,14 +152,20 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
 });
 
 describe('calculus notation end to end', { timeout: 60_000 }, () => {
-  it('integrates: indefinite symbolically, definite numerically', async () => {
+  it('integrates: indefinite symbolically, definite exactly when possible', async () => {
     expect(await last(['\\int x^2\\,dx'])).toEqual(['\\frac{x^{3}}{3}']);
     expect(await last(['\\int x\\exponentialE^{x}\\,dx'])).toEqual([
       '\\left(x-1\\right)\\exponentialE^{x}',
     ]);
-    expect(await last(['\\int_0^1x^2\\,dx'])).toEqual(['0.333333333333333']);
+    // Exact value (elementary closed form) with its decimal.
+    expect(await last(['\\int_0^1x^2\\,dx'])).toEqual(['\\frac{1}{3} ≈ 0.333333333333333']);
+    expect(await last(['\\int_0^{\\infty}\\exponentialE^{-x^2}dx'])).toEqual([
+      '\\frac{\\sqrt{\\pi}}{2} ≈ 0.886226925452758',
+    ]);
+    expect(await last(['\\int_0^{\\pi}x\\sin x\\,dx'])).toEqual(['\\pi ≈ 3.14159265358979']);
+    // Only special functions (Fresnel) or no closed form at all: the number.
     expect(await last(['\\int_0^1\\sin\\left(x^2\\right)dx'])).toEqual(['0.310268301723381']);
-    expect(await last(['\\int_0^{\\infty}\\exponentialE^{-x^2}dx'])).toEqual(['0.886226925452758']);
+    expect(await last(['\\int_0^1\\exponentialE^{x}\\tan x\\,dx'])).toHaveLength(1);
     // Symbolic bounds or parameters: exact.
     expect(await last(['\\int_0^ax\\,dx'])).toEqual(['\\frac{a^{2}}{2}']);
   });
