@@ -20,6 +20,9 @@ interface Props {
   onChange: (latex: string) => void;
   onKeyAction: (action: EditorKeyAction) => void;
   onFocus: () => void;
+  onBlur: () => void;
+  /** Inline shortcuts for the math editor (defined multi-letter names → upright). */
+  shortcuts: Readonly<Record<string, string>>;
   onDelete: () => void;
   onAddCommand: (command: Command) => void;
   onRemoveOutput: (outputId: string) => void;
@@ -72,6 +75,8 @@ export function RowItem(props: Props) {
             onChange={props.onChange}
             onKeyAction={props.onKeyAction}
             onFocus={props.onFocus}
+            onBlur={props.onBlur}
+            shortcuts={props.shortcuts}
             ariaLabel={`Input row ${index + 1}`}
           />
         )}

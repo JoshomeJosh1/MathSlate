@@ -34,7 +34,9 @@ export const EXAMPLES: readonly Entry[] = [
   'speed=12',
   'time=3',
   'distance=speed\\cdot time',
-  { note: 'Multi-letter names work once defined: "speed" above is one name, not s·p·e·e·d.' },
+  {
+    note: 'Multi-letter names work once defined, and turn upright to show they are recognised: "speed" is one name, not s·p·e·e·d.',
+  },
 
   { note: '# Sequences' },
   'u_n=u_{n-1}+3',

@@ -86,7 +86,7 @@ describe('printLatex round-trip', () => {
   it('prints readable canonical LaTeX', () => {
     expect(roundTrip(['2x+1']).printed).toBe('2x+1');
     expect(roundTrip(['xy']).printed).toBe('x\\cdot y');
-    expect(roundTrip(['speed=3']).printed).toBe('\\operatorname{speed}=3');
+    expect(roundTrip(['speed=3']).printed).toBe('\\mathrm{speed}=3');
     expect(roundTrip(['f(x)=x^2']).printed).toBe('f\\left(x\\right)=x^{2}');
     expect(roundTrip(['\\sin^2x']).printed).toBe('\\sin\\left(x\\right)^{2}');
   });

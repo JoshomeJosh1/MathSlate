@@ -102,6 +102,16 @@ Registries use Vite's `import.meta.glob('./defs/*.ts', { eager: true })`, so a n
 - Juxtaposed `xy` prints back as `x\cdot y` (so it cannot merge into a defined `xy`); multi-letter
   names print as `\operatorname{speed}`. `printLatex` round-trips (tested).
 
+### Upright names (`core/decorate.ts`)
+
+A recognised multi-letter name is spelled `\mathrm{speed}` in the row's LaTeX (rendered upright);
+built-in functions typed as letters become `\operatorname{lcm}`; a `\mathrm{…}` name that is no
+longer defined reverts to plain letters. So upright ⇔ recognised. The resolver reports every
+multi-letter name occurrence with its source span (`RowAnalysis.names`); `decorateLatex` rewrites
+those spans. `RowList` applies it to every row except the one being edited (no caret jumps), and
+passes defined names to the editor as inline shortcuts so they turn upright while typing.
+`\mathrm{speed}y` on a left-hand side defines `speedy`.
+
 ### Evaluation (`core/engine.ts`)
 
 On each document change (debounced): analyse → dependency graph (`deps.ts`: cycles are errors on

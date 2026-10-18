@@ -21,6 +21,8 @@ export type DefinitionHead =
 export interface DefinitionShape {
   head: DefinitionHead;
   rhs: Cst;
+  /** Source span of the defined name's base (without subscript), e.g. `speed` in `speed_1 = …`. */
+  baseSpan: Span | null;
 }
 
 /** Extracts the raw head; `seq` vs. named-constant ambiguity is settled by `settleHeads`. */
@@ -30,7 +32,13 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
   if (!lhs || !rhs) return null;
 
   const plain = plainName(lhs);
-  if (plain) return { head: { kind: 'const', name: plain, nameSpan: lhs.span }, rhs };
+  if (plain) {
+    return {
+      head: { kind: 'const', name: plain, nameSpan: lhs.span },
+      rhs,
+      baseSpan: nameBaseSpan(lhs),
+    };
+  }
 
   // a_n or a_5
   if (lhs.type === 'sub') {
@@ -38,12 +46,20 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
     if (base && base.sub === undefined) {
       const index = integerValue(lhs.sub);
       if (index !== null) {
-        return { head: { kind: 'seqBase', name: base, index, nameSpan: lhs.span }, rhs };
+        return {
+          head: { kind: 'seqBase', name: base, index, nameSpan: lhs.span },
+          rhs,
+          baseSpan: nameBaseSpan(lhs.base),
+        };
       }
       const indexVar = lhs.sub.type === 'letter' ? makeName(lhs.sub.name) : null;
       if (indexVar) {
         const usesIndex = mentionsLetter(rhs, indexVar.base);
-        return { head: { kind: 'seq', name: base, indexVar, usesIndex, nameSpan: lhs.span }, rhs };
+        return {
+          head: { kind: 'seq', name: base, indexVar, usesIndex, nameSpan: lhs.span },
+          rhs,
+          baseSpan: nameBaseSpan(lhs.base),
+        };
       }
     }
   }
@@ -59,7 +75,11 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
       if (fn && params.length > 0 && params.every((p): p is Name => p !== null)) {
         const keys = new Set(params.map((p) => `${p.base}_${p.sub ?? ''}`));
         if (keys.size === params.length) {
-          return { head: { kind: 'func', name: fn, params, nameSpan: lhs.span }, rhs };
+          return {
+            head: { kind: 'func', name: fn, params, nameSpan: lhs.span },
+            rhs,
+            baseSpan: nameBaseSpan(fnCst),
+          };
         }
       }
     }
@@ -103,21 +123,17 @@ export function plainName(cst: Cst, allowIndexLikeSub = false): Name | null {
     case 'opname':
       return makeName(cst.name);
     case 'juxt': {
-      if (!cst.items.every((c) => c.type === 'letter' && /^[A-Za-z]$/.test(c.name))) {
-        // Allow a subscript on the last letter: s p e e d _1
-        const last = cst.items[cst.items.length - 1];
-        const init = cst.items.slice(0, -1);
-        if (
-          last?.type === 'sub' &&
-          init.every((c) => c.type === 'letter' && /^[A-Za-z]$/.test(c.name))
-        ) {
-          const base = plainName({ ...cst, items: [...init, last.base] });
-          const sub = subscriptText(last.sub);
-          return base && base.sub === undefined && sub !== null ? makeName(base.base, sub) : null;
-        }
-        return null;
+      // A run of letters and upright names: s p e e d, or \mathrm{speed} y (= speedy).
+      const items = cst.items;
+      const last = items[items.length - 1];
+      const init = items.slice(0, -1);
+      if (items.every(isNamePart)) return makeName(items.map(namePartText).join(''));
+      // Allow a subscript on the last part: s p e e d _1
+      if (last?.type === 'sub' && init.every(isNamePart) && isNamePart(last.base)) {
+        const sub = subscriptText(last.sub);
+        return sub !== null ? makeName([...init, last.base].map(namePartText).join(''), sub) : null;
       }
-      return makeName(cst.items.map((c) => (c.type === 'letter' ? c.name : '')).join(''));
+      return null;
     }
     case 'sub': {
       const base = plainName(cst.base);
@@ -128,6 +144,37 @@ export function plainName(cst: Cst, allowIndexLikeSub = false): Name | null {
         return null;
       }
       return makeName(base.base, sub);
+    }
+    default:
+      return null;
+  }
+}
+
+function isNamePart(c: Cst): boolean {
+  return (
+    (c.type === 'letter' && /^[A-Za-z]$/.test(c.name)) ||
+    (c.type === 'opname' && /^[A-Za-z]+$/.test(c.name))
+  );
+}
+
+function namePartText(c: Cst): string {
+  return c.type === 'letter' || c.type === 'opname' ? c.name : '';
+}
+
+/** Span of the base of a name CST (letters/upright parts, excluding a trailing subscript). */
+export function nameBaseSpan(cst: Cst): Span | null {
+  switch (cst.type) {
+    case 'letter':
+    case 'opname':
+      return cst.span;
+    case 'sub':
+      return nameBaseSpan(cst.base);
+    case 'juxt': {
+      const first = cst.items[0];
+      const last = cst.items[cst.items.length - 1];
+      if (!first || !last) return null;
+      const end = last.type === 'sub' ? last.base.span.end : last.span.end;
+      return { start: first.span.start, end };
     }
     default:
       return null;

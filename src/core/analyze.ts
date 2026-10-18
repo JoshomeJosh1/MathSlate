@@ -8,7 +8,7 @@ import {
 } from '../parser/definitions';
 import { MathError } from '../parser/errors';
 import { parseLatex } from '../parser/parser';
-import { resolveRow, type ResolveOptions } from '../parser/resolve';
+import { resolveRow, type NameOccurrence, type ResolveOptions } from '../parser/resolve';
 import { meaningOf } from '../registries/interpretations';
 import { SymbolTable, type SymbolInfo } from '../parser/symbols';
 import { createBuiltinScope } from './builtinScope';
@@ -36,6 +36,8 @@ export interface RowAnalysis {
   refs: string[];
   /** Symbol interpretations this row relied on: symbol → option id. */
   interpretations: Map<string, string>;
+  /** Multi-letter names in the source and whether they are recognised (for upright display). */
+  names: NameOccurrence[];
 }
 
 export interface AnalyzeOptions {
@@ -71,7 +73,7 @@ export function analyzeRows(
   const heads = settleHeads(shapes.map((s) => s?.head ?? null));
   const settledShapes: (DefinitionShape | null)[] = shapes.map((s, i) => {
     const head = heads[i];
-    return s && head ? { head, rhs: s.rhs } : null;
+    return s && head ? { ...s, head } : null;
   });
 
   // 3. Duplicate definitions are errors on every row involved.
@@ -94,6 +96,7 @@ export function analyzeRows(
           defines: null,
           refs: [],
           interpretations: new Map(),
+          names: [],
         };
       }
       try {
@@ -106,6 +109,7 @@ export function analyzeRows(
           defines: head ? nameKey(head.name) : null,
           refs: [...r.refs],
           interpretations: r.interpretations,
+          names: definedNameOccurrence(shape).concat(r.names),
         };
       } catch (e) {
         if (!(e instanceof MathError)) throw e;
@@ -116,6 +120,7 @@ export function analyzeRows(
           defines: shape ? nameKey(shape.head.name) : null,
           refs: [],
           interpretations: new Map(),
+          names: [],
         };
       }
     });
@@ -128,6 +133,12 @@ export function analyzeRows(
     excluded = new Set([...excluded, ...selfReferencing]);
   }
   throw new Error('analyzeRows: did not converge');
+}
+
+/** The name a definition row defines, if it is a multi-letter name (shown upright). */
+function definedNameOccurrence(shape: DefinitionShape | null): NameOccurrence[] {
+  if (!shape?.baseSpan || !/^[A-Za-z]{2,}$/.test(shape.head.name.base)) return [];
+  return [{ key: shape.head.name.base, span: shape.baseSpan, known: 'user' }];
 }
 
 function buildTable(

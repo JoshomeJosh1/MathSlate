@@ -41,7 +41,8 @@ function prec(e: Expr): number {
 const paren = (s: string) => `\\left(${s}\\right)`;
 
 export function printName(name: Name): string {
-  const base = /^[A-Za-z]{2,}$/.test(name.base) ? `\\operatorname{${name.base}}` : name.base;
+  // Multi-letter names print upright, as recognised names are shown in the editor (decorate.ts).
+  const base = /^[A-Za-z]{2,}$/.test(name.base) ? `\\mathrm{${name.base}}` : name.base;
   return name.sub === undefined ? base : `${base}_{${name.sub}}`;
 }
 

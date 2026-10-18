@@ -40,12 +40,24 @@ export interface ResolveOptions {
   ) => { meaning: InterpretedMeaning; optionId: string } | undefined;
 }
 
+/** A multi-letter name in the source, and what it resolved to. */
+export interface NameOccurrence {
+  /** The name's base, e.g. 'speed' (subscripts are not included). */
+  key: string;
+  /** Source span of the base: the letter run or the \mathrm{…}/\operatorname{…} command. */
+  span: Span;
+  /** 'user': defined in the document (or a local); 'builtin': a built-in function; 'none': unknown. */
+  known: 'user' | 'builtin' | 'none';
+}
+
 export interface ResolvedRow {
   statement: Statement;
   /** Keys of non-local, non-builtin symbols this row reads (for the dependency graph). */
   refs: Set<string>;
   /** Interpretations applied while resolving: symbol → option id. */
   interpretations: Map<string, string>;
+  /** Multi-letter names in the source, for upright display of recognised names. */
+  names: NameOccurrence[];
 }
 
 export function resolveRow(
@@ -56,7 +68,7 @@ export function resolveRow(
 ): ResolvedRow {
   const r = new Resolver(options);
   const statement = r.statement(cst, shape, table);
-  return { statement, refs: r.refs, interpretations: r.interpretations };
+  return { statement, refs: r.refs, interpretations: r.interpretations, names: r.names };
 }
 
 /** Resolves a single expression (no definition handling). */
@@ -84,6 +96,7 @@ interface Factor {
 class Resolver {
   readonly refs = new Set<string>();
   readonly interpretations = new Map<string, string>();
+  readonly names: NameOccurrence[] = [];
 
   constructor(private readonly options: ResolveOptions) {}
 
@@ -285,6 +298,7 @@ class Resolver {
     scope: SymbolTable,
   ): { expr: Expr; consumedNext: boolean } {
     const span = spanOf(f.core.span, f.sub?.span ?? f.core.span);
+    if (/^[A-Za-z]{2,}$/.test(base)) this.recordName(base, f, scope);
     if (f.sub) {
       const subText = subscriptText(f.sub);
       if (subText !== null) {
@@ -449,6 +463,15 @@ class Resolver {
       }
     }
     return out;
+  }
+
+  private recordName(base: string, f: Factor, scope: SymbolTable): void {
+    const subText = f.sub ? subscriptText(f.sub) : null;
+    const info =
+      (subText !== null ? scope.lookup(nameKey(makeName(base, subText))) : undefined) ??
+      scope.lookup(base);
+    const known = !info ? 'none' : info.kind === 'builtinFunction' ? 'builtin' : 'user';
+    this.names.push({ key: base, span: f.core.span, known });
   }
 
   private interpret(symbol: string, form: 'bare' | 'subscripted'): InterpretedMeaning | undefined {

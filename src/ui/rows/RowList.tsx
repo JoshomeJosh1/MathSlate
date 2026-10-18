@@ -12,8 +12,9 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEngine } from '../../app/services';
+import { decoratedRow, nameShortcuts } from '../../core/decorate';
 import { docActions, docStore } from '../../document/docStore';
 import type { RowId } from '../../document/model';
 import { useStore } from '../../document/store';
@@ -24,7 +25,25 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
   const doc = useStore(docStore);
   const engine = useEngine();
   const editors = useRef(new Map<RowId, MathEditorHandle>());
+  // Last focused row (keeps its suggestion chips visible) and the row currently being edited.
   const [focusedRow, setFocusedRow] = useState<RowId | null>(null);
+  const [editingRow, setEditingRow] = useState<RowId | null>(null);
+
+  // Show recognised multi-letter names upright. Never rewrite the row under the cursor (the
+  // caret would jump); it is decorated as soon as the user leaves it.
+  useEffect(() => {
+    for (const row of doc.rows) {
+      if (row.kind === 'note' || row.id === editingRow) continue;
+      const next = decoratedRow(row.latex, engine.rows.get(row.id)?.analysis);
+      if (next !== null) docActions.updateLatex(row.id, next);
+    }
+  }, [doc, engine, editingRow]);
+
+  // Typing a defined multi-letter name turns it upright immediately. Stable identity per name set.
+  const shortcutKey = JSON.stringify(
+    nameShortcuts([...engine.rows.values()].map((v) => v.analysis)),
+  );
+  const shortcuts = useMemo(() => JSON.parse(shortcutKey) as Record<string, string>, [shortcutKey]);
   // A row to focus once it has been rendered (e.g. one that was just inserted).
   const pendingFocus = useRef<RowId | null>(null);
 
@@ -102,7 +121,12 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
               }}
               onFocus={() => {
                 setFocusedRow(row.id);
+                setEditingRow(row.id);
               }}
+              onBlur={() => {
+                setEditingRow((current) => (current === row.id ? null : current));
+              }}
+              shortcuts={shortcuts}
               onDelete={() => {
                 docActions.deleteRow(row.id);
               }}

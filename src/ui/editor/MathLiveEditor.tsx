@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useRef } from 'react';
-import { MathfieldElement } from 'mathlive';
+import { MathfieldElement, type InlineShortcutDefinitions } from 'mathlive';
 // Importing the CSS lets Vite bundle the KaTeX fonts as hashed assets under the site's base path,
 // so MathLive must not try to load them itself.
 import 'mathlive/fonts.css';
@@ -18,17 +18,20 @@ export function MathLiveEditor({
   onChange,
   onKeyAction,
   onFocus,
+  onBlur,
+  shortcuts,
   ariaLabel,
   ref,
 }: MathEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<MathfieldElement | null>(null);
+  const defaultShortcuts = useRef<InlineShortcutDefinitions>({});
 
   // Callbacks change identity on every render; keep the latest in a ref so the element's
   // listeners are attached once.
-  const callbacks = useRef({ onChange, onKeyAction, onFocus });
+  const callbacks = useRef({ onChange, onKeyAction, onFocus, onBlur });
   useEffect(() => {
-    callbacks.current = { onChange, onKeyAction, onFocus };
+    callbacks.current = { onChange, onKeyAction, onFocus, onBlur };
   });
 
   useImperativeHandle(
@@ -53,6 +56,7 @@ export function MathLiveEditor({
     mf.menuItems = [];
     mf.smartFence = true;
     mf.value = value;
+    defaultShortcuts.current = mf.inlineShortcuts;
 
     const onInput = () => {
       callbacks.current.onChange(mf.value);
@@ -72,11 +76,13 @@ export function MathLiveEditor({
       else if (ev.detail.direction === 'downward') callbacks.current.onKeyAction?.('moveDown');
     };
     const onFocusIn = () => callbacks.current.onFocus?.();
+    const onFocusOut = () => callbacks.current.onBlur?.();
 
     mf.addEventListener('input', onInput);
     mf.addEventListener('keydown', onKeyDown, { capture: true });
     mf.addEventListener('move-out', onMoveOut);
     mf.addEventListener('focusin', onFocusIn);
+    mf.addEventListener('focusout', onFocusOut);
     fieldRef.current = mf;
 
     return () => {
@@ -84,6 +90,7 @@ export function MathLiveEditor({
       mf.removeEventListener('keydown', onKeyDown, { capture: true });
       mf.removeEventListener('move-out', onMoveOut);
       mf.removeEventListener('focusin', onFocusIn);
+      mf.removeEventListener('focusout', onFocusOut);
       mf.remove();
       fieldRef.current = null;
     };
@@ -95,6 +102,11 @@ export function MathLiveEditor({
     const mf = fieldRef.current;
     if (mf && mf.value !== value) mf.value = value;
   }, [value]);
+
+  useEffect(() => {
+    const mf = fieldRef.current;
+    if (mf) mf.inlineShortcuts = { ...defaultShortcuts.current, ...shortcuts };
+  }, [shortcuts]);
 
   return <div ref={containerRef} className="math-editor" />;
 }

@@ -23,6 +23,12 @@ export interface MathEditorProps {
   onChange: (latex: string) => void;
   onKeyAction?: (action: EditorKeyAction) => void;
   onFocus?: () => void;
+  onBlur?: () => void;
+  /**
+   * Extra text → LaTeX replacements applied as the user types (like "sin" → \sin), e.g.
+   * defined multi-letter names → upright \mathrm{…}. Keep the object identity stable.
+   */
+  shortcuts?: Readonly<Record<string, string>>;
   ariaLabel?: string;
   ref?: Ref<MathEditorHandle>;
 }
