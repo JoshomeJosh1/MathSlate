@@ -1,3 +1,4 @@
+import { FUNCTION_LATEX } from '../parser/functionNames';
 import { GREEK } from '../parser/lexer';
 import { builtinFunctions } from '../registries/builtins/functions';
 import { needsBrackets } from './builtinScope';
@@ -12,29 +13,44 @@ export interface LatexCompletion {
   name: string;
   latex: string;
   description: string;
+  /** Heading it is listed under; the menu shows groups in the order they first appear. */
+  group: string;
+  /** What its tile shows, if not `latex` (a function's name without the brackets). */
+  display?: string;
+  /** Wide tiles (function names) instead of symbol-sized ones. */
+  wide?: boolean;
 }
 
+const symbols = (group: string, entries: [string, string, string][]): LatexCompletion[] =>
+  entries.map(([name, latex, description]) => ({ name, latex, description, group }));
+
 const STRUCTURES: LatexCompletion[] = [
-  { name: 'frac', latex: '\\frac{#?}{#?}', description: 'Fraction' },
-  { name: 'sqrt', latex: '\\sqrt{#?}', description: 'Square root' },
-  { name: 'nthroot', latex: '\\sqrt[#?]{#?}', description: 'n-th root' },
-  { name: 'binom', latex: '\\binom{#?}{#?}', description: 'Binomial coefficient (n choose k)' },
-  { name: 'int', latex: '\\int', description: 'Integral (type _ and ^ for bounds), then dx' },
-  { name: 'defint', latex: '\\int_{#?}^{#?}', description: 'Definite integral, then dx' },
-  { name: 'sum', latex: '\\sum_{#?}^{#?}', description: 'Sum' },
-  { name: 'prod', latex: '\\prod_{#?}^{#?}', description: 'Product' },
-  { name: 'lim', latex: '\\lim_{#?\\to#?}', description: 'Limit' },
-  { name: 'partial', latex: '\\partial', description: 'Partial derivative ∂ (∂/∂x)' },
-  { name: 'infty', latex: '\\infty', description: 'Infinity' },
-  { name: 'cdot', latex: '\\cdot', description: 'Multiplication dot' },
-  { name: 'times', latex: '\\times', description: 'Multiplication cross' },
-  { name: 'div', latex: '\\div', description: 'Division sign' },
-  { name: 'pm', latex: '\\pm', description: 'Plus or minus' },
-  { name: 'mp', latex: '\\mp', description: 'Minus or plus' },
-  { name: 'le', latex: '\\le', description: 'Less than or equal to' },
-  { name: 'ge', latex: '\\ge', description: 'Greater than or equal to' },
-  { name: 'ne', latex: '\\ne', description: 'Not equal to' },
-  { name: 'to', latex: '\\to', description: 'Arrow, in limits (x → 0)' },
+  ...symbols('Structures', [
+    ['frac', '\\frac{#?}{#?}', 'Fraction'],
+    ['sqrt', '\\sqrt{#?}', 'Square root'],
+    ['nthroot', '\\sqrt[#?]{#?}', 'n-th root'],
+    ['binom', '\\binom{#?}{#?}', 'Binomial coefficient (n choose k)'],
+  ]),
+  ...symbols('Calculus', [
+    ['int', '\\int', 'Integral (type _ and ^ for bounds), then dx'],
+    ['defint', '\\int_{#?}^{#?}', 'Definite integral, then dx'],
+    ['sum', '\\sum_{#?}^{#?}', 'Sum'],
+    ['prod', '\\prod_{#?}^{#?}', 'Product'],
+    ['lim', '\\lim_{#?\\to#?}', 'Limit'],
+    ['partial', '\\partial', 'Partial derivative ∂ (∂/∂x)'],
+    ['infty', '\\infty', 'Infinity'],
+    ['to', '\\to', 'Arrow, in limits (x → 0)'],
+  ]),
+  ...symbols('Operators and relations', [
+    ['cdot', '\\cdot', 'Multiplication dot'],
+    ['times', '\\times', 'Multiplication cross'],
+    ['div', '\\div', 'Division sign'],
+    ['pm', '\\pm', 'Plus or minus'],
+    ['mp', '\\mp', 'Minus or plus'],
+    ['le', '\\le', 'Less than or equal to'],
+    ['ge', '\\ge', 'Greater than or equal to'],
+    ['ne', '\\ne', 'Not equal to'],
+  ]),
 ];
 
 function greekDescription(name: string): string {
@@ -43,18 +59,35 @@ function greekDescription(name: string): string {
   return `${capital ? 'Capital Greek' : 'Greek'} letter ${base}${name.startsWith('var') ? ' (variant)' : ''}`;
 }
 
-/** Every completion, in display order: structures, Greek letters, then functions. */
+/** Every completion, in display order: structures, Greek letters, then functions by group. */
 export function latexCompletions(): LatexCompletion[] {
+  // Greek letters that also name a special function say so (Γ: "…; Γ(x) is the gamma function").
+  const functionByLatex = new Map<string, string>();
+  for (const f of builtinFunctions.values()) {
+    const latex = FUNCTION_LATEX[f.name];
+    if (latex && !functionByLatex.has(latex)) functionByLatex.set(latex, f.description);
+  }
   const greek = [...GREEK]
     .filter((name) => name !== 'ell')
-    .map((name) => ({ name, latex: `\\${name}`, description: greekDescription(name) }));
+    .map((name) => {
+      const fn = functionByLatex.get(`\\${name}`);
+      return {
+        name,
+        latex: `\\${name}`,
+        description: greekDescription(name) + (fn ? `; with brackets: ${fn}` : ''),
+        group: /^[A-Z]/.test(name) ? 'Capital Greek letters' : 'Greek letters',
+      };
+    });
   const functions = [...builtinFunctions.values()]
     .filter((f) => /^[A-Za-z]{2,}$/.test(f.name) && !GREEK.has(f.name))
     .map((f) => ({
       name: f.name,
       // Functions that need brackets come with them, the first argument box selected.
       latex: functionLatex(f.name) + (needsBrackets(f) ? '\\left(#?\\right)' : ''),
+      display: functionLatex(f.name),
       description: f.description,
+      group: f.group ?? 'Functions',
+      wide: true,
     }));
   return [...STRUCTURES, ...greek, ...functions];
 }

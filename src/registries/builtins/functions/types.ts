@@ -16,4 +16,6 @@ export interface BuiltinFunction {
    * means what it would otherwise (Si → S·i, \zeta → the variable ζ).
    */
   callOnly?: boolean;
+  /** Heading it is listed under in the `\` menu, e.g. 'Trigonometry'. Default 'Functions'. */
+  group?: string;
 }

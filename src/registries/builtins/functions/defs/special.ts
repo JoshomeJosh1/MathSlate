@@ -10,7 +10,14 @@ const special = (
   arity: readonly [number, number],
   description: string,
   extra: Partial<BuiltinFunction> = {},
-): BuiltinFunction => ({ name, arity, description, callOnly: true, ...extra });
+): BuiltinFunction => ({
+  name,
+  arity,
+  description,
+  callOnly: true,
+  group: 'Special functions',
+  ...extra,
+});
 
 const functions: BuiltinFunction[] = [
   special('erf', [1, 1], 'Error function'),

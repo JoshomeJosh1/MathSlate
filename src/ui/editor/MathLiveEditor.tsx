@@ -5,7 +5,7 @@ import { MathfieldElement, type InlineShortcutDefinitions } from 'mathlive';
 import 'mathlive/fonts.css';
 import './mathlive.css';
 import { CommandMenu } from './CommandMenu';
-import { matchCompletions } from './matchCompletions';
+import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, MathEditorProps } from './MathEditor';
 import { INLINE_SHORTCUTS } from './shortcuts';
 
@@ -147,15 +147,16 @@ export function MathLiveEditor({
     pickRef.current = pick;
     /** Handles a key while the menu is open; false lets the key through to the field. */
     const menuKey = (ev: KeyboardEvent, m: MenuState): boolean => {
-      const items = matchCompletions(completions ?? [], m.query);
+      const layout = menuLayout(completions ?? [], m.query);
+      const items = layout.items;
       const current = items[m.active];
+      const direction = ARROWS[ev.key];
       if (/^[A-Za-z]$/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
         setMenu({ ...m, query: m.query + ev.key, active: 0 });
       } else if (ev.key === 'Backspace') {
         setMenu(m.query ? { ...m, query: m.query.slice(0, -1), active: 0 } : null);
-      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-        const step = ev.key === 'ArrowDown' ? 1 : -1;
-        setMenu({ ...m, active: (m.active + step + items.length) % Math.max(items.length, 1) });
+      } else if (direction) {
+        setMenu({ ...m, active: moveInGrid(layout, m.active, direction) });
       } else if (ev.key === 'Enter' || ev.key === 'Tab' || ev.key === ' ') {
         if (current) pick(current);
         else setMenu(null);
@@ -301,7 +302,7 @@ export function MathLiveEditor({
       {menu && (
         <CommandMenu
           query={menu.query}
-          items={matchCompletions(completions ?? [], menu.query)}
+          layout={menuLayout(completions ?? [], menu.query)}
           active={menu.active}
           anchor={menu.anchor}
           macros={macros}
@@ -311,6 +312,13 @@ export function MathLiveEditor({
     </>
   );
 }
+
+const ARROWS: Partial<Record<string, 'left' | 'right' | 'up' | 'down'>> = {
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+};
 
 interface MenuState {
   query: string;

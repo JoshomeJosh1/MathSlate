@@ -158,8 +158,10 @@ brackets (`bracketOnly`: lcmab stays letters). Symbol shortcuts (≤, ″) are n
 knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser
 understands — structures/operators (a static list there), Greek letters (`GREEK`) and every
 built-in function from the registry (with brackets when it needs them) — and its test checks
-each entry parses. `ui/editor/CommandMenu.tsx` renders it; keys are handled in
-`MathLiveEditor.tsx` while the field keeps focus; matching is in `matchCompletions.ts`.
+each entry parses. `ui/editor/CommandMenu.tsx` renders it as a grid of tiles in groups (a
+function's group is `BuiltinFunction.group`), name and description on hover; keys (typing
+filters, arrows move in the grid) are handled in `MathLiveEditor.tsx` while the field keeps
+focus; matching, layout and grid movement are in `matchCompletions.ts`.
 
 ### Evaluation (`core/engine.ts`)
 
@@ -246,7 +248,7 @@ Every new user-visible feature also gets an example in `src/document/documentati
 - **Add a built-in function**: add an entry to a file in
   `src/registries/builtins/functions/defs/` (or a new file default-exporting a `BuiltinFunction`
   or an array): `name`, `arity: [min, max]`, `description`, optional `inverse` (for `^{-1}`) and
-  `subscriptArg` (for `\log_b`). It becomes callable as `name(…)`, `\operatorname{name}(…)`, and as
+  `subscriptArg` (for `\log_b`), and `group` (its heading in the `\` menu). It becomes callable as `name(…)`, `\operatorname{name}(…)`, and as
   `\name` if listed in `FUNCTION_COMMANDS` (`lexer.ts`). Map it in each backend: `FUNCTIONS` in
   `cas/sympy/serialize.ts` (+ `_FUNCTION_NAMES` in `runtime.py` if SymPy names it differently)
   and `FUNCTIONS` in `cas/nerdamer/serialize.ts` / `parseText.ts`. Add it to the documentation

@@ -24,7 +24,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
   },
   {
-    note: 'Type \\ for a menu of everything MathSlate understands — symbols, structures and every function, each with a description. Keep typing to filter it (\\fr, \\root), use ↑/↓ to choose, and Enter, Tab or Space to insert; Esc closes it.',
+    note: 'Type \\ for a menu of everything MathSlate understands — structures, symbols, Greek letters and every function, in groups (hover over one for its name and description). Keep typing to filter it (\\fr, \\root), use the arrow keys to choose, and Enter, Tab or Space to insert; Esc closes it.',
   },
   {
     note: 'Type " in an empty row to turn it into a note like this one. Backspace in an empty note turns it back into math.',

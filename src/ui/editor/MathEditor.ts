@@ -20,9 +20,18 @@ export interface MathEditorHandle {
 }
 
 export interface CommandCompletion {
+  /** Typed after `\`. */
   name: string;
+  /** Inserted; `#?` marks an empty box to fill in. */
   latex: string;
+  /** Shown on hover. */
   description: string;
+  /** Heading in the menu; groups appear in the order of their first entry. */
+  group: string;
+  /** What the tile shows, if not `latex`. */
+  display?: string;
+  /** A wide tile (a function name) rather than a symbol-sized one. */
+  wide?: boolean;
 }
 
 export interface MathEditorProps {
