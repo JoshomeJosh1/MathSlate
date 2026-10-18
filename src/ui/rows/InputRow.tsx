@@ -1,13 +1,16 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Ref } from 'react';
+import type { RowAnalysis } from '../../core/analyze';
 import type { InputRow as InputRowData } from '../../document/model';
 import { MathEditor, type EditorKeyAction, type MathEditorHandle } from '../editor';
+import { RowDebug, RowError } from './RowDiagnostics';
 
 interface Props {
   row: InputRowData;
+  analysis: RowAnalysis | undefined;
   index: number;
-  showLatex: boolean;
+  showDebug: boolean;
   editorRef: Ref<MathEditorHandle>;
   onChange: (latex: string) => void;
   onKeyAction: (action: EditorKeyAction) => void;
@@ -16,8 +19,9 @@ interface Props {
 
 export function InputRow({
   row,
+  analysis,
   index,
-  showLatex,
+  showDebug,
   editorRef,
   onChange,
   onKeyAction,
@@ -66,11 +70,8 @@ export function InputRow({
           ×
         </button>
       </div>
-      {showLatex && (
-        <div className="row-latex" aria-label="LaTeX source">
-          {row.latex === '' ? <span className="muted">(empty)</span> : row.latex}
-        </div>
-      )}
+      {analysis?.error && <RowError latex={row.latex} error={analysis.error} />}
+      {showDebug && <RowDebug latex={row.latex} analysis={analysis} />}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RowList } from './ui/rows/RowList';
 
 export function App() {
-  const [showLatex, setShowLatex] = useState(true);
+  const [showDebug, setShowDebug] = useState(true);
   return (
     <div className="app">
       <header className="app-header">
@@ -10,16 +10,16 @@ export function App() {
         <label className="toggle">
           <input
             type="checkbox"
-            checked={showLatex}
+            checked={showDebug}
             onChange={(e) => {
-              setShowLatex(e.target.checked);
+              setShowDebug(e.target.checked);
             }}
           />
-          Show LaTeX
+          Show LaTeX / AST
         </label>
       </header>
       <main>
-        <RowList showLatex={showLatex} />
+        <RowList showDebug={showDebug} />
       </main>
     </div>
   );

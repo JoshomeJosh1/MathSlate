@@ -8,6 +8,8 @@
   --accent: #2f6fde;
   --selection: #d6e4fb;
   --output-bg: #f7f9fc;
+  --error: #c62828;
+  --error-bg: #fde8e8;
   font-family:
     system-ui,
     -apple-system,
@@ -29,6 +31,8 @@
     --accent: #6ea0ff;
     --selection: #2c3f63;
     --output-bg: #1b1f24;
+    --error: #ff8a80;
+    --error-bg: #4a2323;
   }
 }
 
@@ -135,7 +139,7 @@ body {
   color: var(--text);
 }
 
-.row-latex {
+.row-debug {
   margin-left: 40px;
   padding: 2px 8px 6px;
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
@@ -143,6 +147,34 @@ body {
   color: var(--muted);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.row-ast {
+  color: var(--accent);
+}
+
+.row-error {
+  margin-left: 40px;
+  padding: 0 8px 6px;
+  font-size: 0.8rem;
+  color: var(--error);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.row-error-source {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.row-error-source mark {
+  background: var(--error-bg);
+  color: var(--error);
+  border-radius: 2px;
 }
 
 .muted {

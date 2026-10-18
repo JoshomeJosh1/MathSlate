@@ -12,15 +12,20 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { analyzeRows } from '../../core/analyze';
 import { docActions, docStore } from '../../document/docStore';
 import type { RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { InputRow } from './InputRow';
 
-export function RowList({ showLatex }: { showLatex: boolean }) {
+export function RowList({ showDebug }: { showDebug: boolean }) {
   const doc = useStore(docStore);
+  const analyses = useMemo(
+    () => analyzeRows(doc.rows, { interpretationChoices: doc.interpretations }),
+    [doc.rows, doc.interpretations],
+  );
   const editors = useRef(new Map<RowId, MathEditorHandle>());
   // A row to focus once it has been rendered (e.g. one that was just inserted).
   const pendingFocus = useRef<RowId | null>(null);
@@ -83,8 +88,9 @@ export function RowList({ showLatex }: { showLatex: boolean }) {
             <InputRow
               key={row.id}
               row={row}
+              analysis={analyses[index]}
               index={index}
-              showLatex={showLatex}
+              showDebug={showDebug}
               editorRef={(handle) => {
                 if (handle) editors.current.set(row.id, handle);
                 else editors.current.delete(row.id);
