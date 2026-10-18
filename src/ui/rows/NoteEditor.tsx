@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef, type Ref } from 'react';
+import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from 'react';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 
 interface Props {
@@ -9,23 +9,44 @@ interface Props {
   ref?: Ref<MathEditorHandle>;
 }
 
-/** Plain-text row for headings and explanations. Lines starting with "#" render as headings. */
+/**
+ * Plain-text row for headings and explanations. Wraps and grows to fit its text. Lines starting
+ * with "#" render as headings. Enter starts a new math row; Shift+Enter inserts a line break.
+ */
 export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props) {
-  const input = useRef<HTMLInputElement>(null);
+  const area = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(
     ref,
     () => ({
-      focus: () => input.current?.focus(),
-      getLatex: () => input.current?.value ?? '',
+      focus: () => area.current?.focus(),
+      getLatex: () => area.current?.value ?? '',
     }),
     [],
   );
+
+  // Grow to fit the content (and shrink back), including after the width changes.
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [value]);
+
   const heading = value.startsWith('#');
   return (
-    <input
-      ref={input}
+    <textarea
+      ref={area}
       className={`note-editor${heading ? ' heading' : ''}`}
       value={value}
+      rows={1}
       placeholder="Note"
       aria-label="Note"
       onFocus={onFocus}
@@ -34,15 +55,19 @@ export function NoteEditor({ value, onChange, onKeyAction, onFocus, ref }: Props
       }}
       onKeyDown={(e) => {
         const el = e.currentTarget;
-        if (e.key === 'Enter') {
+        const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
+        const atEnd = el.selectionStart === el.value.length;
+        if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           onKeyAction('enter');
         } else if (e.key === 'Backspace' && el.value === '') {
           e.preventDefault();
           onKeyAction('toMath');
-        } else if (e.key === 'ArrowUp') {
+        } else if (e.key === 'ArrowUp' && atStart) {
+          e.preventDefault();
           onKeyAction('moveUp');
-        } else if (e.key === 'ArrowDown') {
+        } else if (e.key === 'ArrowDown' && atEnd) {
+          e.preventDefault();
           onKeyAction('moveDown');
         }
       }}

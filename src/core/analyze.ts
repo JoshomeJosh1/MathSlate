@@ -137,8 +137,16 @@ export function analyzeRows(
 
 /** The name a definition row defines, if it is a multi-letter name (shown upright). */
 function definedNameOccurrence(shape: DefinitionShape | null): NameOccurrence[] {
-  if (!shape?.baseSpan || !/^[A-Za-z]{2,}$/.test(shape.head.name.base)) return [];
-  return [{ key: shape.head.name.base, span: shape.baseSpan, known: 'user' }];
+  if (!shape) return [];
+  const { name } = shape.head;
+  const out: NameOccurrence[] = [];
+  if (shape.baseSpan && /^[A-Za-z]{2,}$/.test(name.base)) {
+    out.push({ key: name.base, span: shape.baseSpan, known: 'user' });
+  }
+  if (shape.subSpan && name.sub !== undefined && /^[A-Za-z]{2,}$/.test(name.sub)) {
+    out.push({ key: name.sub, span: shape.subSpan, known: 'subscript' });
+  }
+  return out;
 }
 
 function buildTable(

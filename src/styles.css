@@ -221,8 +221,14 @@ button {
   outline: none;
   background: transparent;
   color: var(--muted);
+  font: inherit;
   font-size: 0.95rem;
+  line-height: 1.45;
   padding: 0.6rem 0.5rem;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .note-editor.heading {

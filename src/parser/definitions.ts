@@ -23,6 +23,8 @@ export interface DefinitionShape {
   rhs: Cst;
   /** Source span of the defined name's base (without subscript), e.g. `speed` in `speed_1 = …`. */
   baseSpan: Span | null;
+  /** Source span of the name's subscript when it is part of the name (v_{max} = …). */
+  subSpan: Span | null;
 }
 
 /** Extracts the raw head; `seq` vs. named-constant ambiguity is settled by `settleHeads`. */
@@ -37,6 +39,7 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
       head: { kind: 'const', name: plain, nameSpan: lhs.span },
       rhs,
       baseSpan: nameBaseSpan(lhs),
+      subSpan: nameSubSpan(lhs),
     };
   }
 
@@ -50,6 +53,7 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
           head: { kind: 'seqBase', name: base, index, nameSpan: lhs.span },
           rhs,
           baseSpan: nameBaseSpan(lhs.base),
+          subSpan: null,
         };
       }
       const indexVar = lhs.sub.type === 'letter' ? makeName(lhs.sub.name) : null;
@@ -59,6 +63,7 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
           head: { kind: 'seq', name: base, indexVar, usesIndex, nameSpan: lhs.span },
           rhs,
           baseSpan: nameBaseSpan(lhs.base),
+          subSpan: null,
         };
       }
     }
@@ -79,6 +84,7 @@ export function definitionShape(cst: Cst | null): DefinitionShape | null {
             head: { kind: 'func', name: fn, params, nameSpan: lhs.span },
             rhs,
             baseSpan: nameBaseSpan(fnCst),
+            subSpan: nameSubSpan(fnCst),
           };
         }
       }
@@ -159,6 +165,13 @@ function isNamePart(c: Cst): boolean {
 
 function namePartText(c: Cst): string {
   return c.type === 'letter' || c.type === 'opname' ? c.name : '';
+}
+
+/** Span of a name CST's trailing subscript, if any. */
+export function nameSubSpan(cst: Cst): Span | null {
+  if (cst.type === 'sub') return cst.sub.span;
+  const last = cst.type === 'juxt' ? cst.items[cst.items.length - 1] : undefined;
+  return last?.type === 'sub' ? last.sub.span : null;
 }
 
 /** Span of the base of a name CST (letters/upright parts, excluding a trailing subscript). */

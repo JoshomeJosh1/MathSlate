@@ -40,6 +40,8 @@ function desiredSpelling(n: NameOccurrence, current: string): string | null {
       return current.startsWith('\\') ? null : `\\operatorname{${n.key}}`;
     case 'none':
       return /^\\mathrm\{[A-Za-z]+\}$/.test(current) ? n.key : null;
+    case 'subscript':
+      return `\\mathrm{${n.key}}`;
   }
 }
 

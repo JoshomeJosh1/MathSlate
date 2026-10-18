@@ -46,8 +46,12 @@ export interface NameOccurrence {
   key: string;
   /** Source span of the base: the letter run or the \mathrm{…}/\operatorname{…} command. */
   span: Span;
-  /** 'user': defined in the document (or a local); 'builtin': a built-in function; 'none': unknown. */
-  known: 'user' | 'builtin' | 'none';
+  /**
+   * 'user': defined in the document (or a local); 'builtin': a built-in function; 'none':
+   * unknown; 'subscript': a multi-letter subscript that is part of a name (v_{max}), always
+   * shown upright as typographic convention.
+   */
+  known: 'user' | 'builtin' | 'none' | 'subscript';
 }
 
 export interface ResolvedRow {
@@ -356,7 +360,10 @@ class Resolver {
       if (subText !== null) {
         const full = makeName(base, subText);
         const info = scope.lookup(nameKey(full));
-        if (info) return this.finishName(full, info, f, next, scope, span);
+        if (info) {
+          this.recordSubscript(f.sub, subText);
+          return this.finishName(full, info, f, next, scope, span);
+        }
       }
       const baseInfo = scope.lookup(base);
       const interpreted = baseInfo ? undefined : this.interpret(base, 'subscripted');
@@ -377,6 +384,7 @@ class Resolver {
         );
       }
       const name = makeName(base, subText);
+      this.recordSubscript(f.sub, subText);
       return this.finishName(name, undefined, f, next, scope, span);
     }
     return this.finishName(makeName(base), scope.lookup(base), f, next, scope, span);
@@ -515,6 +523,12 @@ class Resolver {
       }
     }
     return out;
+  }
+
+  /** A name's subscript of two or more letters (v_{max}) is shown upright. */
+  private recordSubscript(sub: Cst, text: string): void {
+    if (/^[A-Za-z]{2,}$/.test(text))
+      this.names.push({ key: text, span: sub.span, known: 'subscript' });
   }
 
   private recordName(base: string, f: Factor, scope: SymbolTable): void {

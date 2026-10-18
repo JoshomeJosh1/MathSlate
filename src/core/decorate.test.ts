@@ -31,10 +31,18 @@ describe('upright display of recognised multi-letter names', () => {
       '\\mathrm{area}(3)',
     ]);
     expect(decorate('v_{max}=3', 'speed_1=4', 'speed_1+v_{max}')).toEqual([
-      'v_{max}=3',
+      'v_{\\mathrm{max}}=3',
       '\\mathrm{speed}_1=4',
-      '\\mathrm{speed}_1+v_{max}',
+      '\\mathrm{speed}_1+v_{\\mathrm{max}}',
     ]);
+  });
+
+  it('shows multi-letter subscripts of names upright, but not sequence indices', () => {
+    expect(decorate('A_{circle}=\\pi', 'x_{max}+v_{\\max}+x_{1}+x_n')).toEqual([
+      'A_{\\mathrm{circle}}=\\pi',
+      'x_{\\mathrm{max}}+v_{\\mathrm{max}}+x_{1}+x_n',
+    ]);
+    expect(decorate('a_n=n^2', 'a_{nk}')).toEqual(['a_n=n^2', 'a_{nk}']); // n·k is an index
   });
 
   it('leaves single letters and undefined runs alone', () => {
