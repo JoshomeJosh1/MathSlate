@@ -151,6 +151,20 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
   });
 });
 
+describe('units with SymPy', { timeout: 60_000 }, () => {
+  it('computes, converts and checks units', async () => {
+    expect(await last(['5\\unit{km}+300\\unit{m}'])).toEqual(['5.3\\unit{km}']);
+    expect(await last(['m=70\\unit{kg}', 'm\\cdot9.81\\unit{m/s^{2}}'])).toEqual([
+      '686.7\\unit{N}',
+    ]);
+    expect(await last(['60\\unit{mi}\\to\\unit{km}'])).toEqual(['96.56064\\unit{km}']);
+    expect(await last(['\\sqrt{9\\unit{m^{2}}}'])).toEqual(['3\\unit{m}']);
+    expect(await last(['x\\unit{m}+2\\unit{m}'])).toEqual(['\\left(x+2\\right)\\unit{m}']);
+    expect(await last(['5\\unit{m}+2\\unit{s}'])).toEqual(["!Can't add m and s"]);
+    expect(await last([['3x\\unit{m}=12\\unit{m}', 'solve']])).toEqual(['solve: {4}']);
+  });
+});
+
 describe('calculus notation end to end', { timeout: 60_000 }, () => {
   it('integrates: indefinite symbolically, definite exactly when possible', async () => {
     expect(await last(['\\int x^2\\,dx'])).toEqual(['\\frac{x^{3}}{3}']);
@@ -255,6 +269,7 @@ describe('documentation slate with SymPy', { timeout: 120_000 }, () => {
         .filter((o) => o.state !== 'ok')
         .map((o) => `${row.latex} [${o.commandId}]: ${o.state} ${o.error ?? ''}`),
     );
-    expect(failures).toEqual([]);
+    // The units folder demonstrates this error on purpose.
+    expect(failures).toEqual(["5\\unit{m}+2\\unit{s} [auto]: error Can't add m and s"]);
   });
 });

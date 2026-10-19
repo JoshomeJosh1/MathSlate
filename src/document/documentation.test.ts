@@ -37,7 +37,10 @@ function children(e: Expr): Expr[] {
     case 'num':
     case 'var':
     case 'constant':
+    case 'unit':
       return [];
+    case 'convert':
+      return [e.expr];
     case 'neg':
     case 'factorial':
     case 'abs':

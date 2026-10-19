@@ -60,7 +60,17 @@ export type Expr =
       lower: Expr;
       upper: Expr;
       span: Span;
-    };
+    }
+  /** A unit of measurement, `\unit{km}` or `\unit{m/s^{2}}`: a product of unit symbols' powers. */
+  | { kind: 'unit'; factors: UnitFactor[]; span: Span }
+  /** `expr \to \unit{mi}`: show the value in the given unit. Only at the top of a row. */
+  | { kind: 'convert'; expr: Expr; target: UnitFactor[]; span: Span };
+
+/** One unit symbol of a (compound) unit and its power: m/s² is [m¹, s⁻²]. */
+export interface UnitFactor {
+  symbol: string;
+  power: number;
+}
 
 /** What a row means, after classification of its top-level `=`. */
 export type Statement =

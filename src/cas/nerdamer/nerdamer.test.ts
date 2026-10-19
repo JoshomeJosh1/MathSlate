@@ -53,6 +53,33 @@ async function last(rows: (string | [string, ...string[]])[]): Promise<string[]>
   });
 }
 
+describe('units, through Nerdamer', () => {
+  it('computes with units and shows the answer in a unit the row used', async () => {
+    expect(await last(['5\\unit{km}+300\\unit{m}'])).toEqual(['5.3\\unit{km}']);
+    expect(await last(['5\\left[km\\right]+300\\left[m\\right]'])).toEqual(['5.3\\unit{km}']);
+    expect(await last(['m=70\\unit{kg}', 'm\\cdot9.81\\unit{m/s^{2}}'])).toEqual([
+      '686.7\\unit{N}',
+    ]);
+    expect(
+      await last(['\\mathrm{speed}=12\\unit{km/h}', '\\mathrm{speed}\\cdot30\\unit{min}']),
+    ).toEqual(['6\\unit{km}']);
+  });
+
+  it('converts with →', async () => {
+    expect(await last(['5\\unit{km}\\to\\unit{m}'])).toEqual(['5000\\unit{m}']);
+    expect(await last(['d=2\\unit{h}\\cdot 30\\unit{km/h}\\to\\unit{mi}'])).toEqual([
+      '37.28227153424\\unit{mi}',
+    ]);
+  });
+
+  it('rejects mismatched units', async () => {
+    expect(await last(['5\\unit{m}+2\\unit{s}'])).toEqual(["!Can't add m and s"]);
+    expect(await last(['5\\unit{m}\\to\\unit{s}'])).toEqual(["!Can't convert m to s"]);
+    // Brackets that do not spell a unit keep their ordinary meaning.
+    expect(await last(['3\\left[x\\right]'])).toEqual([]);
+  });
+});
+
 describe('Nerdamer backend end to end', () => {
   it('evaluates exactly, with decimals', async () => {
     expect(await last(['\\frac13+\\frac16'])).toEqual(['\\frac{1}{2}']);

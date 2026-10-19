@@ -23,6 +23,7 @@ starting `#` are headings, `##` subheadings.
 | 3c        | Calculus notation: ∫ (indefinite → symbolic, definite → numeric), d/dx, ∂, lim, Σ, Π  | done    |
 | —         | Upright recognised names and subscripts; notes (`"`); documentation slate             | done    |
 | —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
+| —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
 | 4         | `/` command palette, `ans` / `out_k` references, promote by drag                      | planned |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrix commands (det, inverse, transpose, eigenvalues, dot, cross)                    | planned |
@@ -203,6 +204,22 @@ next one answers (**fallback**, shown "via sympy").
   sequences, built-in sequences, inequalities, one-sided limits or integer factorisation — those
   are declined so SymPy answers.
 
+### Units (`core/units.ts`, `registries/units/`)
+
+A unit is `\unit{km}` / `\unit{m/s^{2}}` in a row's LaTeX (AST `{ kind: 'unit', factors }`, text
+read by `parser/units.ts`); typed as `5[km]` — square brackets whose content spells known units
+resolve as a unit (`[x+1]` stays brackets) and decoration rewrites them as `\unit{…}`. The editor
+draws `\unit` as a macro (`ui/editor/unitLatex.ts`: upright, faint brackets). `expr \to [unit]`
+(or a literal `->`) at the end of a row is a conversion (AST `convert`, only at the top; on a
+definition it wraps the right-hand side). Backends know nothing about units: the engine wraps the
+CAS in `withUnits`, which expands units into positive base-unit symbols (`km` → `1000·@m`), runs
+the request, checks the answer's dimension (`Can't add m and s`) and shows it in the `→` target,
+else the first unit the row (or its definitions) wrote with that dimension, else a named unit (N,
+J, W, …), else base units — by asking the backend for answer ÷ unit (evaluate, then simplify if
+base units remain). Rational amounts are shown as decimals (5.3 km). The registry
+(`registries/units/defs/*.ts`, auto-discovered) lists each unit's symbol, name, dimension, exact
+decimal factor and SI prefixes; prefixed symbols are generated and must be unique (tested).
+
 ### Special functions
 
 `registries/builtins/functions/defs/special.ts` (erf, Γ, ζ, Fresnel S/C, Si/Ci, Li_s, Lambert W,
@@ -276,6 +293,9 @@ Every new user-visible feature also gets an example in `src/document/documentati
   and `FUNCTIONS` in `cas/nerdamer/serialize.ts` / `parseText.ts`. Add it to the documentation
   (a note describing it, under the right `##` group, plus example rows; the documentation test
   fails otherwise).
+- **Add a unit**: an entry in a file in `src/registries/units/defs/` (`symbol`, `name`,
+  `dimension` in base units m/kg/s/A/K/mol, exact decimal `factor`, optional `prefixes`, `group`
+  for the `\` menu). Mention it in the documentation's Units folder.
 - **Add a built-in sequence**: a file in `src/registries/builtins/sequences/defs/`, a file in
   `src/registries/interpretations/defs/` with `form: 'subscripted'` and an option whose meaning is
   `{ kind: 'sequence', sequence: '<name>' }` (see `primes.ts`), and its implementation in

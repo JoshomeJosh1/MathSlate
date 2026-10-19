@@ -9,8 +9,14 @@ import {
 } from '../parser/definitions';
 import { MathError } from '../parser/errors';
 import { parseLatex } from '../parser/parser';
-import { resolveRow, type NameOccurrence, type ResolveOptions } from '../parser/resolve';
+import {
+  resolveRow,
+  type NameOccurrence,
+  type ResolveOptions,
+  type UnitOccurrence,
+} from '../parser/resolve';
 import { meaningOf } from '../registries/interpretations';
+import { isUnitSymbol } from './units';
 import { SymbolTable, type SymbolInfo } from '../parser/symbols';
 import { createBuiltinScope } from './builtinScope';
 
@@ -39,6 +45,8 @@ export interface RowAnalysis {
   interpretations: Map<string, string>;
   /** Multi-letter names in the source and whether they are recognised (for upright display). */
   names: NameOccurrence[];
+  /** Units typed in square brackets, rewritten as `\unit{…}` (see decorate.ts). */
+  units: UnitOccurrence[];
 }
 
 export interface AnalyzeOptions {
@@ -57,6 +65,7 @@ export function analyzeRows(
       const found = meaningOf(symbol, form, interpretationChoices);
       return found && { meaning: found.meaning, optionId: found.option.id };
     },
+    isUnit: isUnitSymbol,
   };
 
   // 1. Parse.
@@ -98,6 +107,7 @@ export function analyzeRows(
           refs: [],
           interpretations: new Map(),
           names: [],
+          units: [],
         };
       }
       try {
@@ -122,6 +132,7 @@ export function analyzeRows(
             ...definedNameOccurrence(shape),
             ...r.names,
           ],
+          units: r.units,
         };
       } catch (e) {
         if (!(e instanceof MathError)) throw e;
@@ -133,6 +144,7 @@ export function analyzeRows(
           refs: [],
           interpretations: new Map(),
           names: [],
+          units: [],
         };
       }
     });

@@ -1,4 +1,5 @@
 import { nameKey, type Expr, type Statement } from './ast';
+import { unitText } from './units';
 
 /**
  * Compact Lisp-like rendering of the AST, for tests and the debug view. Spans and multiplication
@@ -12,6 +13,10 @@ export function exprToSexpr(e: Expr): string {
       return nameKey(e.name);
     case 'constant':
       return `#${e.id}`;
+    case 'unit':
+      return `[${unitText(e.factors)}]`;
+    case 'convert':
+      return `(-> ${exprToSexpr(e.expr)} [${unitText(e.target)}])`;
     case 'neg':
       return `(- ${exprToSexpr(e.arg)})`;
     case 'binary': {

@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { convertLatexToMarkup } from 'mathlive';
 import 'mathlive/static.css';
+import { expandUnitMacro } from './unitLatex';
 
 /** Read-only rendering of LaTeX (output rows). MathLive's static renderer, no editing. */
 export function MathLiveView({ latex, className }: { latex: string; className?: string }) {
   const html = useMemo(() => {
     try {
-      return convertLatexToMarkup(latex);
+      return convertLatexToMarkup(expandUnitMacro(latex));
     } catch {
       return null;
     }

@@ -9,6 +9,7 @@ import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
 import { emptyStructureRange, removeStrayPlaceholders } from './emptyStructure';
 import { INLINE_SHORTCUTS } from './shortcuts';
+import { UNIT_MACRO, UNIT_SHADOW_CSS } from './unitLatex';
 
 MathfieldElement.fontsDirectory = null;
 MathfieldElement.soundsDirectory = null;
@@ -85,7 +86,14 @@ export function MathLiveEditor({
           { def, args: 0, captureSelection: true, expand: false },
         ]),
       ),
+      // Units: one unit you cannot type inside; Backspace deletes it whole.
+      unit: { def: UNIT_MACRO, args: 1, captureSelection: true, expand: false },
     };
+    if (mf.shadowRoot) {
+      const style = document.createElement('style');
+      style.textContent = UNIT_SHADOW_CSS;
+      mf.shadowRoot.append(style);
+    }
     mf.value = value;
     // Our own curated list replaces MathLive's defaults (see shortcuts.ts).
     mf.inlineShortcuts = { ...INLINE_SHORTCUTS, ...shortcuts };

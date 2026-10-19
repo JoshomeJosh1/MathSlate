@@ -11,6 +11,7 @@ import {
 import { analyzeRows, type RowAnalysis } from './analyze';
 import { buildDependencies } from './deps';
 import { shapeOf, targetOf } from './shape';
+import { withUnits } from './units';
 
 /**
  * Turns the document into what the UI shows: per row, its analysis, error, output rows (auto
@@ -80,10 +81,11 @@ export class Engine {
   private keys = new Map<string, string>();
   private idle: Promise<void> = Promise.resolve();
 
-  constructor(
-    private readonly cas: CasBackend,
-    options: EngineOptions = {},
-  ) {
+  private readonly cas: CasBackend;
+
+  constructor(cas: CasBackend, options: EngineOptions = {}) {
+    // Units are handled here for every backend (see core/units.ts).
+    this.cas = withUnits(cas);
     this.debounceMs = options.debounceMs ?? 150;
     cas.onStatusChange(() => {
       // A backend became ready: re-run so provisional/pending outputs get upgraded.
@@ -227,7 +229,7 @@ export class Engine {
             ...(preview ? { preview } : {}),
             auto: {
               inputLatex: printLatex(target.expr),
-              computes: analysis.refs.length > 0 || ctx.facts.hasOperators,
+              computes: analysis.refs.length > 0 || ctx.facts.hasOperators || ctx.facts.hasUnits,
             },
           },
         );

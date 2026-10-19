@@ -76,6 +76,10 @@ class Serializer {
         return this.id(e.name);
       case 'constant':
         return CONSTANTS[e.id];
+      case 'unit':
+      case 'convert':
+        // Units are expanded into base-unit symbols before a request reaches a backend.
+        throw new Error('units reached the Nerdamer serializer');
       case 'neg':
         return `(-(${go(e.arg)}))`;
       case 'binary': {

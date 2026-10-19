@@ -14,6 +14,7 @@
   --warn: #b26a00;
   --error: #c62828;
   --error-bg: #fde8e8;
+  --unit-bracket: #b4bcc8;
   font-family:
     system-ui,
     -apple-system,
@@ -41,7 +42,13 @@
     --warn: #ffb74d;
     --error: #ff8a80;
     --error-bg: #4a2323;
+    --unit-bracket: #4c5560;
   }
+}
+
+/* The faint square brackets around a unit (\unit{km}, see ui/editor/unitLatex.ts). */
+.ML-unit-bracket {
+  color: var(--unit-bracket);
 }
 
 * {

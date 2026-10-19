@@ -55,7 +55,10 @@ function substitute(expr: Expr, env: Env, bound: ReadonlySet<string>): Expr {
   switch (expr.kind) {
     case 'num':
     case 'constant':
+    case 'unit':
       return expr;
+    case 'convert':
+      return { ...expr, expr: go(expr.expr) };
     case 'var': {
       const key = nameKey(expr.name);
       if (bound.has(key)) return expr;
@@ -136,7 +139,10 @@ function replaceVars(expr: Expr, values: ReadonlyMap<string, Expr>): Expr {
       return values.get(nameKey(expr.name)) ?? expr;
     case 'num':
     case 'constant':
+    case 'unit':
       return expr;
+    case 'convert':
+      return { ...expr, expr: go(expr.expr) };
     case 'call':
     case 'derivative':
       return { ...expr, args: expr.args.map(go) };

@@ -30,6 +30,8 @@ export interface ShapeFacts {
   hasOperators: boolean;
   /** Contains a definite integral (evaluated in two passes: quick numeric, then exact). */
   hasDefiniteIntegral: boolean;
+  /** Contains units (`5\unit{km}`) or a conversion: evaluating it computes something. */
+  hasUnits: boolean;
 }
 
 export interface Target {
@@ -63,6 +65,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
   let hasExpandableProduct = false;
   let hasOperators = false;
   let hasDefiniteIntegral = false;
+  let hasUnits = false;
   const bound: string[] = [];
   const within = (name: Name, body: Expr) => {
     bound.push(nameKey(name));
@@ -138,6 +141,13 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
       case 'relation':
         e.operands.forEach(visit);
         return;
+      case 'convert':
+        hasUnits = true;
+        visit(e.expr);
+        return;
+      case 'unit':
+        hasUnits = true;
+        return;
       case 'num':
       case 'constant':
         return;
@@ -159,6 +169,7 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
     hasFunctions,
     hasOperators,
     hasDefiniteIntegral,
+    hasUnits,
   };
 }
 
@@ -184,7 +195,10 @@ function polynomialDegree(e: Expr, defined: ReadonlySet<string>): number | null 
   switch (e.kind) {
     case 'num':
     case 'constant':
+    case 'unit':
       return 0;
+    case 'convert':
+      return polynomialDegree(e.expr, defined);
     case 'var':
       return defined.has(nameKey(e.name)) ? 0 : 1;
     case 'neg':

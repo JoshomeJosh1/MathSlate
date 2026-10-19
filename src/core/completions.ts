@@ -1,6 +1,7 @@
 import { FUNCTION_LATEX } from '../parser/functionNames';
 import { GREEK } from '../parser/lexer';
 import { builtinFunctions } from '../registries/builtins/functions';
+import { units } from '../registries/units';
 import { needsBrackets } from './builtinScope';
 import { functionLatex } from './decorate';
 
@@ -39,7 +40,7 @@ const STRUCTURES: LatexCompletion[] = [
     ['lim', '\\lim_{#?\\to#?}', 'Limit'],
     ['partial', '\\partial', 'Partial derivative ∂ (∂/∂x)'],
     ['infty', '\\infty', 'Infinity'],
-    ['to', '\\to', 'Arrow, in limits (x → 0)'],
+    ['to', '\\to', 'Arrow: in limits (x → 0), or to convert to a unit (→ [km])'],
   ]),
   ...symbols('Operators and relations', [
     ['cdot', '\\cdot', 'Multiplication dot'],
@@ -89,5 +90,19 @@ export function latexCompletions(): LatexCompletion[] {
       group: f.group ?? 'Functions',
       wide: true,
     }));
-  return [...STRUCTURES, ...greek, ...functions];
+  // Units, by group; typed by symbol (\km), or by name when the symbol is not plain letters (\ohm)
+  // or already names something else (\minute: \min is the function).
+  const taken = new Set([...STRUCTURES, ...greek, ...functions].map((c) => c.name));
+  const unitEntries = [...units.values()]
+    .map((u) => ({
+      name:
+        /^[A-Za-z]+$/.test(u.symbol) && !taken.has(u.symbol)
+          ? u.symbol
+          : u.name.replace(/\s*\(.*\)$/, '').replace(/[^A-Za-z]/g, ''),
+      latex: `\\unit{${u.symbol}}`,
+      description: u.name,
+      group: `Units: ${u.group.toLowerCase()}`,
+    }))
+    .sort((a, b) => a.group.localeCompare(b.group));
+  return [...STRUCTURES, ...greek, ...functions, ...unitEntries];
 }

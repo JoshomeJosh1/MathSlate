@@ -55,10 +55,35 @@ class Parser {
 
   parseRow(): Cst | null {
     if (this.peek().kind === 'eof') return null;
-    const result = this.parseRelation();
+    let result = this.parseRelation();
+    if (this.peek().kind === 'to') result = this.parseConversion(result);
     const t = this.peek();
     if (t.kind !== 'eof') throw new MathError(`Unexpected ${describe(t)}`, t.span);
     return result;
+  }
+
+  /**
+   * `… \to [unit]` ends a row: show the value in that unit. On a definition (`d = vt \to km`)
+   * it applies to the right-hand side, so the row still defines d.
+   */
+  private parseConversion(value: Cst): Cst {
+    const to = this.next();
+    if (this.peek().kind === 'eof') throw new MathError('Missing unit after "→"', to.span);
+    const target = this.parseExpr(0);
+    const convert = (expr: Cst): Cst => ({
+      type: 'convert',
+      expr,
+      target,
+      span: spanOf(expr.span, target.span),
+    });
+    if (value.type === 'relation' && value.ops.length === 1 && value.ops[0] === '=') {
+      const [lhs, rhs] = value.operands;
+      if (lhs && rhs) {
+        const operands = [lhs, convert(rhs)];
+        return { ...value, operands, span: spanOf(value.span, target.span) };
+      }
+    }
+    return convert(value);
   }
 
   // ---------------------------------------------------------------- token helpers
@@ -171,6 +196,7 @@ class Parser {
       case 'special':
       case 'cmd':
       case 'placeholder':
+      case 'unit':
         return true;
       case 'env':
         return t.which === 'begin';
@@ -323,6 +349,8 @@ class Parser {
       }
       case 'special':
         return { type: 'special', id: t.id, span: t.span };
+      case 'unit':
+        return { type: 'unit', text: t.text, span: t.span };
       case 'placeholder':
         throw new MathError('Fill in the empty box', t.span);
       case 'fn':

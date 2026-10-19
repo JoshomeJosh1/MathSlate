@@ -34,6 +34,7 @@ export type Token =
   | { kind: 'percent'; span: Span } // \%
   | { kind: 'to'; span: Span } // \to (limits)
   | { kind: 'placeholder'; span: Span } // \placeholder{} (empty MathLive box)
+  | { kind: 'unit'; text: string; span: Span } // \unit{km}
   | { kind: 'eof'; span: Span };
 
 export type SpecialId = 'exponentialE' | 'imaginaryI' | 'infinity';
@@ -303,6 +304,11 @@ export function tokenize(src: string): Token[] {
         push({ kind: 'placeholder', span: span() });
         continue;
       }
+      if (name === 'unit') {
+        const text = readBracedText(start);
+        push({ kind: 'unit', text, span: span() });
+        continue;
+      }
       if (name === 'prime') {
         push({ kind: 'prime', span: span() });
         continue;
@@ -343,6 +349,13 @@ export function tokenize(src: string): Token[] {
         continue;
       }
       throw new MathError(`Unknown command "\\${name}"`, span());
+    }
+
+    // "->" typed where the editor did not turn it into an arrow: the arrow (unit conversions).
+    if (c === '-' && src.charAt(i + 1) === '>') {
+      i += 2;
+      push({ kind: 'to', span: { start, end: i } });
+      continue;
     }
 
     i++;

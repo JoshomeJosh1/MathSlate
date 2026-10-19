@@ -67,7 +67,11 @@ export type Cst =
       span: Span;
     }
   /** A lone + or − in a script, as in a one-sided limit point 0^{+}. */
-  | { type: 'sign'; sign: '+' | '-'; span: Span };
+  | { type: 'sign'; sign: '+' | '-'; span: Span }
+  /** \unit{km}: the unit's text, read by parser/units.ts. */
+  | { type: 'unit'; text: string; span: Span }
+  /** `expr \to target` at the end of a row: show the value in the target unit. */
+  | { type: 'convert'; expr: Cst; target: Cst; span: Span };
 
 export type GroupDelim = 'paren' | 'bracket' | 'set';
 export type BinaryOp = 'add' | 'sub' | 'mul' | 'div';

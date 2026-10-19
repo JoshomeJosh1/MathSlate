@@ -1,6 +1,7 @@
 import type { ConstantId, Expr, Name, RelOp, Statement } from './ast';
 import { FUNCTION_LATEX, SUBSCRIPT_FIRST } from './functionNames';
 import { LATEX_FUNCTION_COMMANDS } from './lexer';
+import { unitText } from './units';
 
 /**
  * AST → canonical LaTeX that our own parser reads back to the same tree (in the same document
@@ -27,6 +28,7 @@ const RELATIONS: Record<RelOp, string> = {
 function prec(e: Expr): number {
   switch (e.kind) {
     case 'relation':
+    case 'convert':
       return 0;
     case 'binary':
       return e.op === 'add' || e.op === 'sub' ? 1 : e.op === 'mul' ? 2 : e.op === 'pow' ? 3 : 5;
@@ -69,6 +71,10 @@ export function printLatex(e: Expr): string {
       return printName(e.name);
     case 'constant':
       return CONSTANTS[e.id];
+    case 'unit':
+      return `\\unit{${unitText(e.factors)}}`;
+    case 'convert':
+      return `${wrap(e.expr, 1)}\\to\\unit{${unitText(e.target)}}`;
     case 'neg':
       return `-${wrap(e.arg, 2)}`;
     case 'binary':
@@ -161,6 +167,8 @@ export function printLatex(e: Expr): string {
  */
 function mulSeparator(e: Expr & { kind: 'binary' }, left: string, right: string): string {
   if (e.form === 'times') return '\\times ';
+  // A quantity: 5\unit{km}, (x+1)\unit{m} (the unit draws its own space).
+  if (e.right.kind === 'unit' && e.left.kind !== 'unit') return '';
   if (e.form === 'juxt') {
     // After a number: 2x, 2\sin…  Before a command: x\cos(x), x\left(x+1\right) — a command
     // cannot merge with the letters before it into a longer name.

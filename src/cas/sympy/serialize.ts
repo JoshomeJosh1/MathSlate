@@ -181,6 +181,10 @@ class Serializer {
     switch (e.kind) {
       case 'num':
         return /^[0-9]+$/.test(e.value) ? `Integer(${e.value})` : `Rational(${pyString(e.value)})`;
+      case 'unit':
+      case 'convert':
+        // Units are expanded into base-unit symbols before a request reaches a backend.
+        throw new Error('units reached the SymPy serializer');
       case 'var': {
         const key = nameKey(e.name);
         if (!locals.has(key) && this.defined.get(key) === 'const') return `u_${pyId(key)}`;
@@ -304,7 +308,13 @@ class Serializer {
   }
 
   declarations(): string[] {
-    return [...this.symbols].sort().map((key) => `s_${pyId(key)} = Symbol(${pyString(key)})`);
+    // Base units (`@m`, from core/units.ts) are positive, so sqrt(@m^2) = @m.
+    return [...this.symbols]
+      .sort()
+      .map(
+        (key) =>
+          `s_${pyId(key)} = Symbol(${pyString(key)}${key.startsWith('@') ? ', positive=True' : ''})`,
+      );
   }
 }
 

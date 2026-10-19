@@ -1,5 +1,5 @@
 import { GREEK, LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
-import type { NameOccurrence } from '../parser/resolve';
+import type { NameOccurrence, UnitOccurrence } from '../parser/resolve';
 import { builtinFunctions, type BuiltinFunction } from '../registries/builtins/functions';
 import type { RowAnalysis } from './analyze';
 import { needsBrackets } from './builtinScope';
@@ -12,8 +12,18 @@ import { needsBrackets } from './builtinScope';
  *
  * Pure and idempotent: decorating already-decorated LaTeX returns it unchanged.
  */
-export function decorateLatex(latex: string, names: readonly NameOccurrence[]): string {
+export function decorateLatex(
+  latex: string,
+  names: readonly NameOccurrence[],
+  units: readonly UnitOccurrence[] = [],
+): string {
   const edits: { start: number; end: number; text: string }[] = [];
+  // A unit typed in square brackets ([km]) becomes \unit{km}: shown with light brackets.
+  for (const u of units) edits.push({ ...u.span, text: `\\unit{${u.text}}` });
+  // "->" left as typed (the editor's shortcut does not always fire) becomes an arrow.
+  for (const m of latex.matchAll(/->/g)) {
+    edits.push({ start: m.index, end: m.index + 2, text: '\\to ' });
+  }
   for (const n of names) {
     const current = latex.slice(n.span.start, n.span.end);
     let desired = desiredSpelling(n, current);
@@ -60,7 +70,7 @@ function desiredSpelling(n: NameOccurrence, current: string): string | null {
 /** The decorated LaTeX for a row, or null if it needs no change (or the analysis is stale). */
 export function decoratedRow(latex: string, analysis: RowAnalysis | undefined): string | null {
   if (!analysis || analysis.latex !== latex) return null;
-  const next = decorateLatex(latex, analysis.names);
+  const next = decorateLatex(latex, analysis.names, analysis.units);
   return next === latex ? null : next;
 }
 

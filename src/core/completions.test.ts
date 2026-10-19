@@ -27,6 +27,12 @@ describe('the \\ menu', () => {
     }
   });
 
+  it('offers units', () => {
+    expect(completions.find((c) => c.name === 'km')?.latex).toBe('\\unit{km}');
+    expect(completions.find((c) => c.name === 'ohm')?.latex).toBe('\\unit{Ω}');
+    expect(completions.find((c) => c.name === 'minute')?.latex).toBe('\\unit{min}');
+  });
+
   it('gives functions that need brackets their brackets', () => {
     const lcm = completions.find((c) => c.name === 'lcm');
     expect(lcm?.latex).toBe('\\lcm\\left(#?\\right)');

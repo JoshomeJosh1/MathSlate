@@ -6,6 +6,7 @@ import {
   type Name,
   type RelOp,
   type Statement,
+  type UnitFactor,
 } from './ast';
 import type { Cst } from './cst';
 import type { DefinitionShape } from './definitions';
@@ -13,6 +14,7 @@ import { subscriptText } from './definitions';
 import { MathError, spanOf, type Span } from './errors';
 import { functionAliasKey } from './functionNames';
 import { isCallable, isSequence, type SymbolInfo, type SymbolTable } from './symbols';
+import { parseUnitText, unitText } from './units';
 
 /**
  * CST → AST using a symbol table. This is where the context-dependent reading happens:
@@ -39,6 +41,15 @@ export interface ResolveOptions {
     symbol: string,
     form: 'bare' | 'subscripted',
   ) => { meaning: InterpretedMeaning; optionId: string } | undefined;
+  /** Whether a unit symbol exists (`km`, `N`, `µs`); from the units registry. */
+  isUnit?: (symbol: string) => boolean;
+}
+
+/** A unit written in square brackets (`[km]`), to be rewritten as `\unit{km}`. */
+export interface UnitOccurrence {
+  span: Span;
+  /** The unit's text for `\unit{…}`. */
+  text: string;
 }
 
 /** A multi-letter name in the source, and what it resolved to. */
@@ -64,6 +75,8 @@ export interface ResolvedRow {
   interpretations: Map<string, string>;
   /** Multi-letter names in the source, for upright display of recognised names. */
   names: NameOccurrence[];
+  /** Units typed in square brackets, for rewriting as `\unit{…}`. */
+  units: UnitOccurrence[];
 }
 
 export function resolveRow(
@@ -74,7 +87,13 @@ export function resolveRow(
 ): ResolvedRow {
   const r = new Resolver(options);
   const statement = r.statement(cst, shape, table);
-  return { statement, refs: r.refs, interpretations: r.interpretations, names: r.names };
+  return {
+    statement,
+    refs: r.refs,
+    interpretations: r.interpretations,
+    names: r.names,
+    units: r.units,
+  };
 }
 
 /** Resolves a single expression (no definition handling). */
@@ -103,8 +122,43 @@ class Resolver {
   readonly refs = new Set<string>();
   readonly interpretations = new Map<string, string>();
   readonly names: NameOccurrence[] = [];
+  readonly units: UnitOccurrence[] = [];
 
   constructor(private readonly options: ResolveOptions) {}
+
+  /** The factors of `\unit{…}` text; an error names an unknown symbol. */
+  private unitFactors(text: string, span: Span): UnitFactor[] {
+    const factors = parseUnitText(text, span);
+    for (const f of factors) {
+      if (this.options.isUnit && !this.options.isUnit(f.symbol)) {
+        throw new MathError(`Unknown unit "${f.symbol}"`, span);
+      }
+    }
+    return factors;
+  }
+
+  /** A bracket group that spells a unit (`[km]`, `[m/s^2]`), or null. */
+  private bracketUnit(cst: Cst & { type: 'group' }): UnitFactor[] | null {
+    const only = cst.items.length === 1 ? cst.items[0] : undefined;
+    const text = only && this.options.isUnit ? unitTextOf(only) : null;
+    if (text === null) return null;
+    try {
+      const factors = parseUnitText(text, cst.span);
+      if (!factors.every((f) => this.options.isUnit?.(f.symbol))) return null;
+      this.units.push({ span: cst.span, text: unitText(factors) });
+      return factors;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The target of `→`: `\unit{mi}` or `[mi]`. */
+  private conversionTarget(cst: Cst): UnitFactor[] {
+    if (cst.type === 'unit') return this.unitFactors(cst.text, cst.span);
+    const factors = cst.type === 'group' && cst.delim === 'bracket' ? this.bracketUnit(cst) : null;
+    if (!factors) throw new MathError('Convert to a unit, e.g. → [km]', cst.span);
+    return factors;
+  }
 
   statement(cst: Cst | null, shape: DefinitionShape | null, table: SymbolTable): Statement {
     if (!cst) return { kind: 'empty' };
@@ -170,7 +224,20 @@ class Resolver {
         return this.juxtaposition([cst], scope, span);
       case 'juxt':
         return this.juxtaposition(cst.items, scope, span);
+      case 'unit':
+        return { kind: 'unit', factors: this.unitFactors(cst.text, span), span };
+      case 'convert':
+        return {
+          kind: 'convert',
+          expr: this.expr(cst.expr, scope),
+          target: this.conversionTarget(cst.target),
+          span,
+        };
       case 'group': {
+        if (cst.delim === 'bracket') {
+          const factors = this.bracketUnit(cst);
+          if (factors) return { kind: 'unit', factors, span };
+        }
         const items = cst.items.map((c) => this.expr(c, scope));
         if (cst.delim === 'paren' && items.length === 1 && items[0]) return items[0];
         return { kind: 'list', delim: cst.delim, items, span };
@@ -615,6 +682,53 @@ function unwrap(item: Cst): Factor {
     throw new MathError('A subscript must follow a name', node.sub.span);
   }
   return { core: node, wrappers, span: item.span };
+}
+
+const UNIT_GREEK: Partial<Record<string, string>> = { '\\mu': 'µ', '\\Omega': 'Ω' };
+
+/**
+ * What the inside of square brackets says as unit text, if it is made only of letters, powers,
+ * products and one quotient: `[km]` → km, `[m/s^2]` → m/(s^{2}), `[\mu m]` → µm. Null otherwise.
+ */
+function unitTextOf(cst: Cst): string | null {
+  switch (cst.type) {
+    case 'letter':
+      return /^[A-Za-z]$/.test(cst.name) ? cst.name : (UNIT_GREEK[cst.name] ?? null);
+    case 'opname':
+      return cst.name;
+    case 'fnapp':
+      // [min]: the editor turned the letters into the function \min.
+      return cst.arg || cst.sub || cst.power ? null : cst.name;
+    case 'juxt': {
+      const parts = cst.items.map(unitTextOf);
+      return parts.every((p) => p !== null) ? parts.join('') : null;
+    }
+    case 'pow': {
+      const base = unitTextOf(cst.base);
+      const exp = cst.exp;
+      const power =
+        exp.type === 'num' && /^[0-9]+$/.test(exp.value)
+          ? exp.value
+          : exp.type === 'neg' && exp.arg.type === 'num' && /^[0-9]+$/.test(exp.arg.value)
+            ? `-${exp.arg.value}`
+            : null;
+      return base !== null && power !== null ? `${base}^{${power}}` : null;
+    }
+    case 'binary': {
+      if (cst.op !== 'mul' && cst.op !== 'div') return null;
+      const left = unitTextOf(cst.left);
+      const right = unitTextOf(cst.right);
+      if (left === null || right === null) return null;
+      return cst.op === 'mul' ? `${left} ${right}` : `${left}/(${right})`;
+    }
+    case 'frac': {
+      const num = unitTextOf(cst.num);
+      const den = unitTextOf(cst.den);
+      return num !== null && den !== null ? `${num}/(${den})` : null;
+    }
+    default:
+      return null;
+  }
 }
 
 function isParenGroup(f: Factor | undefined): boolean {

@@ -282,6 +282,9 @@ export function children(cst: Cst): Cst[] {
     case 'bigop':
       return [cst.index, cst.lower, cst.upper, cst.operand];
     case 'sign':
+    case 'unit':
       return [];
+    case 'convert':
+      return [cst.expr, cst.target];
   }
 }
