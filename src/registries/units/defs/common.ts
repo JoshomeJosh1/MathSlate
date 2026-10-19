@@ -10,6 +10,11 @@ const units: UnitDef[] = [
   { symbol: 'ft', name: 'foot', dimension: { m: 1 }, factor: '0.3048', group: 'Length' },
   { symbol: 'yd', name: 'yard', dimension: { m: 1 }, factor: '0.9144', group: 'Length' },
   { symbol: 'mi', name: 'mile', dimension: { m: 1 }, factor: '1609.344', group: 'Length' },
+  // Astronomy (IAU), all exact: the au by definition, a light year is c × a Julian year, and a
+  // parsec is 648000/π au.
+  { symbol: 'au', name: 'astronomical unit', dimension: { m: 1 }, factor: '149597870700', group: 'Astronomy' },
+  { symbol: 'ly', name: 'light year', dimension: { m: 1 }, factor: '9460730472580800', prefixes: ['k', 'M', 'G'], group: 'Astronomy' },
+  { symbol: 'pc', name: 'parsec', dimension: { m: 1 }, factor: '96939420213600000', piPower: -1, prefixes: ['k', 'M', 'G'], menu: ['k', 'M'], group: 'Astronomy' },
   { symbol: 't', name: 'tonne', dimension: { kg: 1 }, factor: '1000', prefixes: ['k', 'M', 'G'], group: 'Mass' },
   { symbol: 'lb', name: 'pound', dimension: { kg: 1 }, factor: '0.45359237', group: 'Mass' },
   { symbol: 'oz', name: 'ounce', dimension: { kg: 1 }, factor: '0.028349523125', group: 'Mass' },

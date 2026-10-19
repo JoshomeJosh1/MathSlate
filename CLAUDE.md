@@ -353,7 +353,8 @@ Every new user-visible feature also gets an example in `src/document/documentati
   (a note describing it, under the right `##` group, plus example rows; the documentation test
   fails otherwise).
 - **Add a unit**: an entry in a file in `src/registries/units/defs/` (`symbol`, `name`,
-  `dimension` in base units m/kg/s/A/K/mol, exact decimal `factor`, optional `prefixes`, `group`
+  `dimension` in base units m/kg/s/A/K/mol, exact decimal `factor` (times π^`piPower` if set:
+  the parsec), optional `prefixes`, `group`
   for the `\` menu). Mention it in the documentation's Units folder.
 - **Add a built-in sequence**: a file in `src/registries/builtins/sequences/defs/`, a file in
   `src/registries/interpretations/defs/` with `form: 'subscripted'` and an option whose meaning is

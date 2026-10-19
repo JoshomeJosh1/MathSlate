@@ -67,6 +67,12 @@ describe('units, through Nerdamer', () => {
 
   it('converts with →', async () => {
     expect(await last(['5\\unit{km}\\to\\unit{m}'])).toEqual(['5000\\unit{m}']);
+    expect(await last(['1\\unit{au}\\to\\unit{km}'])).toEqual(['149597870.7\\unit{km}']);
+    expect(await last(['1\\unit{ly}\\to\\unit{Pm}'])).toEqual(['9.4607304725808\\unit{Pm}']);
+    // A parsec is exactly 648000/π au.
+    expect(await last(['1\\unit{pc}\\to\\unit{au}'])).toEqual([
+      '648000\\pi^{-1}\\unit{au} ≈ 206264.806247096\\unit{au}',
+    ]);
     // A unit on its own is one of it.
     expect(await last(['\\left[in\\right]\\to\\left[mm\\right]'])).toEqual(['25.4\\unit{mm}']);
     expect(await last(['d=2\\unit{h}\\cdot 30\\unit{km/h}\\to\\unit{mi}'])).toEqual([

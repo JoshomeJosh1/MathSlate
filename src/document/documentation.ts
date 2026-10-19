@@ -530,10 +530,11 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\mathrm{pace}=12\\unit{km/h}',
   '\\mathrm{pace}\\cdot90\\unit{min}\\to\\unit{mi}',
   '3\\unit{kWh}\\to\\unit{MJ}',
+  '1\\unit{pc}\\to\\unit{ly}',
   { note: 'Adding different kinds of quantity is an error.' },
   '5\\unit{m}+2\\unit{s}',
   {
-    note: 'Units: metre, gram, second, ampere, kelvin, mole, newton, joule, watt, pascal, hertz, coulomb, volt, ohm and litre with every SI prefix, quecto to quetta (km, mg, µs, pg, dam, GW, …); minute, hour, day, year; inch, foot, yard, mile; tonne, pound, ounce; mph; watt-hour, calorie, electronvolt; bar, atm, psi.',
+    note: 'Units: metre, gram, second, ampere, kelvin, mole, newton, joule, watt, pascal, hertz, coulomb, volt, ohm and litre with every SI prefix, quecto to quetta (km, mg, µs, pg, dam, GW, …); minute, hour, day, year; inch, foot, yard, mile; astronomical unit (au), light year (ly), parsec (pc, kpc, Mpc); tonne, pound, ounce; mph; watt-hour, calorie, electronvolt; bar, atm, psi.',
   },
 
   { folder: 'Using results' },

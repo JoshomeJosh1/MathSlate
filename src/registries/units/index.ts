@@ -9,6 +9,8 @@ export interface UnitInfo {
   dimension: Dimension;
   /** Exact decimals whose product is the unit's multiple of the base units. */
   factors: readonly string[];
+  /** Times π to this power (0 for most units). */
+  piPower: number;
   group: string;
   /** Offered in the `\` menu (unprefixed units and the common prefixed ones). */
   inMenu: boolean;
@@ -34,6 +36,7 @@ function build(): Map<string, UnitInfo> {
       dimension,
       group,
       factors: d.factor === '1' ? [] : [d.factor],
+      piPower: d.piPower ?? 0,
       inMenu: true,
     });
   }
@@ -50,6 +53,7 @@ function build(): Map<string, UnitInfo> {
         dimension: d.dimension,
         group: d.group,
         factors: p === 'k' && d.symbol === 'g' ? [] : factors,
+        piPower: d.piPower ?? 0,
         inMenu: d.menu?.includes(p) ?? false,
       });
     }

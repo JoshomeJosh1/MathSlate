@@ -15,6 +15,8 @@ export interface UnitDef {
   dimension: Dimension;
   /** Exact decimal multiple of the base units: '1609.344' for a mile. */
   factor: string;
+  /** The multiple also has π to this power: a parsec is 648000·149597870700 / π m (-1). */
+  piPower?: number;
   /** SI prefixes this unit takes: 'all' (pg, das, QW), or a list (`k` → kt). */
   prefixes?: 'all' | readonly string[];
   /** The prefixed forms the `\` menu offers (all of them can be typed). */

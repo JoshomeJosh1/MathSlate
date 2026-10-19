@@ -175,7 +175,10 @@ function unitValue(factors: readonly UnitFactor[]): Expr {
           info.dimension[b] ?? 0,
         ),
       );
-      return power(product([...info.factors.map(num), ...dims]), f.power);
+      const pi: Expr[] = info.piPower
+        ? [power({ kind: 'constant', id: 'pi', span: NO_SPAN }, info.piPower)]
+        : [];
+      return power(product([...info.factors.map(num), ...pi, ...dims]), f.power);
     }),
   );
 }
