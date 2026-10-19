@@ -28,7 +28,7 @@ starting `#` are headings, `##` subheadings.
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
-| 8         | URL share, error highlight inside the math field (done); perf                         | partial |
+| 8         | URL share, error highlight inside the math field, perf (measured; see Performance)    | done    |
 
 ## Commands
 
@@ -324,6 +324,17 @@ Definite integrals keep any closed form SymPy finds, special functions included.
   flicker): a dashed outline around the group to join (each row draws its piece) and a label
   that follows the pointer, recomputed on every pointer move. Typing `@` in an empty row makes a
   folder, `#` a heading note, `"` a note; Shift+click on row numbers selects rows to group.
+
+### Performance (measured on the documentation slate, 285 math rows)
+
+Analysis of the whole document takes ~2 ms and the engine's per-edit work ~5 ms, so there is no
+incremental re-parsing; typing causes no long tasks. Showing every row at once (expanding all
+folders) takes ~1.4 s: React rendering the rows (~0.7 s; dnd-kit's `useSortable` ~0.13 s of it)
+and creating the MathLive fields (~2.6 ms each). Tried and rejected: static previews
+(`convertLatexToMarkup`) until a field scrolls near the viewport — their markup costs more layout
+than a field (whose content sits in a shadow root), so it was slower overall. Notes size
+themselves with CSS (a hidden copy of the text in the same grid cell), not by measuring
+`scrollHeight`, which forced a layout per note. Next step if needed: virtualize the row list.
 
 ## Conventions
 

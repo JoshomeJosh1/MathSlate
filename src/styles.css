@@ -345,35 +345,57 @@ button {
   color: var(--text);
 }
 
-/* Notes: plain text rows for headings and explanations. */
+/*
+ * Notes: plain text rows for headings and explanations. The wrapper holds the typography; its
+ * textarea and a hidden copy of the text (::after) share one grid cell, so the copy sets the
+ * height (NoteEditor.tsx).
+ */
 .note-editor {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
+  display: grid;
   color: var(--muted);
-  font: inherit;
   font-size: 0.95rem;
   line-height: 1.45;
-  padding: 0.6rem 0.5rem;
-  resize: none;
-  overflow: hidden;
+  --note-padding-top: 0.6rem;
+}
+
+.note-editor > textarea,
+.note-editor::after {
+  grid-area: 1 / 1;
+  min-width: 0;
+  margin: 0;
+  border: none;
+  padding: var(--note-padding-top) 0.5rem 0.6rem;
+  font: inherit;
+  color: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.note-editor::after {
+  content: attr(data-value) ' ';
+  visibility: hidden;
+}
+
+.note-editor > textarea {
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
 }
 
 .note-editor.heading {
   color: var(--text);
   font-size: 1.1rem;
   font-weight: 600;
-  padding-top: 1rem;
+  --note-padding-top: 1rem;
 }
 
 .note-editor.subheading {
   color: var(--text);
   font-weight: 600;
-  padding-top: 0.8rem;
+  --note-padding-top: 0.8rem;
 }
 
 .row-item.note .row-gutter {
