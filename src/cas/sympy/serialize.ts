@@ -335,7 +335,7 @@ class Serializer {
       case 'evaluate':
         return `_evaluate(${target})`;
       case 'simplify':
-        return `simplify(${target})`;
+        return `_simplify(${target})`;
       case 'factor':
         return `_factor(${target})`;
       case 'expand':

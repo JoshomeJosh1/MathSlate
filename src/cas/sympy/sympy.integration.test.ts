@@ -190,6 +190,24 @@ describe('ans and out_k with SymPy', { timeout: 60_000 }, () => {
   });
 });
 
+describe('tidy results', { timeout: 60_000 }, () => {
+  it('evaluates what SymPy leaves as written', async () => {
+    expect(await last(['\\sinh(\\ln 2)'])).toEqual(['\\frac{3}{4} ≈ 0.75']);
+    expect(await last(['\\cosh(\\ln 3)'])).toEqual(['\\frac{5}{3} ≈ 1.66666666666667']);
+    expect(await last(['\\operatorname{B}(\\frac12,\\frac12)'])).toEqual([
+      '\\pi ≈ 3.14159265358979',
+    ]);
+    expect(await last(['\\sqrt{3+2\\sqrt2}'])).toEqual(['1+\\sqrt{2} ≈ 2.41421356237309']);
+  });
+
+  it('simplifies with erfc as 1 − erf, and hyperbolic functions of logarithms', async () => {
+    expect(await last([['\\operatorname{erf}(x)+\\operatorname{erfc}(x)', 'simplify']])).toEqual([
+      'simplify: 1',
+    ]);
+    expect(await last([['\\sinh(\\ln x)', 'simplify']])).toEqual(['simplify: \\frac{x^{2}-1}{2x}']);
+  });
+});
+
 describe('sequences with SymPy', { timeout: 60_000 }, () => {
   it('sums and multiplies over built-in and recursive sequences', async () => {
     expect(await last(['\\sum_{k=1}^{4}p_k'])).toEqual(['17']);

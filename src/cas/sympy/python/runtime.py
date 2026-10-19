@@ -9,6 +9,7 @@ from functools import reduce
 from mpmath.libmp import prec_to_dps
 from sympy import *  # noqa: F401,F403  (generated programs use SymPy names directly)
 from sympy.core.function import Application, AppliedUndef
+from sympy.functions.elementary.hyperbolic import HyperbolicFunction
 from sympy.core.relational import Relational
 from sympy.matrices import MatrixBase
 from sympy.sets.sets import EmptySet as _EmptySetClass
@@ -466,11 +467,35 @@ def _tidy(e):
         if e.has(exp_polar):
             # exp_polar(2πi) is SymPy's branch bookkeeping; as an ordinary number it is 1.
             e = unpolarify(e).replace(exp_polar, exp)
+        # sinh(ln 2) → 3/4, sinh(ln x) → (x² − 1)/(2x): SymPy leaves hyperbolic functions of a
+        # logarithm as they are, though as exponentials the logarithm cancels.
+        e = e.replace(
+            lambda x: isinstance(x, HyperbolicFunction) and x.args[0].has(log),
+            lambda x: together(x.rewrite(exp)),
+        )
+        # B(1/2, 1/2) → π: Beta of numbers stays unevaluated unless written with Γ.
+        e = e.replace(
+            lambda x: isinstance(x, beta) and all(a.is_number for a in x.args),
+            lambda x: x.rewrite(gamma),
+        )
         if e.has(gamma):
             e = _with_time_limit(2.0, lambda: gammasimp(e))
+        # √(3 + 2√2) → 1 + √2.
+        if e.is_number and any(isinstance(p.base, Add) for p in e.atoms(Pow)):
+            e = _with_time_limit(2.0, lambda: sqrtdenest(e))
     except Exception:  # noqa: BLE001 - tidying is optional
         pass
     return e
+
+
+def _simplify(e):
+    """simplify, also trying erfc as 1 − erf (erf(x) + erfc(x) → 1), whichever is shorter."""
+    best = simplify(e)
+    if isinstance(e, Basic) and e.has(erfc):
+        other = simplify(e.rewrite(erf))
+        if count_ops(other) < count_ops(best):
+            best = other
+    return best
 
 
 def _describe(result):
