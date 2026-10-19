@@ -169,6 +169,12 @@ to spell a longer shortcut (binom → binomial, tan → artanh, which then fires
 brackets (`bracketOnly` — call-only functions: lcmab and Six stay letters; for these any typed
 character but `(`, `_`, `^` or a space reverts too, so 2Ai+1 is 2·A·i+1). Symbol shortcuts (≤, ″) are not affected.
 
+**Digits after a letter are subscripts** (`canSubscript` in `MathLiveEditor.tsx`, using MathLive's
+internal model): x1 → x₁, out3 → out₃, θ2 → θ₂, after a letter with no subscript/power yet, not
+inside a subscript, power or square brackets (units), and not after a function command (sin2x).
+More digits stay in the subscript; any other character leaves it first (x1+2 → x₁+2); Backspace
+straight after the first digit makes it a plain digit again. Works for the math keyboard too.
+
 **Touch screens** get MathLive's math keyboard (`mathVirtualKeyboardPolicy = 'auto'`, which
 only applies on `pointer: coarse`); MathLive never raises the system keyboard (its input is
 `inputmode=none`). The keyboard's keys arrive as commands, not key events, so its return

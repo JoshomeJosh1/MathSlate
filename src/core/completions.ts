@@ -50,7 +50,7 @@ const STRUCTURES: LatexCompletion[] = [
   ]),
   ...symbols('Results', [
     ['ans', '\\mathrm{ans}', 'The nearest result above'],
-    ['out', '\\mathrm{out}_{#?}', 'An output by its label: out₃ is the output labelled 3'],
+    ['out', '\\mathrm{out}', 'An output by its label: type its number next (out3 → out₃)'],
   ]),
   ...symbols('Operators and relations', [
     ['cdot', '\\cdot', 'Multiplication dot'],

@@ -117,8 +117,13 @@ export function MathLiveEditor({
     let fired: Fired | null = null;
     /** A word being spelled out after a shortcut was reverted (e.g. "binomi"). */
     let spelling: string | null = null;
-    /** The caret is in the number box of a NUMBER_BOX shortcut (out_□), digits typed so far. */
+    /**
+     * A digit typed after a letter became its subscript (x1 → x₁), and the caret is still in
+     * that subscript: more digits stay in it, anything else leaves it (x1+2 is x₁ + 2).
+     */
     let numberBox = false;
+    /** The digit about to be typed was moved into a subscript: undoable like a shortcut. */
+    let subscripted: Fired | null = null;
     let applying = false;
 
     const wordKeys = () => Object.keys(mf.inlineShortcuts).filter((k) => /^[A-Za-z]{2,}$/.test(k));
@@ -153,8 +158,8 @@ export function MathLiveEditor({
       if (pending) {
         const { char, virtual } = pending;
         const key = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
-        fired = key ? { key, by: 'mathlive' } : virtual ? applyShortcut() : null;
-        if (fired && NUMBER_BOX.has(fired.key)) numberBox = true;
+        fired = key ? { key, by: 'mathlive' } : (subscripted ?? (virtual ? applyShortcut() : null));
+        subscripted = null;
         if (spelling !== null && !key) {
           spelling += char;
           const word = spelling;
@@ -312,22 +317,27 @@ export function MathLiveEditor({
      * A printable character is about to be typed, from a physical key or the math keyboard
      * (`virtual`, whose keys MathLive inserts without applying inline shortcuts: onInput then
      * applies them, see applyShortcut). `last` is the shortcut the previous character fired.
-     * Returns whether it changed the field (turned that shortcut back into letters, or left a
-     * number box).
+     * Returns whether it changed the field (turned that shortcut back into letters, or moved the
+     * caret into or out of a number subscript).
      */
     const beforeChar = (char: string, last: Fired | null, virtual: boolean): boolean => {
       let reverted = false;
-      if (numberBox && !/^\d$/.test(char)) {
-        // Only digits go in out's box: anything else straight after "out" turns it back into
-        // letters; after its number, leaves the box (out₃+1, not out_{3+1}).
+      const digit = /^\d$/.test(char);
+      if (numberBox && !digit) {
+        // Only digits go in an automatic subscript: anything else leaves it (x₁ + 2).
         numberBox = false;
-        if (last && NUMBER_BOX.has(last.key)) {
-          revert(last);
-        } else {
-          applying = true;
-          mf.executeCommand('moveAfterParent');
-          applying = false;
-        }
+        applying = true;
+        mf.executeCommand('moveAfterParent');
+        applying = false;
+        reverted = true;
+      } else if (digit && !numberBox && canSubscript(mf)) {
+        // A digit straight after a letter is its subscript: x1 → x₁, out3 → out₃.
+        const restore = { value: mf.value, position: mf.position, insert: char };
+        applying = true;
+        mf.executeCommand('moveToSubscript');
+        applying = false;
+        numberBox = true;
+        subscripted = { key: char, by: 'us', restore };
         reverted = true;
       } else if (last && /^[A-Za-z]$/.test(char)) {
         // The longest word ending in this letter that extends the shortcut and could still
@@ -513,7 +523,12 @@ export function MathLiveEditor({
     /** Turns a shortcut that just fired back into the letters that were typed. */
     const revert = (last: Fired) => {
       applying = true;
-      if (last.span) {
+      if (last.restore) {
+        // An automatic subscript: the field as it was, then the digit typed plainly.
+        mf.value = last.restore.value;
+        mf.position = last.restore.position;
+        mf.insert(last.restore.insert);
+      } else if (last.span) {
         // Replace just what it inserted: replacing the whole value here would lose the key the
         // math keyboard is about to type.
         const { start, length } = last.span;
@@ -845,16 +860,35 @@ const EMPTY_ROW_KEYS: Partial<Record<string, EditorKeyAction>> = {
 
 /**
  * A word shortcut that just fired: by MathLive (undo reverts it) or by us; `span` is where we put
- * what it inserted (offsets), when we applied it for the math keyboard.
+ * what it inserted (offsets), when we applied it for the math keyboard; `restore` undoes an
+ * automatic subscript (the field before it, and the digit to type plainly instead).
  */
 interface Fired {
   key: string;
   by: 'mathlive' | 'us';
   span?: { start: number; length: number };
+  restore?: { value: string; position: number; insert: string };
 }
 
-/** Shortcuts whose box takes a number (out → out_□): other keys leave the box (see beforeChar). */
-const NUMBER_BOX = new Set(['out']);
+/**
+ * Whether a digit typed now should be the subscript of the letter before the caret (x1 → x₁):
+ * a letter (italic, upright or Greek) with no subscript or power yet, not itself inside a
+ * subscript or power, nor inside square brackets (a unit). Function names (\sin) are not letters.
+ */
+function canSubscript(mf: MathfieldElement): boolean {
+  const model = internalModel(mf);
+  if (!model || !mf.selectionIsCollapsed) return false;
+  const atom = model.at(model.position) as
+    (InternalAtom & { value?: unknown; subscript?: unknown; superscript?: unknown }) | undefined;
+  if (atom?.type !== 'mord' || typeof atom.value !== 'string') return false;
+  if (!/^\p{L}$/u.test(atom.value) || atom.subscript || atom.superscript) return false;
+  for (let a: InternalAtom | undefined = atom; a; a = a.parent) {
+    if (a.parentBranch === 'subscript' || a.parentBranch === 'superscript') return false;
+    const delim = (a.parent as { leftDelim?: unknown } | undefined)?.leftDelim;
+    if (a.parent?.type === 'leftright' && (delim === '[' || delim === '\\lbrack')) return false;
+  }
+  return true;
+}
 
 /** Typed characters that end a call-only name without its brackets (letters handled apart). */
 const BREAKS_CALL = /^[^A-Za-z(_^\s]$/;
