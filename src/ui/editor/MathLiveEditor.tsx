@@ -117,13 +117,6 @@ export function MathLiveEditor({
     let fired: Fired | null = null;
     /** A word being spelled out after a shortcut was reverted (e.g. "binomi"). */
     let spelling: string | null = null;
-    /**
-     * A digit typed after a letter became its subscript (x1 → x₁), and the caret is still in
-     * that subscript: more digits stay in it, anything else leaves it (x1+2 is x₁ + 2).
-     */
-    let numberBox = false;
-    /** The digit about to be typed was moved into a subscript: undoable like a shortcut. */
-    let subscripted: Fired | null = null;
     let applying = false;
 
     const wordKeys = () => Object.keys(mf.inlineShortcuts).filter((k) => /^[A-Za-z]{2,}$/.test(k));
@@ -158,8 +151,7 @@ export function MathLiveEditor({
       if (pending) {
         const { char, virtual } = pending;
         const key = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
-        fired = key ? { key, by: 'mathlive' } : (subscripted ?? (virtual ? applyShortcut() : null));
-        subscripted = null;
+        fired = key ? { key, by: 'mathlive' } : virtual ? applyShortcut() : null;
         if (spelling !== null && !key) {
           spelling += char;
           const word = spelling;
@@ -291,13 +283,18 @@ export function MathLiveEditor({
         ev.preventDefault();
         typed = '';
         spelling = null;
-        numberBox = false;
         revert(last);
+      } else if (ev.inputType === 'deleteContentBackward' && deleteSubscriptDigit()) {
+        ev.preventDefault();
+        callbacks.current.onChange(mf.value);
       } else if (ev.inputType === 'deleteContentBackward' && mf.value === '') {
         ev.preventDefault();
         callbacks.current.onKeyAction?.('backspaceEmpty');
       } else if (ev.inputType === 'insertText' && ev.data?.length === 1) {
-        if (beforeChar(ev.data, last, true)) {
+        if (subscriptDigit(ev.data)) {
+          ev.preventDefault();
+          callbacks.current.onChange(mf.value);
+        } else if (beforeChar(ev.data, last, true)) {
           // MathLive loses its own insert when the field changed under it: type the key here.
           ev.preventDefault();
           applying = true;
@@ -309,37 +306,66 @@ export function MathLiveEditor({
         typed = '';
         pending = null;
         spelling = null;
-        numberBox = false;
       }
+    };
+
+    /**
+     * A digit straight after a letter is its subscript, and more digits extend it (x1 → x₁,
+     * x12 → x₁₂, out3 → out₃); the caret stays after the subscript, so whatever comes next is
+     * typed normally (x1+2). Types the digit itself and returns true when it applies.
+     */
+    const subscriptDigit = (char: string): boolean => {
+      if (!/^\d$/.test(char)) return false;
+      const target = subscriptTarget(mf);
+      if (!target) return false;
+      const restore = { value: mf.value, position: mf.position, insert: char };
+      applying = true;
+      if (target === 'new') mf.executeCommand('moveToSubscript');
+      else mf.position = target.end;
+      mf.insert(char);
+      mf.executeCommand('moveAfterParent');
+      applying = false;
+      // Backspace straight after the first digit makes it a plain digit again.
+      fired = target === 'new' ? { key: char, by: 'us', restore } : null;
+      typed = '';
+      pending = null;
+      spelling = null;
+      return true;
+    };
+
+    /**
+     * Backspace just after a number subscript (x₁₂|) deletes its last digit, and the subscript
+     * with it when that was the only one; MathLive would only step into it. Returns whether it
+     * did.
+     */
+    const deleteSubscriptDigit = (): boolean => {
+      const target = subscriptTarget(mf);
+      if (!target || target === 'new') return false;
+      applying = true;
+      if (target.digits > 1) {
+        mf.position = target.end;
+        mf.executeCommand('deleteBackward');
+        mf.executeCommand('moveAfterParent');
+      } else {
+        mf.selection = { ranges: [[target.letter, mf.position]], direction: 'none' };
+        mf.executeCommand('deleteBackward');
+      }
+      applying = false;
+      typed = '';
+      pending = null;
+      spelling = null;
+      return true;
     };
 
     /**
      * A printable character is about to be typed, from a physical key or the math keyboard
      * (`virtual`, whose keys MathLive inserts without applying inline shortcuts: onInput then
      * applies them, see applyShortcut). `last` is the shortcut the previous character fired.
-     * Returns whether it changed the field (turned that shortcut back into letters, or moved the
-     * caret into or out of a number subscript).
+     * Returns whether it turned that shortcut back into letters.
      */
     const beforeChar = (char: string, last: Fired | null, virtual: boolean): boolean => {
       let reverted = false;
-      const digit = /^\d$/.test(char);
-      if (numberBox && !digit) {
-        // Only digits go in an automatic subscript: anything else leaves it (x₁ + 2).
-        numberBox = false;
-        applying = true;
-        mf.executeCommand('moveAfterParent');
-        applying = false;
-        reverted = true;
-      } else if (digit && !numberBox && canSubscript(mf)) {
-        // A digit straight after a letter is its subscript: x1 → x₁, out3 → out₃.
-        const restore = { value: mf.value, position: mf.position, insert: char };
-        applying = true;
-        mf.executeCommand('moveToSubscript');
-        applying = false;
-        numberBox = true;
-        subscripted = { key: char, by: 'us', restore };
-        reverted = true;
-      } else if (last && /^[A-Za-z]$/.test(char)) {
+      if (last && /^[A-Za-z]$/.test(char)) {
         // The longest word ending in this letter that extends the shortcut and could still
         // spell another one: "artanh" after "tan" fired (not just "tanh").
         const run = /[A-Za-z]*$/.exec(typed + char)?.[0] ?? '';
@@ -425,7 +451,6 @@ export function MathLiveEditor({
         typed = '';
         fired = null;
         spelling = null;
-        numberBox = false;
         openMenu();
         return;
       }
@@ -436,7 +461,12 @@ export function MathLiveEditor({
         typed = '';
         fired = null;
         spelling = null;
-        numberBox = false;
+        callbacks.current.onChange(mf.value);
+        return;
+      }
+      if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && subscriptDigit(ev.key)) {
+        ev.preventDefault();
+        ev.stopPropagation();
         callbacks.current.onChange(mf.value);
         return;
       }
@@ -447,8 +477,13 @@ export function MathLiveEditor({
         ev.stopPropagation();
         typed = '';
         spelling = null;
-        numberBox = false;
         revert(last);
+        return;
+      }
+      if (ev.key === 'Backspace' && !ev.ctrlKey && !ev.altKey && deleteSubscriptDigit()) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        callbacks.current.onChange(mf.value);
         return;
       }
       deleting = ev.key === 'Backspace' || ev.key === 'Delete';
@@ -458,7 +493,6 @@ export function MathLiveEditor({
         ev.stopPropagation();
         typed = '';
         spelling = null;
-        numberBox = false;
         callbacks.current.onChange(mf.value);
         return;
       }
@@ -468,7 +502,6 @@ export function MathLiveEditor({
         typed = '';
         pending = null;
         spelling = null;
-        numberBox = false;
       }
       if (ev.key === 'Enter' && !ev.shiftKey) {
         ev.preventDefault();
@@ -497,7 +530,6 @@ export function MathLiveEditor({
       typed = '';
       fired = null;
       spelling = null;
-      numberBox = false;
       clickedUnit = pointOnUnit(mf, ev.clientX, ev.clientY);
     };
     /**
@@ -870,24 +902,52 @@ interface Fired {
   restore?: { value: string; position: number; insert: string };
 }
 
+/** MathLive's atoms, as far as automatic subscripts need them (checked at runtime). */
+type ScriptAtom = InternalAtom & {
+  value?: unknown;
+  subscript?: ScriptAtom[];
+  superscript?: ScriptAtom[];
+  leftSibling?: ScriptAtom;
+  rightSibling?: ScriptAtom;
+};
+
+/** A letter: italic, upright or Greek (not a function name like \sin). */
+const isLetter = (a: ScriptAtom | undefined) =>
+  a?.type === 'mord' && typeof a.value === 'string' && /^\p{L}$/u.test(a.value);
+
 /**
- * Whether a digit typed now should be the subscript of the letter before the caret (x1 → x₁):
- * a letter (italic, upright or Greek) with no subscript or power yet, not itself inside a
- * subscript or power, nor inside square brackets (a unit). Function names (\sin) are not letters.
+ * Where a digit typed now goes as a subscript (x1 → x₁, x₁2 → x₁₂): 'new' after a letter
+ * without a subscript or power, or the end of the all-digit subscript of a letter the caret is
+ * just after. Null when it is an ordinary digit, also inside a subscript or power, or inside
+ * square brackets (a unit).
  */
-function canSubscript(mf: MathfieldElement): boolean {
+function subscriptTarget(
+  mf: MathfieldElement,
+): 'new' | { end: number; digits: number; letter: number } | null {
   const model = internalModel(mf);
-  if (!model || !mf.selectionIsCollapsed) return false;
-  const atom = model.at(model.position) as
-    (InternalAtom & { value?: unknown; subscript?: unknown; superscript?: unknown }) | undefined;
-  if (atom?.type !== 'mord' || typeof atom.value !== 'string') return false;
-  if (!/^\p{L}$/u.test(atom.value) || atom.subscript || atom.superscript) return false;
+  if (!model || !mf.selectionIsCollapsed) return null;
+  const atom = model.at(model.position) as ScriptAtom | undefined;
+  if (!atom) return null;
   for (let a: InternalAtom | undefined = atom; a; a = a.parent) {
-    if (a.parentBranch === 'subscript' || a.parentBranch === 'superscript') return false;
+    if (a.parentBranch === 'subscript' || a.parentBranch === 'superscript') return null;
     const delim = (a.parent as { leftDelim?: unknown } | undefined)?.leftDelim;
-    if (a.parent?.type === 'leftright' && (delim === '[' || delim === '\\lbrack')) return false;
+    if (a.parent?.type === 'leftright' && (delim === '[' || delim === '\\lbrack')) return null;
   }
-  return true;
+  if (isLetter(atom) && atom.rightSibling?.type !== 'subsup') return 'new';
+  const digits = atom.subscript?.filter((a) => a.type !== 'first') ?? [];
+  const last = digits.at(-1);
+  const letter = atom.leftSibling;
+  if (
+    atom.type === 'subsup' &&
+    !atom.superscript &&
+    letter &&
+    isLetter(letter) &&
+    last &&
+    digits.every((a) => typeof a.value === 'string' && /^\d$/.test(a.value))
+  ) {
+    return { end: model.offsetOf(last), digits: digits.length, letter: model.offsetOf(letter) };
+  }
+  return null;
 }
 
 /** Typed characters that end a call-only name without its brackets (letters handled apart). */

@@ -31,7 +31,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, Esc leaves the row, and the number on the left drags a row.',
   },
   {
-    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm, erf, Si), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, ans, out, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. A number straight after a letter becomes its subscript: x1 gives x₁, and anything else you type next goes after it (x1+2). If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
+    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm, erf, Si), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, ans, out, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. A number straight after a letter becomes its subscript: x1 gives x₁, x12 gives x₁₂, and anything else is typed after it (x1+2 is x₁+2). If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
   },
   {
     note: 'Type \\ for a menu of everything MathSlate understands — structures, symbols, Greek letters and every function, in groups (hover over one for its name and description). Keep typing to filter it (\\fr, \\root), use the arrow keys to choose, and Enter, Tab or Space to insert; Esc closes it.',
