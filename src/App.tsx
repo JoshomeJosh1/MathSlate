@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { preferences, usePreferences } from './app/preferences';
 import { useBackends } from './app/services';
 import { docActions, docStore } from './document/docStore';
 import { documentationDoc } from './document/documentation';
 import { emptyDoc } from './document/model';
+import { replacedByLink, shareLink } from './document/share';
 import { useStore } from './document/store';
 import { RowList } from './ui/rows/RowList';
 
@@ -65,6 +66,66 @@ function DecimalsToggle() {
   );
 }
 
+/** Copies a link that opens this slate (the document itself is in the link). */
+function ShareButton() {
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  useEffect(() => {
+    if (state === 'idle') return;
+    const t = setTimeout(() => {
+      setState('idle');
+    }, 2000);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [state]);
+  return (
+    <button
+      title="Copy a link that opens this slate (everything is in the link; nothing is uploaded)"
+      onClick={() => {
+        const link = shareLink(docStore.get());
+        navigator.clipboard.writeText(link).then(
+          () => {
+            setState('copied');
+          },
+          () => {
+            // No clipboard access: show the link to copy by hand.
+            window.prompt('Copy this link:', link);
+          },
+        );
+      }}
+    >
+      {state === 'copied' ? 'Link copied' : 'Share'}
+    </button>
+  );
+}
+
+/** After a shared link replaced the user's slate: offer it back. */
+function SharedBanner() {
+  const previous = useStore(replacedByLink);
+  if (!previous) return null;
+  return (
+    <div className="shared-banner" role="status">
+      <span>Opened a shared slate.</span>
+      <button
+        onClick={() => {
+          docActions.replace(previous);
+          replacedByLink.set(null);
+        }}
+      >
+        Back to my slate
+      </button>
+      <button
+        className="muted-button"
+        onClick={() => {
+          replacedByLink.set(null);
+        }}
+      >
+        Keep this one
+      </button>
+    </div>
+  );
+}
+
 function hasContent(): boolean {
   return docStore.get().rows.some((r) => r.latex.trim() !== '');
 }
@@ -96,6 +157,7 @@ export function App() {
           >
             Documentation
           </button>
+          <ShareButton />
           <BackendPicker />
           <DecimalsToggle />
           <label className="toggle">
@@ -111,6 +173,7 @@ export function App() {
         </div>
       </header>
       <main>
+        <SharedBanner />
         <RowList showDebug={showDebug} />
       </main>
     </div>

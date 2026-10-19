@@ -4,7 +4,16 @@ import type { Store } from './store';
 
 const STORAGE_KEY = 'mathslate.doc.v1';
 
-function isDoc(value: unknown): value is Doc {
+/** Whether this browser has a slate of the user's saved (not just the first-visit default). */
+export function hasSavedDoc(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+export function isDoc(value: unknown): value is Doc {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Partial<Doc>;
   return (

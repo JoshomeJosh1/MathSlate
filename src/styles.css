@@ -842,3 +842,25 @@ button {
 .output-body.draggable {
   cursor: grab;
 }
+
+/* After opening a shared link: offer the user's own slate back (App.tsx). */
+.shared-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 0.875rem;
+}
+
+.shared-banner span {
+  flex: 1;
+}
+
+.shared-banner .muted-button {
+  color: var(--muted);
+}

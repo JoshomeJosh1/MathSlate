@@ -28,7 +28,7 @@ starting `#` are headings, `##` subheadings.
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
-| 8         | URL share, error highlight inside the math field, perf                                | planned |
+| 8         | URL share (done), error highlight inside the math field, perf                         | partial |
 
 ## Commands
 
@@ -59,7 +59,10 @@ src/
                    only their decimal (`shownValue` in ui/rows/promote.ts; copy uses what is shown)
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
                    docStore.ts (app singleton + actions), persistence.ts (localStorage autosave),
-                   documentation.ts (the documentation slate: first visit + Documentation button)
+                   documentation.ts (the documentation slate: first visit + Documentation button),
+                   share.ts (Share: the whole doc lz-compressed in the URL hash `#s=…`; opening
+                   a link keeps the user's slate in localStorage until the banner's "Back to my
+                   slate" / "Keep this one"; the hash is removed so reloads do not reopen it)
   parser/          errors.ts (MathError + Span), lexer.ts, cst.ts, parser.ts (Pratt, LaTeX → CST),
                    definitions.ts (LHS shapes), symbols.ts (SymbolTable), resolve.ts (CST → AST),
                    ast.ts, printLatex.ts (AST → LaTeX), sexpr.ts (debug/test rendering)

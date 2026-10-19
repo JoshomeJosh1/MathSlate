@@ -3,8 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { docStore } from './document/docStore';
 import { autosave } from './document/persistence';
+import { openSharedLink } from './document/share';
 import './styles.css';
 
+// A shared link (#s=…) opens its slate; before autosave, which would save it over the user's.
+openSharedLink();
+window.addEventListener('hashchange', openSharedLink);
 autosave(docStore);
 
 const root = document.getElementById('root');
