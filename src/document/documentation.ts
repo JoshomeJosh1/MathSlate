@@ -476,7 +476,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   { note: 'inverse(M) — the inverse of a square matrix; M^{-1} also works. Type inverse.' },
   '\\inverse\\left(M\\right)',
   {
-    note: 'eigenvalues(M) — each eigenvalue as often as it occurs. eigenvectors(M) — pairs (eigenvalue, eigenvector). Type eigenvalues, eigenvectors.',
+    note: 'eigenvalues(M) — each eigenvalue as often as it occurs. eigenvectors(M) — the set of pairs (eigenvalue, eigenvector). Type eigenvalues, eigenvectors.',
   },
   '\\eigenvalues\\left(M\\right)',
   '\\eigenvectors\\left(\\begin{bmatrix}2&0\\\\0&3\\end{bmatrix}\\right)',

@@ -177,7 +177,7 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
     const D = '\\left\\lbrack2,0;0,3\\right\\rbrack';
     expect(await last([`\\eigenvalues\\left(${D}\\right)`])).toEqual(['\\left(2,3\\right)']);
     expect(await last([`\\eigenvectors\\left(${D}\\right)`])).toEqual([
-      '\\left(\\left(2,\\begin{bmatrix}1\\\\0\\end{bmatrix}\\right),\\left(3,\\begin{bmatrix}0\\\\1\\end{bmatrix}\\right)\\right)',
+      '\\left\\lbrace \\left(2,\\begin{bmatrix}1\\\\0\\end{bmatrix}\\right),\\left(3,\\begin{bmatrix}0\\\\1\\end{bmatrix}\\right)\\right\\rbrace',
     ]);
     const A = '\\left\\lbrack1,2,3;4,5,6\\right\\rbrack';
     expect(await last([`\\rref\\left(${A}\\right)`])).toEqual([

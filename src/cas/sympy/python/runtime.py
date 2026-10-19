@@ -88,11 +88,12 @@ def _eigenvalues(m):
 
 
 def _eigenvectors(m):
-    """(eigenvalue, eigenvector) pairs, one for each independent eigenvector."""
+    """(eigenvalue, eigenvector) pairs, one for each independent eigenvector, as a set (like the
+    null space: the vectors are a basis of each eigenspace)."""
     pairs = []
-    for value, _, vectors in sorted(_square(m, "eigenvectors").eigenvects(), key=lambda t: default_sort_key(t[0])):
-        pairs.extend(Tuple(value, v) for v in vectors)
-    return Tuple(*pairs)
+    for value, _, vectors in _square(m, "eigenvectors").eigenvects():
+        pairs.extend(Tuple(value, ImmutableMatrix(v)) for v in vectors)
+    return FiniteSet(*pairs)
 
 
 def _rref(m):
