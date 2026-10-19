@@ -97,8 +97,10 @@ describe('ans and out_k', () => {
     expect(await last([['x^2-1', 'expand'], 'x+1', 'out_1+1'])).toEqual(['x^{2}']);
   });
 
-  it('a user definition of ans wins', async () => {
-    expect(await last(['ans=5', '7', 'ans+1'])).toEqual(['6']);
+  it('ans and out cannot be redefined', async () => {
+    expect(await last(['ans=5'])).toEqual(['!"ans" is the result above; use another name']);
+    expect(await last(['out_1=5'])).toEqual(['!"out" refers to outputs (out_3); use another name']);
+    expect(await last(['ans=5', '7', 'ans+1'])).toEqual(['8']);
   });
 
   it('explains what cannot be used', async () => {

@@ -10,15 +10,16 @@ import {
 import { MathError } from '../parser/errors';
 import { parseLatex } from '../parser/parser';
 import {
+  displayName,
   resolveRow,
   type NameOccurrence,
   type ResolveOptions,
   type Rewrite,
 } from '../parser/resolve';
-import { meaningOf } from '../registries/interpretations';
+import { interpretations, meaningOf } from '../registries/interpretations';
 import { isUnitSymbol } from './units';
 import { SymbolTable, type SymbolInfo } from '../parser/symbols';
-import { createBuiltinScope } from './builtinScope';
+import { ANS, OUT, createBuiltinScope } from './builtinScope';
 
 /**
  * Document-level static analysis: parse every row, find definitions, build the symbol table,
@@ -117,16 +118,26 @@ function analyze(
     }
   });
 
-  // 2. Definition heads (shape only), settled across rows.
-  const shapes = parsed.map((p) => (p.error ? null : definitionShape(p.cst)));
+  // 2. Definition heads (shape only), settled across rows. A built-in function applied on the
+  // left (sin(x) = 1/2) is an equation, not a new sin.
+  const shapes = parsed.map((p) => {
+    const shape = p.error ? null : definitionShape(p.cst);
+    return shape?.head.kind === 'func' && isBuiltinFunction(nameKey(shape.head.name))
+      ? null
+      : shape;
+  });
   const heads = settleHeads(shapes.map((s) => s?.head ?? null));
   const settledShapes: (DefinitionShape | null)[] = shapes.map((s, i) => {
     const head = heads[i];
     return s && head ? { ...s, head } : null;
   });
 
-  // 3. Duplicate definitions are errors on every row involved.
+  // 3. Duplicate definitions and definitions of reserved names are errors on the rows involved.
   const duplicateErrors = findDuplicates(heads);
+  heads.forEach((head, i) => {
+    const error = head && reservedNameError(head);
+    if (error && !duplicateErrors.has(i)) duplicateErrors.set(i, error);
+  });
 
   // 4. Symbol table; a constant whose body refers to itself (x = x + 1) is an equation instead.
   let excluded = new Set<number>();
@@ -243,6 +254,42 @@ function buildTable(
     }
   });
   return new SymbolTable(entries, builtinScope);
+}
+
+function isBuiltinFunction(key: string): boolean {
+  return builtinScope.lookup(key)?.kind === 'builtinFunction';
+}
+
+/**
+ * Names a document cannot define: built-in functions, the constants e, i and π (exact results
+ * contain them, so a redefinition would make results mean something else), and ans / out.
+ */
+const RESERVED_CONSTANTS = new Set(
+  interpretations.filter((i) => i.form === 'bare').map((i) => i.symbol),
+);
+
+function reservedNameError(head: DefinitionHead): MathError | null {
+  const key = nameKey(head.name);
+  const shown = `"${displayName(key).replace('\\pi', 'π').replace(/^\\/, '')}"`;
+  if (head.name.sub === undefined && RESERVED_CONSTANTS.has(key)) {
+    return new MathError(`${shown} is a constant; use another name`, head.nameSpan);
+  }
+  if (head.name.base === ANS) {
+    return new MathError(`"ans" is the result above; use another name`, head.nameSpan);
+  }
+  if (head.name.base === OUT) {
+    return new MathError(`"out" refers to outputs (out_3); use another name`, head.nameSpan);
+  }
+  if (isBuiltinFunction(key)) {
+    return new MathError(`${shown} is a built-in function; use another name`, head.nameSpan);
+  }
+  if (isBuiltinFunction(head.name.base)) {
+    // lcm_n = …: the error marks the name without its subscript.
+    const { nameSpan } = head;
+    const span = { start: nameSpan.start, end: nameSpan.start + head.name.base.length };
+    return new MathError(`"${head.name.base}" is a built-in function; use another name`, span);
+  }
+  return null;
 }
 
 function findDuplicates(heads: (DefinitionHead | null)[]): Map<number, MathError> {

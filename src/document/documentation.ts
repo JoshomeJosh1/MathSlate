@@ -72,7 +72,9 @@ export const DOCUMENTATION: readonly Entry[] = [
   { note: 'Decimals like 0.1 are exact fractions; a ≈ decimal is shown alongside exact numbers.' },
 
   { folder: 'Constants' },
-  { note: 'π, e and i are recognised automatically unless you define them yourself.' },
+  {
+    note: 'π, e and i are the constants, so they cannot be defined (results use them); the same goes for built-in function names, ans and out. As an index or a parameter they are fine: Σ_{i=1}^{n}, f(e).',
+  },
   '\\pi',
   'e',
   'e^{i\\pi}+1',

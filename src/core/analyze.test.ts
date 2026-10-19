@@ -287,9 +287,14 @@ describe('symbol interpretations', () => {
     ['\\pi r^2', '(* #pi (^ r 2))'],
     ['p_5', '(_ p 5)'],
     ['p', 'p'], // primes only claim p with a subscript
-    [['e=3', 'e+1'], '(+ e 1)'], // a definition beats the interpretation
-    [['i=2', '2i'], '(* 2 i)'],
+    // Exact results contain e, i and π, so they cannot be redefined; they can still be bound.
+    [['e=3', 'e+1'], '(+ #e 1)'],
+    ['e=3', '!"e" is a constant; use another name @0-1'],
+    ['i=2', '!"i" is a constant; use another name @0-1'],
+    ['\\pi=3', '!"π" is a constant; use another name @0-3'],
+    ['e_1=3', '(def e_{1} 3)'],
     [['f(e)=e+1', 'f(1)'], '(f 1)'],
+    ['\\sum_{i=1}^{3}i', '(sum i i 1 3)'],
   ]);
 
   it("applies the document's choices", () => {
@@ -306,4 +311,16 @@ describe('symbol interpretations', () => {
       {},
     ]);
   });
+});
+
+describe('built-in functions cannot be redefined', () => {
+  table([
+    // A built-in function applied on the left is an equation, however it is spelled.
+    ['sin(x)=x^2', '(= (sin x) (^ x 2))'],
+    ['\\sin(x)=\\frac12', '(= (sin x) (/ 1 2))'],
+    [['sin(x)=x^2', 'sin(3)'], '(sin 3)'],
+    ['\\Gamma(x)=7', '(= (gamma x) 7)'],
+    ['sin=3', '!"sin" is a built-in function; use another name @0-3'],
+    ['lcm_n=n', '!"lcm" is a built-in function; use another name @0-3'],
+  ]);
 });

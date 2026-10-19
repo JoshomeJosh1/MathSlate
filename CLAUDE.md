@@ -189,8 +189,8 @@ them), and edits an attached command's arguments (click the output's title).
 ### Using results: `ans` and `out_k` (`core/outputRefs.ts`)
 
 `ans` (the nearest result above, hidden automatic results included) and `out_k` (the output
-labelled k) are symbols of the builtin scope (`ANS`, `OUT` in `builtinScope.ts`; a document's own
-`ans`/`out` wins). The engine builds rows that use them (directly or through a definition) after
+labelled k) are symbols of the builtin scope (`ANS`, `OUT` in `builtinScope.ts`; reserved, see
+below). The engine builds rows that use them (directly or through a definition) after
 the others: each use is renamed to a private symbol (`@ans_{row}` — in a definition, ans is the
 result above that definition's row — and `@out_{k}`) defined as the result's value
 (`Engine.values`, every output's latest value). A row whose result is still being computed
@@ -289,9 +289,14 @@ Definite integrals keep any closed form SymPy finds, special functions included.
 ### Key design decisions
 
 - **The AST is CAS-agnostic.** Backend knowledge lives only in `src/cas/<backend>/`.
-- **Constants and built-in sequences are interpretations, not reserved symbols.** `e`, `i`, `π`,
-  `p_n`, `F_n` only apply when the user has not defined that symbol; the document stores choices
-  per symbol (`Doc.interpretations`). A bare `p` is a variable; only `p_5` uses primes.
+- **Constants and built-in sequences are interpretations, not symbols.** `e`, `i`, `π`, `p_n`,
+  `F_n` apply to otherwise undefined names; the document stores choices per symbol
+  (`Doc.interpretations`). A bare `p` is a variable; only `p_5` uses primes.
+- **Reserved names** (`reservedNameError` in `core/analyze.ts`): a row cannot define a built-in
+  function, `e`, `i`, `π` (exact results contain them, so a redefinition would change what results
+  mean) or `ans` / `out` — an error on that row. They can still be bound (`\sum_{i=1}^n`, a
+  parameter `f(e)`). A built-in function applied on the left (`sin(x) = 1/2`) is an equation, not
+  a definition. `p_n = …` / `F_n = …` may still define sequences.
 - **Results round-trip.** CAS results come back as our AST → `printLatex`, so "copy to input"
   always yields LaTeX our parser accepts.
 - **Output rows are derived.** The document stores only `OutputSpec`s (command, stable label).

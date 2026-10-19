@@ -3,9 +3,10 @@ import { SymbolTable, type SymbolInfo } from '../parser/symbols';
 import { builtinFunctions, type BuiltinFunction } from '../registries/builtins/functions';
 
 /**
- * Root scope with the built-in functions. User definitions live in a child scope and shadow these.
- * Constants (e, i, π) and built-in sequences (p_n, F_n) are not symbols: they are interpretations
- * of otherwise undefined names (registries/interpretations), so users can still define their own.
+ * Root scope with the built-in functions. User definitions live in a child scope, but cannot
+ * define these names (`reservedNameError` in analyze.ts), nor e, i, π, ans or out. Constants
+ * (e, i, π) and built-in sequences (p_n, F_n) are not symbols: they are interpretations of
+ * otherwise undefined names (registries/interpretations).
  *
  * Functions with a conventional LaTeX spelling (Γ, \operatorname{S}, \operatorname{J}_n) also get
  * an alias entry under that spelling, pointing at the canonical function.
@@ -28,7 +29,7 @@ export function createBuiltinScope(): SymbolTable {
     }
   }
   // References to results (core/outputRefs.ts): ans, the nearest result above, and out_k, an
-  // output by its label. Shown upright like defined names; a user's own ans or out wins.
+  // output by its label. Shown upright like defined names; reserved.
   entries.push({ key: ANS, kind: 'variable' }, { key: OUT, kind: 'sequence' });
   return new SymbolTable(entries);
 }
