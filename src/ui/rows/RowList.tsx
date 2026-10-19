@@ -15,7 +15,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useEngine } from '../../app/services';
 import { decoratedRow, functionShortcuts, nameShortcuts } from '../../core/decorate';
 import { docActions, docStore } from '../../document/docStore';
@@ -23,6 +23,7 @@ import type { InputRow, RowId } from '../../document/model';
 import { useStore } from '../../document/store';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { dropTarget, sameTarget, type DropTarget } from './dropTarget';
+import { RESULT_ROWS_TYPE, resultDrop, type ResultDrop } from './resultDrop';
 import { RowItem, type OutlinePiece } from './RowItem';
 
 const FUNCTION_SHORTCUTS = functionShortcuts();
@@ -303,13 +304,81 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
     if (id) focusRow(id, true);
   };
 
+  // Dragging a result into the slate (resultDrop.ts). Capture phase, so math fields do not take
+  // the drop as text.
+  const [resultGap, setResultGap] = useState<(ResultDrop & { left: number; width: number }) | null>(
+    null,
+  );
+  const isResultDrag = (e: DragEvent) => e.dataTransfer.types.includes(RESULT_ROWS_TYPE);
+  const gapAt = (y: number) => {
+    const boxes = [...(list.current?.querySelectorAll<HTMLElement>('[data-row-id]') ?? [])].map(
+      (el) => {
+        const rect = el.getBoundingClientRect();
+        return { id: el.dataset.rowId ?? '', top: rect.top, bottom: rect.bottom };
+      },
+    );
+    return resultDrop(boxes, y);
+  };
+  const onResultDragOver = (e: DragEvent) => {
+    if (!isResultDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    const gap = gapAt(e.clientY);
+    const rect = list.current?.getBoundingClientRect();
+    setResultGap((current) =>
+      current?.after === gap?.after && current?.y === gap?.y
+        ? current
+        : gap && rect
+          ? { ...gap, left: rect.left, width: rect.width }
+          : null,
+    );
+  };
+  const onResultDrop = (e: DragEvent) => {
+    if (!isResultDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setResultGap(null);
+    const gap = gapAt(e.clientY);
+    const latexes: unknown = JSON.parse(e.dataTransfer.getData(RESULT_ROWS_TYPE) || '[]');
+    if (!gap || !Array.isArray(latexes) || latexes.length === 0) return;
+    const ids = docActions.insertRows(gap.after, latexes.map(String));
+    focusRow(ids.at(-1), true);
+  };
+  useEffect(() => {
+    if (!resultGap) return;
+    // The drag ended elsewhere (dropped outside, or Esc).
+    const clear = () => {
+      setResultGap(null);
+    };
+    window.addEventListener('dragend', clear);
+    return () => {
+      window.removeEventListener('dragend', clear);
+    };
+  }, [resultGap]);
+
   const draggedRow = dragging ? byId.get(dragging.id) : undefined;
   const draggedFolder = draggedRow?.kind === 'folder' ? draggedRow.id : null;
   const labelText = draggedRow ? dragLabel(draggedRow, dragging?.target, byId) : null;
   const outline = dropOutline(visible, dragging?.id, dragging?.target);
 
   return (
-    <div className="row-list" ref={list}>
+    <div
+      className="row-list"
+      ref={list}
+      onDragOverCapture={onResultDragOver}
+      onDropCapture={onResultDrop}
+      onDragLeave={(e) => {
+        // Left the slate (not just moved between its children).
+        if (!list.current?.contains(e.relatedTarget as Node | null)) setResultGap(null);
+      }}
+    >
+      {resultGap && (
+        <div
+          className="result-drop-line"
+          style={{ top: resultGap.y, left: resultGap.left, width: resultGap.width }}
+        />
+      )}
       <DndContext
         sensors={sensors}
         collisionDetection={rowUnderPointer}

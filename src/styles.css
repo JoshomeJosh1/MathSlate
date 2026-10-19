@@ -827,3 +827,18 @@ button {
   padding: 0.6rem 0.7rem;
   color: var(--muted);
 }
+
+/* A result dragged into the slate: where its new row(s) will go (RowList, resultDrop.ts). */
+.result-drop-line {
+  position: fixed;
+  z-index: 60;
+  height: 3px;
+  margin-top: -1.5px;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.output-body.draggable {
+  cursor: grab;
+}

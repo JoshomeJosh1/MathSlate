@@ -4,6 +4,7 @@ import {
   groupRows,
   groupWith,
   insertRowAfter,
+  insertRowAtStart,
   moveRow,
   removeOutput,
   setCollapsed,
@@ -30,6 +31,26 @@ export const docActions = {
       return result.doc;
     });
     return id;
+  },
+  /**
+   * New math rows holding `latexes`, after row `afterId` (null: at the very start), as Enter would
+   * place them. Returns their ids.
+   */
+  insertRows(afterId: RowId | null, latexes: readonly string[]): RowId[] {
+    const ids: RowId[] = [];
+    docStore.set((doc) => {
+      let next = doc;
+      let after = afterId;
+      for (const latex of latexes) {
+        const result =
+          after === null ? insertRowAtStart(next, latex) : insertRowAfter(next, after, latex);
+        next = result.doc;
+        after = result.id;
+        ids.push(result.id);
+      }
+      return next;
+    });
+    return ids;
   },
   /** A new folder at the end of the slate, with an empty math row in it. Returns its id. */
   addFolder(): RowId {

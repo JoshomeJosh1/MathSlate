@@ -5,6 +5,7 @@ import { printName } from '../../parser/printLatex';
 import { MathView } from '../editor';
 import { usePreferences } from '../../app/preferences';
 import { promotableLatex, shownValue } from './promote';
+import { RESULT_ROWS_TYPE } from './resultDrop';
 
 interface Props {
   output: OutputView;
@@ -86,6 +87,7 @@ export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
   const { decimals } = usePreferences();
   const value = output.value && shownValue(output.value, decimals);
   const promotable = promotableLatex(value);
+  const draggable = !!onPromote && promotable.length > 0 && output.state === 'ok';
   return (
     <div className={`output-row${output.stale ? ' stale' : ''}`}>
       <div
@@ -100,7 +102,16 @@ export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
           '='
         )}
       </div>
-      <div className="output-body">
+      <div
+        className={`output-body${draggable ? ' draggable' : ''}`}
+        draggable={draggable}
+        title={draggable ? 'Drag into the slate to copy it into a new row' : undefined}
+        onDragStart={(e) => {
+          e.dataTransfer.setData(RESULT_ROWS_TYPE, JSON.stringify(promotable));
+          e.dataTransfer.setData('text/plain', promotable.join('\n'));
+          e.dataTransfer.effectAllowed = 'copy';
+        }}
+      >
         {output.title &&
           (onEditArgs ? (
             <button

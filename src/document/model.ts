@@ -140,6 +140,12 @@ export function insertRowAfter(
   return { doc: { ...doc, rows: normalizeFolders(rows) }, id: row.id };
 }
 
+/** A new math row at the very start of the slate (outside any folder). */
+export function insertRowAtStart(doc: Doc, latex = ''): { doc: Doc; id: RowId } {
+  const row = newRow(latex);
+  return { doc: { ...doc, rows: normalizeFolders([row, ...doc.rows]) }, id: row.id };
+}
+
 /**
  * Removes a row. Removing a folder keeps its rows (they leave the folder). The document always
  * keeps at least one (empty) row.

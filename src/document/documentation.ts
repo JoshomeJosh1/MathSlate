@@ -40,7 +40,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type " in an empty row to turn it into a note like this one, or # for a heading. Backspace in an empty note turns it back into math.',
   },
   {
-    note: 'Results appear in tinted output rows. Under the row you are editing, suggested commands appear: click one to add it as an output row (labelled out₁, out₂, …). ↧ copies a result into a new row; × removes an output.',
+    note: 'Results appear in tinted output rows. Under the row you are editing, suggested commands appear: click one to add it as an output row (labelled out₁, out₂, …). ↧ copies a result into a new row below, or drag the result to where you want it (a line shows where it goes); ⧉ copies its LaTeX; × removes an output.',
   },
 
   { folder: 'Folders and notes' },

@@ -100,6 +100,7 @@ export function RowItem(props: Props) {
     <div
       ref={setNodeRef}
       className={classes.join(' ')}
+      data-row-id={row.id}
       // Translate only: dnd-kit's transform also scales a row to the size of the row it is over,
       // which stretches rows of different heights.
       style={{ transform: CSS.Translate.toString(transform), transition }}

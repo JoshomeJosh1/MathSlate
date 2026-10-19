@@ -24,7 +24,7 @@ starting `#` are headings, `##` subheadings.
 | —         | Upright recognised names and subscripts; notes (`"`); documentation slate             | done    |
 | —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
 | —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
-| 4         | Command palette + arguments, `ans` / `out_k` (done); promote by drag                  | partial |
+| 4         | Command palette + arguments, `ans` / `out_k`, promote (↧ or drag a result into place) | done    |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
@@ -51,7 +51,9 @@ src/
                    (read-only rendering for outputs), index.ts (picks the implementation)
     rows/          RowList.tsx (sortable list, focus/keyboard nav, upright-name decoration),
                    RowItem.tsx (input + outputs + chips, drags as a unit), OutputRow.tsx,
-                   NoteEditor.tsx, SuggestionChips.tsx, RowDiagnostics.tsx, promote.ts
+                   NoteEditor.tsx, SuggestionChips.tsx, RowDiagnostics.tsx, promote.ts,
+                   resultDrop.ts (results dragged into the slate: native drag and drop, so they
+                   also drop as LaTeX text into other apps; separate from dnd-kit reordering)
   app/services.ts  singletons: backends → CasRouter → Engine, fed by docStore; React hooks
   app/preferences.ts  per-browser display preferences (localStorage), e.g. Decimals: results show
                    only their decimal (`shownValue` in ui/rows/promote.ts; copy uses what is shown)
