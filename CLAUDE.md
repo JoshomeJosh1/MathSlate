@@ -30,6 +30,17 @@ starting `#` are headings, `##` subheadings.
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
 | 8         | URL share, error highlight inside the math field, perf (measured; see Performance)    | done    |
 
+### Ideas (not started — ask before implementing)
+
+- **Converting to a unit system**: `5[km/h] → [SI]` (or a `\unitsystem{SI}` command; undecided)
+  shows the result in a system's units: for the answer's dimension, the system's named unit if one
+  fits exactly, else a product of its base units. Systems: SI (m, kg, s, A, K, mol; N, J, W, Pa,
+  C, V, Ω, Hz), CGS for mechanics only (cm, g, s; dyn, erg, Ba, P, St — electrical CGS is
+  ambiguous, so an error), imperial / US customary (ft, lb, s; lbf, psi, hp, BTU — needs those
+  units and a choice of unit per dimension). Sketch: a unit-system registry (one file per system)
+  consulted by `displayUnit` in `core/units.ts`; system names only special after `→`; `\` menu
+  entries. Temperature stays out (offsets).
+
 ## Commands
 
 ```sh
