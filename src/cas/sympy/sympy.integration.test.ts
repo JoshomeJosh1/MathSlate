@@ -173,6 +173,30 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
     expect(await last(['2\\cdot3'])).toEqual(['6']); // still multiplication
   });
 
+  it('finds eigenvalues and eigenvectors, row reduces, and runs matrix commands', async () => {
+    const D = '\\left\\lbrack2,0;0,3\\right\\rbrack';
+    expect(await last([`\\eigenvalues\\left(${D}\\right)`])).toEqual(['\\left(2,3\\right)']);
+    expect(await last([`\\eigenvectors\\left(${D}\\right)`])).toEqual([
+      '\\left(\\left(2,\\begin{bmatrix}1\\\\0\\end{bmatrix}\\right),\\left(3,\\begin{bmatrix}0\\\\1\\end{bmatrix}\\right)\\right)',
+    ]);
+    const A = '\\left\\lbrack1,2,3;4,5,6\\right\\rbrack';
+    expect(await last([`\\rref\\left(${A}\\right)`])).toEqual([
+      '\\begin{bmatrix}1&0&-1\\\\0&1&2\\end{bmatrix}',
+    ]);
+    expect(await last([`\\nullspace\\left(${A}\\right)`])).toEqual([
+      '\\left(\\begin{bmatrix}1\\\\-2\\\\1\\end{bmatrix}\\right)',
+    ]);
+    expect(await last([M, ['M', 'det', 'inverse', 'rank']])).toEqual([
+      '\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}',
+      'det: -2',
+      'inverse: \\begin{bmatrix}-2&1\\\\\\frac{3}{2}&-\\frac{1}{2}\\end{bmatrix}',
+      'rank: 2',
+    ]);
+    expect(await last(['\\inverse\\left(\\left\\lbrack1,2;2,4\\right\\rbrack\\right)'])).toEqual([
+      '!The matrix is not invertible (its determinant is 0)',
+    ]);
+  });
+
   it('treats a 1×1 matrix as a number', async () => {
     const v = 'v=\\left\\lbrack1,2,3\\right\\rbrack';
     expect(await last([v, 'v^{T}v'])).toEqual(['14']);

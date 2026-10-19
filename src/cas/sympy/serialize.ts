@@ -90,6 +90,11 @@ const FUNCTIONS: Record<string, Py> = {
   tr: call('_trace'),
   rank: call('_rank'),
   transpose: call('_transpose'),
+  inverse: call('_inverse'),
+  eigenvalues: call('_eigenvalues'),
+  eigenvectors: call('_eigenvectors'),
+  rref: call('_rref'),
+  nullspace: call('_nullspace'),
   dot: call('_dot'),
   cross: call('_cross'),
 };

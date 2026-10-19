@@ -16,7 +16,10 @@ export interface ShapeFacts {
   freeVars: Name[];
   isRelation: boolean;
   isEquation: boolean;
+  /** Its value is a matrix or vector: a literal, a name defined as one, or arithmetic on them. */
   isMatrix: boolean;
+  /** Its size, when it can be told without computing (null if unknown or not a matrix). */
+  matrixSize: { rows: number; cols: number } | null;
   /** Built only from numbers, free variables, + − × and non-negative integer powers. */
   isPolynomial: boolean;
   /** Highest total degree if polynomial (0 for constants). */
@@ -156,12 +159,14 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
   visit(expr);
 
   const poly = polynomialDegree(expr, defined);
+  const size = matrixSize(expr, env, 0);
   const freeVars = [...free.values()].sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
   return {
     freeVars,
     isRelation: expr.kind === 'relation',
     isEquation: expr.kind === 'relation' && expr.ops.length === 1 && expr.ops[0] === '=',
-    isMatrix: expr.kind === 'matrix',
+    isMatrix: size !== null,
+    matrixSize: size === 'unknown' ? null : size,
     isPolynomial: poly !== null,
     degree: poly ?? 0,
     hasExpandableProduct,
@@ -171,6 +176,62 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
     hasDefiniteIntegral,
     hasUnits,
   };
+}
+
+type Size = { rows: number; cols: number } | 'unknown' | null;
+
+/** Functions of a matrix whose value is a matrix: how they change its size. */
+const MATRIX_FUNCTIONS: Partial<Record<string, (s: { rows: number; cols: number }) => Size>> = {
+  transpose: (s) => ({ rows: s.cols, cols: s.rows }),
+  inverse: (s) => s,
+  rref: (s) => s,
+};
+
+/**
+ * Whether an expression's value is a matrix, and its size if that is clear from the source:
+ * null (not a matrix), 'unknown' (a matrix of unknown size), or rows × columns.
+ */
+function matrixSize(e: Expr, env: readonly Definition[], depth: number): Size {
+  if (depth > 20) return null; // definitions that refer to each other
+  const go = (x: Expr) => matrixSize(x, env, depth + 1);
+  switch (e.kind) {
+    case 'matrix':
+      return { rows: e.rows.length, cols: e.rows[0]?.length ?? 0 };
+    case 'var': {
+      const key = nameKey(e.name);
+      const def = env.find((d) => d.kind === 'defConst' && nameKey(d.name) === key);
+      return def && def.kind === 'defConst' ? go(def.body) : null;
+    }
+    case 'neg':
+    case 'convert':
+      return go(e.kind === 'neg' ? e.arg : e.expr);
+    case 'call': {
+      const fn = MATRIX_FUNCTIONS[e.fn.base];
+      const arg = e.args[0] ? go(e.args[0]) : null;
+      if (!fn || arg === null) return null;
+      return arg === 'unknown' ? 'unknown' : fn(arg);
+    }
+    case 'binary': {
+      const l = go(e.left);
+      if (e.op === 'pow') {
+        if (l === null || l === 'unknown') return l;
+        const transposed = e.right.kind === 'var' && nameKey(e.right.name) === 'T';
+        return transposed ? { rows: l.cols, cols: l.rows } : l;
+      }
+      const r = go(e.right);
+      if (l === null) return e.op === 'div' ? null : r; // a number times a matrix
+      if (r === null) return l;
+      if (l === 'unknown' || r === 'unknown') return 'unknown';
+      if (e.op === 'mul' && e.form !== 'cdot' && e.form !== 'times') {
+        // A product of matrices; a 1×1 result is a number (vᵀw).
+        return l.rows === 1 && r.cols === 1 ? null : { rows: l.rows, cols: r.cols };
+      }
+      if (e.op === 'mul') return e.form === 'times' ? l : null; // u×w is a vector, u·w a number
+      return l;
+    }
+    default:
+      return null;
+  }
 }
 
 /** Variable a command should use: x if present, then t, y, z, then the first free variable. */

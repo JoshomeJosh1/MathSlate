@@ -77,6 +77,37 @@ def _rank(m):
     return Integer(m.rank())
 
 
+def _inverse(m):
+    return _square(m, "inverse").inv()
+
+
+def _eigenvalues(m):
+    """Each eigenvalue as often as its multiplicity, in order."""
+    values = _square(m, "eigenvalues").eigenvals()
+    return Tuple(*[v for v in sorted(values, key=default_sort_key) for _ in range(values[v])])
+
+
+def _eigenvectors(m):
+    """(eigenvalue, eigenvector) pairs, one for each independent eigenvector."""
+    pairs = []
+    for value, _, vectors in sorted(_square(m, "eigenvectors").eigenvects(), key=lambda t: default_sort_key(t[0])):
+        pairs.extend(Tuple(value, v) for v in vectors)
+    return Tuple(*pairs)
+
+
+def _rref(m):
+    if not isinstance(m, MatrixBase):
+        raise MathSlateError("Row reduction needs a matrix")
+    return m.rref()[0]
+
+
+def _nullspace(m):
+    if not isinstance(m, MatrixBase):
+        raise MathSlateError("The null space needs a matrix")
+    basis = m.nullspace()
+    return Tuple(*basis) if basis else FiniteSet()
+
+
 def _transpose(m):
     return m.T if isinstance(m, MatrixBase) else m
 

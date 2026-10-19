@@ -26,7 +26,7 @@ starting `#` are headings, `##` subheadings.
 | —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
 | 4         | `/` command palette, `ans` / `out_k` references, promote by drag                      | planned |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
-| 6         | Matrix input and operations (det, transpose, dot, cross, …); eigen/rref commands next | partial |
+| 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
 | 8         | URL share, error highlight inside the math field, perf                                | planned |
 
@@ -239,7 +239,13 @@ the resolver). Operations: `det`, `tr`, `rank`, `transpose`, `dot`, `cross`
 (`builtins/functions/defs/matrices.ts`) and notation handled in the SymPy runtime, so it depends
 on the values: `|M|` determinant / `|v|` length (`_abs`), `u\cdot v` dot and `u\times v` cross
 product between vectors (`_cdot`, `_times`, else multiplication), `M^T` / `M^\top` transpose
-unless `T` is defined (`_pow_T`). SymPy's matrix errors are reworded (`_MATRIX_ERRORS`).
+unless `T` is defined (`_pow_T`). Also `inverse`, `eigenvalues` (with multiplicity),
+`eigenvectors` ((value, vector) pairs), `rref`, `nullspace`. A 1×1 matrix is a number (`_scalar`:
+products via `_mul`, constants, function results, answers). Matrix commands
+(`commands/defs/det.ts`, …) apply those functions via `runFunction`; `shapeOf` knows whether a
+row is a matrix and often its size (`matrixSize` follows names, products, transposes), and
+`matrixRelevance` ranks commands by square / other / vector. SymPy's matrix errors are reworded
+(`_MATRIX_ERRORS`).
 Nerdamer declines matrix functions.
 
 ### Special functions

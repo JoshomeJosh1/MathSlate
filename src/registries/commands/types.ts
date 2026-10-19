@@ -25,6 +25,35 @@ export interface Command {
   run: (ctx: CommandContext, cas: CasBackend) => Promise<CasResult>;
 }
 
+/** Helper for commands that apply a built-in function to the row's value: det(M), rref(M). */
+export function runFunction(ctx: CommandContext, cas: CasBackend, fn: string): Promise<CasResult> {
+  const target = ctx.target.expr;
+  return cas.run({
+    operation: { op: 'evaluate' },
+    target: { kind: 'call', fn: { base: fn }, args: [target], span: target.span },
+    env: ctx.env,
+    locals: ctx.target.locals,
+  });
+}
+
+/**
+ * Relevance of a matrix command from the row's matrix size: square, other (not square, not a
+ * vector), unknown size, and a vector (one row or column; most matrix commands mean little there).
+ */
+export function matrixRelevance(
+  facts: ShapeFacts,
+  square: number,
+  other: number,
+  unknown: number,
+  vector = 0,
+): number {
+  if (!facts.isMatrix) return 0;
+  const size = facts.matrixSize;
+  if (!size) return unknown;
+  if (size.rows === 1 || size.cols === 1) return vector;
+  return size.rows === size.cols ? square : other;
+}
+
 /** Helper for the common case: one CAS operation on the row's target. */
 export function runOperation(
   ctx: CommandContext,
