@@ -110,9 +110,9 @@ export function MathLiveEditor({
     //   with brackets (lcm, gcd, binomial: "lcma" is letters, so it should not look like lcm).
     //   The longer shortcut then fires when its word is complete.
     let typed = ''; // printable characters typed since the last other key or click
-    let pending: { char: string; before: string } | null = null;
-    /** How the last keystroke's shortcut fired: by MathLive (undo reverts it) or by us. */
-    let fired: { key: string; by: 'mathlive' | 'us' } | null = null;
+    let pending: { char: string; before: string; virtual: boolean } | null = null;
+    /** The shortcut the last keystroke fired. */
+    let fired: Fired | null = null;
     /** A word being spelled out after a shortcut was reverted (e.g. "binomi"). */
     let spelling: string | null = null;
     let applying = false;
@@ -147,13 +147,15 @@ export function MathLiveEditor({
         removeStray();
       }
       if (pending) {
-        const { char } = pending;
+        const { char, virtual } = pending;
         const key = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
-        fired = key ? { key, by: 'mathlive' } : null;
+        fired = key ? { key, by: 'mathlive' } : virtual ? applyShortcut() : null;
         if (spelling !== null && !key) {
           spelling += char;
           const word = spelling;
           if (!wordKeys().some((k) => k.startsWith(word))) spelling = null;
+          else if (fired)
+            spelling = null; // applyShortcut did it
           else if (word in mf.inlineShortcuts) {
             // The longer shortcut is complete: replace its letters ourselves (MathLive forgot
             // them when the shorter one was undone).
@@ -266,14 +268,102 @@ export function MathLiveEditor({
      * and Backspace have on a physical keyboard.
      */
     const onBeforeInput = (ev: Event) => {
-      if (fromKey || !(ev instanceof InputEvent)) return;
+      if (fromKey || applying || !(ev instanceof InputEvent)) return;
+      // A physical key's character (its keydown, already handled, set `pending`).
+      if (ev.inputType === 'insertText' && pending && !pending.virtual) return;
+      const last = fired;
+      fired = null;
       if (ev.inputType === 'insertLineBreak') {
         ev.preventDefault();
         callbacks.current.onKeyAction?.('enter');
+      } else if (ev.inputType === 'deleteContentBackward' && last) {
+        // Delete straight after a shortcut fired turns it back into letters, as Backspace does.
+        ev.preventDefault();
+        typed = '';
+        spelling = null;
+        revert(last);
       } else if (ev.inputType === 'deleteContentBackward' && mf.value === '') {
         ev.preventDefault();
         callbacks.current.onKeyAction?.('backspaceEmpty');
+      } else if (ev.inputType === 'insertText' && ev.data?.length === 1) {
+        if (beforeChar(ev.data, last, true)) {
+          // MathLive loses its own insert when the field changed under it: type the key here.
+          ev.preventDefault();
+          applying = true;
+          mf.insert(ev.data);
+          applying = false;
+          onInput();
+        }
+      } else {
+        typed = '';
+        pending = null;
+        spelling = null;
       }
+    };
+
+    /**
+     * A printable character is about to be typed, from a physical key or the math keyboard
+     * (`virtual`, whose keys MathLive inserts without applying inline shortcuts: onInput then
+     * applies them, see applyShortcut). `last` is the shortcut the previous character fired.
+     * Returns whether it turned that shortcut back into letters.
+     */
+    const beforeChar = (char: string, last: Fired | null, virtual: boolean): boolean => {
+      let reverted = false;
+      if (last && /^[A-Za-z]$/.test(char)) {
+        // The longest word ending in this letter that extends the shortcut and could still
+        // spell another one: "artanh" after "tan" fired (not just "tanh").
+        const run = /[A-Za-z]*$/.exec(typed + char)?.[0] ?? '';
+        const keys = wordKeys();
+        let word: string | null = null;
+        for (let s = 0; s < run.length - last.key.length && !word; s++) {
+          const w = run.slice(s);
+          if (keys.some((k) => k.startsWith(w))) word = w;
+        }
+        if (word || bracketOnly?.has(last.key)) {
+          revert(last);
+          reverted = true;
+          spelling = word ? word.slice(0, -1) : null; // the letter itself is typed next
+        }
+      } else if (last && bracketOnly?.has(last.key) && BREAKS_CALL.test(char)) {
+        // Anything but its brackets (or a subscript/power: Li_s, erf^{-1}) after a name that
+        // needs them: "2Ai+1" is 2·A·i + 1, so the name goes back to letters before the key.
+        revert(last);
+        reverted = true;
+      }
+      typed += char;
+      pending = { char, before: mf.value, virtual };
+      return reverted;
+    };
+
+    /**
+     * The word shortcut the letters just before the caret spell, applied as MathLive does for
+     * physical keys (the longest one; `after` rules: "mu" not straight after a letter). Returns
+     * the shortcut, or null when none applies.
+     */
+    const applyShortcut = (): Fired | null => {
+      const at = mf.position;
+      const letters = (from: number) => mf.getValue(Math.max(0, from), at, 'latex');
+      const key = wordKeys()
+        .filter((k) => typed.endsWith(k) && k.length <= at && letters(at - k.length) === k)
+        .sort((a, b) => b.length - a.length)
+        .find((k) => {
+          const def = mf.inlineShortcuts[k];
+          const start = at - k.length;
+          const guarded = typeof def === 'object' && def.after !== undefined;
+          return !guarded || start === 0 || !/^[A-Za-z]$/.test(letters(start - 1).slice(0, 1));
+        });
+      const def = key === undefined ? undefined : mf.inlineShortcuts[key];
+      if (key === undefined || def === undefined) return null;
+      const start = at - key.length;
+      const end = mf.lastOffset - key.length;
+      applying = true;
+      mf.selection = { ranges: [[start, at]], direction: 'none' };
+      mf.insert(typeof def === 'string' ? def : def.value, {
+        selectionMode: 'placeholder',
+        format: 'latex',
+      });
+      applying = false;
+      return { key, by: 'us', span: { start, length: mf.lastOffset - end } };
     };
 
     const onKeyDown = (ev: KeyboardEvent) => {
@@ -338,29 +428,8 @@ export function MathLiveEditor({
         callbacks.current.onChange(mf.value);
         return;
       }
-      const letter = /^[A-Za-z]$/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey;
-      if (last && letter) {
-        // The longest word ending in this letter that extends the shortcut and could still
-        // spell another one: "artanh" after "tan" fired (not just "tanh").
-        const run = /[A-Za-z]*$/.exec(typed + ev.key)?.[0] ?? '';
-        const keys = wordKeys();
-        let word: string | null = null;
-        for (let s = 0; s < run.length - last.key.length && !word; s++) {
-          const w = run.slice(s);
-          if (keys.some((k) => k.startsWith(w))) word = w;
-        }
-        if (word || bracketOnly?.has(last.key)) {
-          revert(last);
-          spelling = word ? word.slice(0, -1) : null; // MathLive types the letter itself next
-        }
-      } else if (last && bracketOnly?.has(last.key) && BREAKS_CALL.test(ev.key)) {
-        // Anything but its brackets (or a subscript/power: Li_s, erf^{-1}) after a name that
-        // needs them: "2Ai+1" is 2·A·i + 1, so the name goes back to letters before the key.
-        revert(last);
-      }
       if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
-        typed += ev.key;
-        pending = { char: ev.key, before: mf.value };
+        beforeChar(ev.key, last, false);
       } else if (!['Shift', 'Control', 'Alt', 'Meta'].includes(ev.key)) {
         typed = '';
         pending = null;
@@ -413,9 +482,16 @@ export function MathLiveEditor({
       return true;
     };
     /** Turns a shortcut that just fired back into the letters that were typed. */
-    const revert = (last: { key: string; by: 'mathlive' | 'us' }) => {
+    const revert = (last: Fired) => {
       applying = true;
-      if (last.by === 'mathlive') {
+      if (last.span) {
+        // Replace just what it inserted: replacing the whole value here would lose the key the
+        // math keyboard is about to type.
+        const { start, length } = last.span;
+        mf.selection = { ranges: [[start, start + length]], direction: 'none' };
+        mf.insert(last.key);
+        mf.position = start + last.key.length;
+      } else if (last.by === 'mathlive') {
         mf.executeCommand('undo');
       } else {
         mf.executeCommand('deleteBackward');
@@ -630,6 +706,16 @@ const EMPTY_ROW_KEYS: Partial<Record<string, EditorKeyAction>> = {
   '#': 'toHeading',
   '@': 'toFolder',
 };
+
+/**
+ * A word shortcut that just fired: by MathLive (undo reverts it) or by us; `span` is where we put
+ * what it inserted (offsets), when we applied it for the math keyboard.
+ */
+interface Fired {
+  key: string;
+  by: 'mathlive' | 'us';
+  span?: { start: number; length: number };
+}
 
 /** Typed characters that end a call-only name without its brackets (letters handled apart). */
 const BREAKS_CALL = /^[^A-Za-z(_^\s]$/;
