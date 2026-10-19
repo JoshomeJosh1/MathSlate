@@ -455,8 +455,11 @@ export function MathLiveEditor({
       if (ev.detail.direction === 'upward') callbacks.current.onKeyAction?.('moveUp');
       else if (ev.detail.direction === 'downward') callbacks.current.onKeyAction?.('moveDown');
     };
-    /** Where the last click was, if it landed on a unit's drawn brackets (see unitsToBrackets). */
-    let clickedUnit = false;
+    /**
+     * Where the last click landed in a drawn unit, as a fraction of the way across its text (0 at
+     * its start, 1 at its end), or null if it was not on a unit (see unitsToBrackets).
+     */
+    let clickedUnit: number | null = null;
     const onPointerDown = (ev: PointerEvent) => {
       typed = '';
       fired = null;
@@ -512,18 +515,53 @@ export function MathLiveEditor({
       const prefix = mf.getValue(0, mf.position, 'latex');
       const suffix = mf.getValue(mf.position, mf.lastOffset, 'latex');
       const full = mf.value;
+      const fraction = clickedUnit;
+      clickedUnit = null;
+      // Positions after the converted LaTeX (the caret's offset once units are brackets).
+      const offsetAfter = (latex: string) => {
+        mf.value = unitsAsBrackets(latex);
+        return mf.lastOffset;
+      };
       applying = true;
-      mf.value = unitsAsBrackets(prefix);
-      let caret = mf.lastOffset;
-      // Clicked on a unit (the caret lands beside it): put the caret inside its brackets, at
-      // the end of the unit if the click was on its right half, else at its start.
-      if (clickedUnit && /\\unit\{(?:[^{}]|\{[^{}]*\})*\}$/.test(prefix)) caret -= 1;
-      else if (clickedUnit && suffix.startsWith('\\unit{')) caret += 1;
-      clickedUnit = false;
+      let caret = offsetAfter(prefix);
+      // Clicked on a unit, the caret is beside it: [start, end] are its brackets' positions.
+      let unit: { start: number; end: number } | null = null;
+      const before = /\\unit\{(?:[^{}]|\{[^{}]*\})*\}$/.exec(prefix);
+      const after = /^\\unit\{(?:[^{}]|\{[^{}]*\})*\}/.exec(suffix);
+      if (fraction !== null && before) {
+        unit = { start: offsetAfter(prefix.slice(0, before.index)), end: caret };
+      } else if (fraction !== null && after) {
+        unit = { start: caret, end: offsetAfter(prefix + after[0]) };
+      }
       mf.value = unitsAsBrackets(full);
-      mf.position = Math.max(0, Math.min(caret, mf.lastOffset));
+      if (unit) {
+        // Inside its brackets for now, at the end nearer the click.
+        caret = (fraction ?? 0) >= 0.5 ? unit.end - 1 : unit.start + 1;
+      }
+      caret = Math.max(0, Math.min(caret, mf.lastOffset));
+      mf.position = caret;
       applying = false;
       callbacks.current.onChange(mf.value);
+      // Then, once the brackets are drawn: the position inside the unit as far across as the
+      // click was across the drawn unit (between letters, before a power, …).
+      if (unit && fraction !== null) {
+        const { start, end } = unit;
+        requestAnimationFrame(() => {
+          if (!mf.hasFocus() || mf.position !== caret) return; // moved on meanwhile
+          const xs: { k: number; x: number }[] = [];
+          for (let k = start + 1; k <= end - 1; k++) {
+            const b = mf.getElementInfo(k)?.bounds;
+            if (b) xs.push({ k, x: b.right });
+          }
+          const first = xs[0];
+          const last = xs.at(-1);
+          if (!first || !last) return;
+          const target = first.x + fraction * (last.x - first.x);
+          let best = first;
+          for (const p of xs) if (Math.abs(p.x - target) < Math.abs(best.x - target)) best = p;
+          mf.position = best.k;
+        });
+      }
     };
     const onFocusIn = () => {
       callbacks.current.onFocus?.();
@@ -739,18 +777,20 @@ const isEmptyCell = (cell: InternalAtom[] | undefined) =>
  * Whether a point is on a unit as drawn: between a pair of its faint brackets (on a bracket
  * itself counts as beside the unit, so a click at the end of a row stays after it).
  */
-function pointOnUnit(mf: MathfieldElement, x: number, y: number): boolean {
+function pointOnUnit(mf: MathfieldElement, x: number, y: number): number | null {
   const brackets = [...(mf.shadowRoot?.querySelectorAll('.ML-unit-bracket') ?? [])].map((b) =>
     b.getBoundingClientRect(),
   );
   for (let k = 0; k + 1 < brackets.length; k += 2) {
     const open = brackets[k];
     const close = brackets[k + 1];
-    if (open && close && x > open.right && x < close.left && y >= open.top && y <= open.bottom) {
-      return true;
+    // On the unit, its brackets included (a click on a bracket puts the caret at that end).
+    if (open && close && x >= open.left && x <= close.right && y >= open.top && y <= open.bottom) {
+      const width = close.left - open.right;
+      return width > 0 ? Math.min(1, Math.max(0, (x - open.right) / width)) : 0;
     }
   }
-  return false;
+  return null;
 }
 
 let keyboardWatched = false;

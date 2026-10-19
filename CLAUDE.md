@@ -251,7 +251,7 @@ with the fix, `+`, non-integer powers, unknown symbols with case/split suggestio
 rewrites units in brackets as `\unit{…}`. The editor
 draws `\unit` as a macro (`ui/editor/unitLatex.ts`: upright, faint brackets); a focused row shows
 its units as typed brackets again so they can be edited (`unitsToBrackets` in
-`MathLiveEditor.tsx`, which keeps the caret, and puts it inside a unit that was clicked). `expr \to [unit]`
+`MathLiveEditor.tsx`, which keeps the caret, and puts it where a unit was clicked: the position inside its brackets as far across as the click was across the drawn unit, `pointOnUnit`). `expr \to [unit]`
 (or a literal `->`) at the end of a row is a conversion (AST `convert`, only at the top; on a
 definition it wraps the right-hand side). Backends know nothing about units: the engine wraps the
 CAS in `withUnits`, which expands units into positive base-unit symbols (`km` → `1000·@m`), runs
