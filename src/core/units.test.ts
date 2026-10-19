@@ -61,7 +61,22 @@ describe('units in rows', () => {
 
 describe('the units registry', () => {
   it('has prefixed units and no symbol twice', () => {
-    for (const s of ['km', 'mm', 'µm', 'kg', 'ms', 'kWh', 'MPa', 'mol', 'min', 'mi']) {
+    for (const s of [
+      'km',
+      'mm',
+      'µm',
+      'kg',
+      'ms',
+      'kWh',
+      'MPa',
+      'mol',
+      'min',
+      'mi',
+      'pg',
+      'dam',
+      'QW',
+      'qs',
+    ]) {
       expect(units.has(s), s).toBe(true);
     }
     expect(units.get('kg')?.factors).toEqual([]); // the base unit of mass

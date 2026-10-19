@@ -465,7 +465,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Units' },
   {
-    note: 'Type a unit in square brackets after a number: 5[km], 9.81[m/s^2]. Once you leave the row the unit is shown upright in faint brackets. Units in brackets never clash with your own names: m is a variable, [m] is metres. You can also pick units from the \\ menu.',
+    note: 'Type a unit in square brackets after a number: 5[km], 9.81[m/s^2]. Once you leave the row the unit is shown upright in faint brackets; click back into the row to edit it as typed. Units in brackets never clash with your own names: m is a variable, [m] is metres. You can also pick units from the \\ menu.',
   },
   '5\\unit{km}+300\\unit{m}',
   '\\mathrm{mass}=70\\unit{kg}',
@@ -480,7 +480,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   { note: 'Adding different kinds of quantity is an error.' },
   '5\\unit{m}+2\\unit{s}',
   {
-    note: 'Units: metre, gram, second, ampere, kelvin, mole, newton, joule, watt, pascal, hertz, coulomb, volt, ohm and litre with SI prefixes (km, mg, µs, kW, …); minute, hour, day, year; inch, foot, yard, mile; tonne, pound, ounce; mph; watt-hour, calorie, electronvolt; bar, atm, psi.',
+    note: 'Units: metre, gram, second, ampere, kelvin, mole, newton, joule, watt, pascal, hertz, coulomb, volt, ohm and litre with every SI prefix, quecto to quetta (km, mg, µs, pg, dam, GW, …); minute, hour, day, year; inch, foot, yard, mile; tonne, pound, ounce; mph; watt-hour, calorie, electronvolt; bar, atm, psi.',
   },
 
   { folder: 'Live dependencies' },

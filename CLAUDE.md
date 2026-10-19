@@ -209,7 +209,9 @@ next one answers (**fallback**, shown "via sympy").
 A unit is `\unit{km}` / `\unit{m/s^{2}}` in a row's LaTeX (AST `{ kind: 'unit', factors }`, text
 read by `parser/units.ts`); typed as `5[km]` — square brackets whose content spells known units
 resolve as a unit (`[x+1]` stays brackets) and decoration rewrites them as `\unit{…}`. The editor
-draws `\unit` as a macro (`ui/editor/unitLatex.ts`: upright, faint brackets). `expr \to [unit]`
+draws `\unit` as a macro (`ui/editor/unitLatex.ts`: upright, faint brackets); a focused row shows
+its units as typed brackets again so they can be edited (`unitsToBrackets` in
+`MathLiveEditor.tsx`, which keeps the caret, and puts it inside a unit that was clicked). `expr \to [unit]`
 (or a literal `->`) at the end of a row is a conversion (AST `convert`, only at the top; on a
 definition it wraps the right-hand side). Backends know nothing about units: the engine wraps the
 CAS in `withUnits`, which expands units into positive base-unit symbols (`km` → `1000·@m`), runs
@@ -218,7 +220,8 @@ else the first unit the row (or its definitions) wrote with that dimension, else
 J, W, …), else base units — by asking the backend for answer ÷ unit (evaluate, then simplify if
 base units remain). Rational amounts are shown as decimals (5.3 km). The registry
 (`registries/units/defs/*.ts`, auto-discovered) lists each unit's symbol, name, dimension, exact
-decimal factor and SI prefixes; prefixed symbols are generated and must be unique (tested).
+decimal factor and SI prefixes (`'all'`: quecto to quetta), and `menu`, the prefixed forms the `\`
+menu offers; prefixed symbols are generated and must be unique (tested).
 
 ### Special functions
 

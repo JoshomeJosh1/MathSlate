@@ -231,6 +231,13 @@ export function tokenize(src: string): Token[] {
       push({ kind: 'letter', name: c, span: { start, end: i } });
       continue;
     }
+    // The micro sign and ohm sign as characters (µm, kΩ typed in a unit).
+    const unicodeLetter = { µ: '\\mu', μ: '\\mu', Ω: '\\Omega' }[c];
+    if (unicodeLetter) {
+      i++;
+      push({ kind: 'letter', name: unicodeLetter, span: { start, end: i } });
+      continue;
+    }
 
     if (c === '\\') {
       if (src.charAt(i + 1) === '\\') {

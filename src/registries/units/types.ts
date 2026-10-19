@@ -15,20 +15,43 @@ export interface UnitDef {
   dimension: Dimension;
   /** Exact decimal multiple of the base units: '1609.344' for a mile. */
   factor: string;
-  /** SI prefixes this unit takes (`k` → km), from PREFIXES. */
-  prefixes?: readonly string[];
+  /** SI prefixes this unit takes: 'all' (pg, das, QW), or a list (`k` → kt). */
+  prefixes?: 'all' | readonly string[];
+  /** The prefixed forms the `\` menu offers (all of them can be typed). */
+  menu?: readonly string[];
   /** Heading in the `\` menu. */
   group: string;
 }
 
-/** SI prefixes as exact decimals. */
+/** A power of ten as an exact decimal: -3 → '0.001', 6 → '1000000'. */
+const powerOfTen = (n: number) => (n >= 0 ? `1${'0'.repeat(n)}` : `0.${'0'.repeat(-n - 1)}1`);
+
+const prefix = (name: string, exponent: number) => ({ name, factor: powerOfTen(exponent) });
+
+/** Every SI prefix, quecto to quetta. */
 export const PREFIXES: Readonly<Record<string, { name: string; factor: string }>> = {
-  n: { name: 'nano', factor: '0.000000001' },
-  µ: { name: 'micro', factor: '0.000001' },
-  m: { name: 'milli', factor: '0.001' },
-  c: { name: 'centi', factor: '0.01' },
-  h: { name: 'hecto', factor: '100' },
-  k: { name: 'kilo', factor: '1000' },
-  M: { name: 'mega', factor: '1000000' },
-  G: { name: 'giga', factor: '1000000000' },
+  q: prefix('quecto', -30),
+  r: prefix('ronto', -27),
+  y: prefix('yocto', -24),
+  z: prefix('zepto', -21),
+  a: prefix('atto', -18),
+  f: prefix('femto', -15),
+  p: prefix('pico', -12),
+  n: prefix('nano', -9),
+  µ: prefix('micro', -6),
+  m: prefix('milli', -3),
+  c: prefix('centi', -2),
+  d: prefix('deci', -1),
+  da: prefix('deca', 1),
+  h: prefix('hecto', 2),
+  k: prefix('kilo', 3),
+  M: prefix('mega', 6),
+  G: prefix('giga', 9),
+  T: prefix('tera', 12),
+  P: prefix('peta', 15),
+  E: prefix('exa', 18),
+  Z: prefix('zetta', 21),
+  Y: prefix('yotta', 24),
+  R: prefix('ronna', 27),
+  Q: prefix('quetta', 30),
 };

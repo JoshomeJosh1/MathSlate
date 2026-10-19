@@ -10,6 +10,8 @@ export interface UnitInfo {
   /** Exact decimals whose product is the unit's multiple of the base units. */
   factors: readonly string[];
   group: string;
+  /** Offered in the `\` menu (unprefixed units and the common prefixed ones). */
+  inMenu: boolean;
 }
 
 // Every module in defs/ is picked up automatically (Vite resolves this glob at build time).
@@ -26,10 +28,18 @@ function build(): Map<string, UnitInfo> {
   };
   for (const d of defs) {
     const { symbol, name, dimension, group } = d;
-    add({ symbol, name, dimension, group, factors: d.factor === '1' ? [] : [d.factor] });
+    add({
+      symbol,
+      name,
+      dimension,
+      group,
+      factors: d.factor === '1' ? [] : [d.factor],
+      inMenu: true,
+    });
   }
   for (const d of defs) {
-    for (const p of d.prefixes ?? []) {
+    const prefixes = d.prefixes === 'all' ? Object.keys(PREFIXES) : (d.prefixes ?? []);
+    for (const p of prefixes) {
       const prefix = PREFIXES[p];
       if (!prefix) throw new Error(`Unknown prefix "${p}" on ${d.symbol}`);
       // kilogram is the base unit of mass: 1 kg = 1000 × 0.001 kg.
@@ -40,6 +50,7 @@ function build(): Map<string, UnitInfo> {
         dimension: d.dimension,
         group: d.group,
         factors: p === 'k' && d.symbol === 'g' ? [] : factors,
+        inMenu: d.menu?.includes(p) ?? false,
       });
     }
   }

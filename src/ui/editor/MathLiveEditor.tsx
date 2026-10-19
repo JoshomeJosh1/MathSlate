@@ -9,7 +9,7 @@ import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
 import { emptyStructureRange, removeStrayPlaceholders } from './emptyStructure';
 import { INLINE_SHORTCUTS } from './shortcuts';
-import { UNIT_MACRO, UNIT_SHADOW_CSS } from './unitLatex';
+import { UNIT_MACRO, UNIT_SHADOW_CSS, unitsAsBrackets } from './unitLatex';
 
 MathfieldElement.fontsDirectory = null;
 MathfieldElement.soundsDirectory = null;
@@ -326,10 +326,13 @@ export function MathLiveEditor({
       if (ev.detail.direction === 'upward') callbacks.current.onKeyAction?.('moveUp');
       else if (ev.detail.direction === 'downward') callbacks.current.onKeyAction?.('moveDown');
     };
-    const onPointerDown = () => {
+    /** Where the last click was, if it landed on a unit's drawn brackets (see unitsToBrackets). */
+    let clickedUnit = false;
+    const onPointerDown = (ev: PointerEvent) => {
       typed = '';
       fired = null;
       spelling = null;
+      clickedUnit = pointOnUnit(mf, ev.clientX, ev.clientY);
     };
     /**
      * Backspace after / Delete before a structure whose boxes are all empty (√□, □/□, Σ) removes
@@ -363,7 +366,34 @@ export function MathLiveEditor({
       applying = false;
       callbacks.current.onChange(mf.value);
     };
-    const onFocusIn = () => callbacks.current.onFocus?.();
+    /**
+     * Units are one block each (\unit{km}), which cannot be typed into: while the row is being
+     * edited they are shown as typed, [km], and become blocks again when it is left (decoration).
+     * The caret stays where it was: the LaTeX before it, converted the same way, is measured.
+     */
+    const unitsToBrackets = () => {
+      if (!mf.hasFocus() || !mf.value.includes('\\unit{')) return;
+      const prefix = mf.getValue(0, mf.position, 'latex');
+      const suffix = mf.getValue(mf.position, mf.lastOffset, 'latex');
+      const full = mf.value;
+      applying = true;
+      mf.value = unitsAsBrackets(prefix);
+      let caret = mf.lastOffset;
+      // Clicked on a unit (the caret lands beside it): put the caret inside its brackets, at
+      // the end of the unit if the click was on its right half, else at its start.
+      if (clickedUnit && /\\unit\{(?:[^{}]|\{[^{}]*\})*\}$/.test(prefix)) caret -= 1;
+      else if (clickedUnit && suffix.startsWith('\\unit{')) caret += 1;
+      clickedUnit = false;
+      mf.value = unitsAsBrackets(full);
+      mf.position = Math.max(0, Math.min(caret, mf.lastOffset));
+      applying = false;
+      callbacks.current.onChange(mf.value);
+    };
+    const onFocusIn = () => {
+      callbacks.current.onFocus?.();
+      // After MathLive has placed the caret for the click that focused the row.
+      setTimeout(unitsToBrackets, 0);
+    };
     const onFocusOut = () => {
       setMenu(null);
       callbacks.current.onBlur?.();
@@ -418,6 +448,24 @@ export function MathLiveEditor({
       )}
     </>
   );
+}
+
+/**
+ * Whether a point is on a unit as drawn: between a pair of its faint brackets (on a bracket
+ * itself counts as beside the unit, so a click at the end of a row stays after it).
+ */
+function pointOnUnit(mf: MathfieldElement, x: number, y: number): boolean {
+  const brackets = [...(mf.shadowRoot?.querySelectorAll('.ML-unit-bracket') ?? [])].map((b) =>
+    b.getBoundingClientRect(),
+  );
+  for (let k = 0; k + 1 < brackets.length; k += 2) {
+    const open = brackets[k];
+    const close = brackets[k + 1];
+    if (open && close && x > open.right && x < close.left && y >= open.top && y <= open.bottom) {
+      return true;
+    }
+  }
+  return false;
 }
 
 let keyboardWatched = false;

@@ -94,6 +94,7 @@ export function latexCompletions(): LatexCompletion[] {
   // or already names something else (\minute: \min is the function).
   const taken = new Set([...STRUCTURES, ...greek, ...functions].map((c) => c.name));
   const unitEntries = [...units.values()]
+    .filter((u) => u.inMenu)
     .map((u) => ({
       name:
         /^[A-Za-z]+$/.test(u.symbol) && !taken.has(u.symbol)

@@ -721,6 +721,11 @@ function unitTextOf(cst: Cst): string | null {
       if (left === null || right === null) return null;
       return cst.op === 'mul' ? `${left} ${right}` : `${left}/(${right})`;
     }
+    case 'group': {
+      // J/(kg·K): the quotient adds the parentheses back.
+      const only = cst.delim === 'paren' && cst.items.length === 1 ? cst.items[0] : undefined;
+      return only ? unitTextOf(only) : null;
+    }
     case 'frac': {
       const num = unitTextOf(cst.num);
       const den = unitTextOf(cst.den);
