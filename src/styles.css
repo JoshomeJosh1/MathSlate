@@ -452,6 +452,13 @@ button {
   opacity: 1;
 }
 
+/* Touch screens have no hover: always show the buttons. */
+@media (hover: none) {
+  .output-actions {
+    opacity: 1;
+  }
+}
+
 .output-actions button {
   border: none;
   background: transparent;
