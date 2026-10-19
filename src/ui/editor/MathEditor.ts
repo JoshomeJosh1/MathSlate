@@ -65,6 +65,11 @@ export interface MathEditorProps {
    * `latex` is inserted; `#?` marks an empty box to fill in.
    */
   completions?: readonly CommandCompletion[];
+  /**
+   * An error to mark inside the field: offsets into `latex`, the LaTeX it was found in (marked
+   * only while the field still shows exactly that).
+   */
+  error?: { latex: string; start: number; end: number } | null;
   ariaLabel?: string;
   ref?: Ref<MathEditorHandle>;
 }

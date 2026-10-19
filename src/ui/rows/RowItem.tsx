@@ -134,6 +134,7 @@ export function RowItem(props: Props) {
             bracketOnly={BRACKET_ONLY}
             completions={COMPLETIONS}
             ariaLabel={`Input row ${number}`}
+            error={view?.error?.span ? { latex: view.analysis.latex, ...view.error.span } : null}
           />
         ) : (
           <NoteEditor
@@ -163,7 +164,8 @@ export function RowItem(props: Props) {
         <RowError
           latex={row.latex}
           message={view.error.message}
-          {...(view.error.span ? { span: view.error.span } : {})}
+          // The field marks where the error is; Debug also shows it in the LaTeX.
+          {...(view.error.span && showDebug ? { span: view.error.span } : {})}
         />
       )}
       {isMath && showDebug && <RowDebug latex={row.latex} analysis={view?.analysis} />}

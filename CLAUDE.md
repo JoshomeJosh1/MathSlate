@@ -28,7 +28,7 @@ starting `#` are headings, `##` subheadings.
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
-| 8         | URL share (done), error highlight inside the math field, perf                         | partial |
+| 8         | URL share, error highlight inside the math field (done); perf                         | partial |
 
 ## Commands
 
@@ -45,10 +45,14 @@ npm run format            # apply Prettier
 
 ```
 src/
-  main.tsx, App.tsx (header: CAS status, New, Documentation, CAS picker, Debug), styles.css
+  main.tsx, App.tsx (header: CAS status, New, Documentation, Share, CAS picker, Decimals,
+                   Debug), styles.css
   ui/
     editor/        MathEditor.ts (editor-agnostic contract), MathLiveEditor.tsx, MathLiveView.tsx
-                   (read-only rendering for outputs), index.ts (picks the implementation)
+                   (read-only rendering for outputs), index.ts (picks the implementation),
+                   errorRange.ts (an error's LaTeX span → field positions, via the top-level
+                   prefixes; the editor underlines those atoms after a pause, only while the
+                   field shows the LaTeX the error was found in)
     rows/          RowList.tsx (sortable list, focus/keyboard nav, upright-name decoration),
                    RowItem.tsx (input + outputs + chips, drags as a unit), OutputRow.tsx,
                    NoteEditor.tsx, SuggestionChips.tsx, RowDiagnostics.tsx, promote.ts,

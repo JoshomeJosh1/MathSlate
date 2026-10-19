@@ -8,6 +8,7 @@ import { CommandMenu, type MenuAnchor } from './CommandMenu';
 import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
 import { emptyStructureRange, removeStrayPlaceholders } from './emptyStructure';
+import { errorRange } from './errorRange';
 import { INLINE_SHORTCUTS } from './shortcuts';
 import { UNIT_MACRO, UNIT_SHADOW_CSS, unitsAsBrackets } from './unitLatex';
 
@@ -28,6 +29,7 @@ export function MathLiveEditor({
   macros,
   bracketOnly,
   completions,
+  error,
   ariaLabel,
   ref,
 }: MathEditorProps) {
@@ -567,6 +569,48 @@ export function MathLiveEditor({
     if (mf) mf.inlineShortcuts = { ...INLINE_SHORTCUTS, ...shortcuts };
   }, [shortcuts]);
 
+  // The error, marked under the part of the field it is about: after a pause (not while typing),
+  // and only while the field shows the LaTeX the error was found in.
+  const errorStart = error?.start;
+  const errorEnd = error?.end;
+  const errorLatex = error?.latex;
+  useEffect(() => {
+    const mf = fieldRef.current;
+    const container = containerRef.current;
+    if (!mf || !container || errorStart === undefined || errorEnd === undefined) return;
+    const mark = document.createElement('div');
+    mark.className = 'math-error-mark';
+    mark.setAttribute('aria-hidden', 'true');
+    const place = () => {
+      mark.remove();
+      if (mf.value !== errorLatex) return;
+      const range = errorRange(mf.value, mf.lastOffset, (k) => mf.getValue(0, k, 'latex'), {
+        start: errorStart,
+        end: errorEnd,
+      });
+      const box = range && errorBox(mf, range.from, range.to);
+      if (!box) return;
+      const origin = container.getBoundingClientRect();
+      mark.classList.toggle('point', range.from === range.to);
+      mark.style.left = `${box.left - origin.left}px`;
+      mark.style.width = `${box.right - box.left}px`;
+      mark.style.top = `${box.bottom - origin.top}px`;
+      container.append(mark);
+    };
+    const timer = setTimeout(place, 400);
+    const hide = () => {
+      mark.remove();
+    };
+    mf.addEventListener('input', hide);
+    window.addEventListener('resize', place);
+    return () => {
+      clearTimeout(timer);
+      mark.remove();
+      mf.removeEventListener('input', hide);
+      window.removeEventListener('resize', place);
+    };
+  }, [errorStart, errorEnd, errorLatex, value]);
+
   return (
     <>
       <div ref={containerRef} className="math-editor" />
@@ -582,6 +626,34 @@ export function MathLiveEditor({
       )}
     </>
   );
+}
+
+/**
+ * Where an error covering positions (from, to] is drawn (viewport coordinates): the atoms'
+ * boxes joined, or a short mark just after position `from` for a point (something missing).
+ */
+function errorBox(
+  mf: MathfieldElement,
+  from: number,
+  to: number,
+): { left: number; right: number; bottom: number } | null {
+  let left = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  if (from === to) {
+    const at = mf.getElementInfo(from)?.bounds ?? mf.getElementInfo(from + 1)?.bounds;
+    if (!at) return null;
+    const x = from === 0 ? at.left : at.right;
+    return { left: x, right: x + 8, bottom: at.bottom };
+  }
+  for (let k = from + 1; k <= to; k++) {
+    const b = mf.getElementInfo(k)?.bounds;
+    if (!b || b.width === 0) continue;
+    left = Math.min(left, b.left);
+    right = Math.max(right, b.right);
+    bottom = Math.max(bottom, b.bottom);
+  }
+  return Number.isFinite(left) ? { left, right, bottom } : null;
 }
 
 /**

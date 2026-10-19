@@ -27,3 +27,20 @@
 .math-editor math-field::part(menu-toggle) {
   display: none;
 }
+
+/* An error's place in the field: a red underline (MathLiveEditor, errorRange.ts). */
+.math-editor {
+  position: relative;
+}
+
+.math-error-mark {
+  position: absolute;
+  height: 0;
+  border-bottom: 2px dashed var(--error);
+  pointer-events: none;
+}
+
+/* Something missing: a small wedge where it should go. */
+.math-error-mark.point {
+  border-bottom-style: solid;
+}
