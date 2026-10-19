@@ -67,6 +67,8 @@ describe('units, through Nerdamer', () => {
 
   it('converts with →', async () => {
     expect(await last(['5\\unit{km}\\to\\unit{m}'])).toEqual(['5000\\unit{m}']);
+    // A unit on its own is one of it.
+    expect(await last(['\\left[in\\right]\\to\\left[mm\\right]'])).toEqual(['25.4\\unit{mm}']);
     expect(await last(['d=2\\unit{h}\\cdot 30\\unit{km/h}\\to\\unit{mi}'])).toEqual([
       '37.28227153424\\unit{mi}',
     ]);
