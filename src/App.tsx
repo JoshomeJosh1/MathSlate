@@ -8,6 +8,7 @@ import { openInNewTab } from './document/persistence';
 import { replacedByLink, shareLink } from './document/share';
 import { useStore } from './document/store';
 import { RowList } from './ui/rows/RowList';
+import { SlatesDialog } from './ui/SlatesDialog';
 
 const STATE_LABEL = { idle: 'idle', loading: 'loading…', ready: 'ready', error: 'failed' } as const;
 
@@ -167,6 +168,7 @@ function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () =
       )}
       <div className="open-dialog-buttons">
         <button
+          className="primary"
           autoFocus
           onClick={() => {
             if (openInNewTab(opening.make())) dialog.current?.close();
@@ -194,6 +196,7 @@ function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () =
 export function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [opening, setOpening] = useState<Opening | null>(null);
+  const [showSlates, setShowSlates] = useState(false);
   const open = (next: Opening) => {
     if (hasContent()) setOpening(next);
     else docActions.replace(next.make());
@@ -219,6 +222,14 @@ export function App() {
           >
             Documentation
           </button>
+          <button
+            title="The slates saved in this browser"
+            onClick={() => {
+              setShowSlates(true);
+            }}
+          >
+            Slates
+          </button>
           <ShareButton />
           <BackendPicker />
           <DecimalsToggle />
@@ -234,6 +245,13 @@ export function App() {
           </label>
         </div>
       </header>
+      {showSlates && (
+        <SlatesDialog
+          onClose={() => {
+            setShowSlates(false);
+          }}
+        />
+      )}
       {opening && (
         <OpenSlateDialog
           opening={opening}

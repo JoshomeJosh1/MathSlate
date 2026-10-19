@@ -112,13 +112,13 @@ button {
 }
 
 /* The suggested choice. */
-.open-dialog-buttons > button:first-child {
+.open-dialog-buttons > button.primary {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
 }
 
-.open-dialog-buttons > button:first-child:hover {
+.open-dialog-buttons > button.primary:hover {
   color: #fff;
   filter: brightness(1.1);
 }
@@ -938,4 +938,74 @@ button {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* The Slates list (ui/SlatesDialog.tsx). */
+.slates-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+}
+
+.slates-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.slates-list li {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.slates-list li:last-child {
+  border-bottom: none;
+}
+
+.slates-list li.current {
+  background: var(--output-bg);
+}
+
+.slate-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.slate-link:hover .slate-name {
+  color: var(--accent);
+}
+
+.slate-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.slate-delete {
+  flex: none;
+  margin-right: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.slate-delete:hover {
+  color: var(--error);
 }

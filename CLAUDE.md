@@ -56,7 +56,7 @@ npm run format            # apply Prettier
 
 ```
 src/
-  main.tsx, App.tsx (header: CAS status, New, Documentation, Share, CAS picker, Decimals,
+  main.tsx, App.tsx (header: CAS status, New, Documentation, Slates, Share, CAS picker, Decimals,
                    Debug), styles.css
   ui/
     editor/        MathEditor.ts (editor-agnostic contract), MathLiveEditor.tsx, MathLiveView.tsx
@@ -73,7 +73,7 @@ src/
   app/preferences.ts  per-browser display preferences (localStorage), e.g. Decimals: results show
                    only their decimal (`shownValue` in ui/rows/promote.ts; copy uses what is shown)
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
-                   docStore.ts (app singleton + actions), persistence.ts (localStorage autosave; one slot for the main slate, and one per tab opened with "Open in new tab", named by `?slate=<id>`),
+                   docStore.ts (app singleton + actions), persistence.ts (localStorage autosave; one slot for the main slate, and one per tab opened with "Open in new tab", named by `?slate=<id>`, each with its last-edit time), slates.ts (the Slates list: every saved slate, newest first; empty unused tab slots are removed),
                    documentation.ts (the documentation slate: first visit + Documentation button),
                    share.ts (Share: the whole doc packed, deflated (fflate) and base64url in the URL hash `#s=…`; opening
                    a link keeps the user's slate in localStorage until the banner's "Back to my
