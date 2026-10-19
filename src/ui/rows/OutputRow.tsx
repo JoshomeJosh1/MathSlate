@@ -3,7 +3,8 @@ import type { CasValue } from '../../cas/types';
 import type { OutputView } from '../../core/engine';
 import { printName } from '../../parser/printLatex';
 import { MathView } from '../editor';
-import { promotableLatex } from './promote';
+import { usePreferences } from '../../app/preferences';
+import { promotableLatex, shownValue } from './promote';
 
 interface Props {
   output: OutputView;
@@ -82,7 +83,9 @@ function CopyButton({ value }: { value: CasValue }) {
 }
 
 export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
-  const promotable = promotableLatex(output.value);
+  const { decimals } = usePreferences();
+  const value = output.value && shownValue(output.value, decimals);
+  const promotable = promotableLatex(value);
   return (
     <div className={`output-row${output.stale ? ' stale' : ''}`}>
       <div
@@ -117,8 +120,8 @@ export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
           </span>
         ) : output.state === 'error' ? (
           <span className="output-error">{output.error}</span>
-        ) : output.value ? (
-          <ValueView value={output.value} />
+        ) : value ? (
+          <ValueView value={value} />
         ) : (
           <span className="muted">computing…</span>
         )}
@@ -142,7 +145,7 @@ export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
         )}
       </div>
       <div className="output-actions">
-        {output.state === 'ok' && output.value && <CopyButton value={output.value} />}
+        {output.state === 'ok' && value && <CopyButton value={value} />}
         {onPromote && promotable.length > 0 && output.state === 'ok' && (
           <button
             title={promotable.length > 1 ? 'Copy each solution to a new row' : 'Copy to a new row'}

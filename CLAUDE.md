@@ -53,6 +53,8 @@ src/
                    RowItem.tsx (input + outputs + chips, drags as a unit), OutputRow.tsx,
                    NoteEditor.tsx, SuggestionChips.tsx, RowDiagnostics.tsx, promote.ts
   app/services.ts  singletons: backends → CasRouter → Engine, fed by docStore; React hooks
+  app/preferences.ts  per-browser display preferences (localStorage), e.g. Decimals: results show
+                   only their decimal (`shownValue` in ui/rows/promote.ts; copy uses what is shown)
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
                    docStore.ts (app singleton + actions), persistence.ts (localStorage autosave),
                    documentation.ts (the documentation slate: first visit + Documentation button)

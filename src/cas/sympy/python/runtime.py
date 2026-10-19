@@ -447,7 +447,9 @@ def _describe(result):
         return {
             "kind": "solutions",
             "variable": var.name,
-            "solutions": [_value(_tidy(s)) for s in sols],
+            "solutions": [
+                {**_value(_tidy(s)), "numeric": _numeric_value(s)} for s in sols
+            ],
         }
     if isinstance(result, tuple) and result and result[0] == "inequality":
         return {"kind": "expr", **_value(result[1]), "numeric": None}

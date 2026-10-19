@@ -45,7 +45,12 @@ export type CasValue =
       kind: 'expr';
       /** Decimal approximation for exact numeric results. */ numeric: CasExpr | null;
     })
-  | { kind: 'solutions'; variable: Name; solutions: CasExpr[] }
+  | {
+      kind: 'solutions';
+      variable: Name;
+      /** Each with a decimal approximation when it is an exact non-integer number (SymPy). */
+      solutions: (CasExpr & { numeric?: CasExpr | null })[];
+    }
   | { kind: 'boolean'; value: boolean };
 
 export type CasResult =

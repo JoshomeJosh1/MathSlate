@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { preferences, usePreferences } from './app/preferences';
 import { useBackends } from './app/services';
 import { docActions, docStore } from './document/docStore';
 import { documentationDoc } from './document/documentation';
@@ -47,6 +48,23 @@ function BackendPicker() {
   );
 }
 
+/** Show results as decimals only (a preference of this browser, not of the document). */
+function DecimalsToggle() {
+  const { decimals } = usePreferences();
+  return (
+    <label className="toggle" title="Show results as decimals instead of exact values">
+      <input
+        type="checkbox"
+        checked={decimals}
+        onChange={(e) => {
+          preferences.set({ ...preferences.get(), decimals: e.target.checked });
+        }}
+      />
+      Decimals
+    </label>
+  );
+}
+
 function hasContent(): boolean {
   return docStore.get().rows.some((r) => r.latex.trim() !== '');
 }
@@ -79,6 +97,7 @@ export function App() {
             Documentation
           </button>
           <BackendPicker />
+          <DecimalsToggle />
           <label className="toggle">
             <input
               type="checkbox"

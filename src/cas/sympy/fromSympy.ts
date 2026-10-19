@@ -32,7 +32,11 @@ export type SympyResultJson =
       ok: true;
       value:
         | ({ kind: 'expr'; numeric: SympyValueJson | null } & SympyValueJson)
-        | { kind: 'solutions'; variable: string; solutions: SympyValueJson[] }
+        | {
+            kind: 'solutions';
+            variable: string;
+            solutions: (SympyValueJson & { numeric?: SympyValueJson | null })[];
+          }
         | { kind: 'boolean'; value: boolean };
     }
   | { ok: false; error: string };
@@ -166,7 +170,10 @@ export function toCasValue(v: Extract<SympyResultJson, { ok: true }>['value']): 
       return {
         kind: 'solutions',
         variable: parseNameKey(v.variable),
-        solutions: v.solutions.map(casExpr),
+        solutions: v.solutions.map((s) => ({
+          ...casExpr(s),
+          numeric: s.numeric ? casExpr(s.numeric) : null,
+        })),
       };
     case 'boolean':
       return { kind: 'boolean', value: v.value };

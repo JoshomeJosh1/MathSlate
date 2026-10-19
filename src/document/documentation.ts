@@ -69,7 +69,9 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\left|3-8\\right|',
   '50\\%\\cdot 80',
   ['\\sqrt2+\\pi', 'numeric'],
-  { note: 'Decimals like 0.1 are exact fractions; a ≈ decimal is shown alongside exact numbers.' },
+  {
+    note: 'Decimals like 0.1 are exact fractions; a ≈ decimal is shown alongside exact numbers. Tick Decimals in the header to see only the decimals (copying then copies the decimal too).',
+  },
 
   { folder: 'Constants' },
   {
