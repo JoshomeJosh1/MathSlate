@@ -94,28 +94,28 @@ export function functionMacros(): Record<string, string> {
 }
 
 /**
- * Inline shortcuts for the built-in functions, so typing "sinh" or "lcm" turns upright at once.
- * Special functions (Si, Ci, li, …) are left out: without brackets their letters keep their
- * ordinary meaning (Si = S·i), and they are made upright once recognised.
+ * Inline shortcuts for the built-in functions, so typing "sinh", "lcm" or "erf" turns upright
+ * at once. Names that are Greek letters (gamma, zeta) keep their Greek shortcut.
  */
 export function functionShortcuts(): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const f of multiLetterFunctions()) {
-    if (f.callOnly) continue;
-    for (const name of spellings(f)) out[name] = functionLatex(name);
+  for (const name of multiLetterFunctions().flatMap(spellings)) {
+    if (!GREEK.has(name)) out[name] = functionLatex(name);
   }
   return out;
 }
 
 /**
- * Function shortcuts that only stand when brackets follow (lcm, gcd, binomial: two or more
- * arguments), so the editor turns them back into letters if another letter is typed.
+ * Function shortcuts that only stand when brackets follow (special functions; lcm, gcd,
+ * binomial: two or more arguments). Without brackets their letters keep their ordinary meaning
+ * (Si = S·i), so the editor turns them back into letters when anything else is typed.
  */
 export function bracketOnlyShortcuts(): Set<string> {
   return new Set(
     multiLetterFunctions()
-      .filter((f) => !f.callOnly && needsBrackets(f))
-      .flatMap(spellings),
+      .filter(needsBrackets)
+      .flatMap(spellings)
+      .filter((name) => !GREEK.has(name)),
   );
 }
 

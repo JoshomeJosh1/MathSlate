@@ -2,7 +2,8 @@ import type { BuiltinFunction } from '../types';
 
 /**
  * Special functions. All are `callOnly`: the name only means the function when followed by
- * parentheses, so Si can still be S·i, ζ a variable, and C(x+1) a product. Their conventional
+ * parentheses, so Si can still be S·i, ζ a variable, and C(x+1) a product (the editor's shortcut
+ * for a name turns back into letters unless brackets follow). Their conventional
  * LaTeX spellings (Γ, S, J_n, …) are in parser/functionNames.ts.
  */
 const special = (

@@ -259,6 +259,10 @@ export function MathLiveEditor({
           revert(last);
           spelling = word ? word.slice(0, -1) : null; // MathLive types the letter itself next
         }
+      } else if (last && bracketOnly?.has(last.key) && BREAKS_CALL.test(ev.key)) {
+        // Anything but its brackets (or a subscript/power: Li_s, erf^{-1}) after a name that
+        // needs them: "2Ai+1" is 2·A·i + 1, so the name goes back to letters before the key.
+        revert(last);
       }
       if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
         typed += ev.key;
@@ -384,6 +388,9 @@ const EMPTY_ROW_KEYS: Partial<Record<string, EditorKeyAction>> = {
   '#': 'toHeading',
   '@': 'toFolder',
 };
+
+/** Typed characters that end a call-only name without its brackets (letters handled apart). */
+const BREAKS_CALL = /^[^A-Za-z(_^\s]$/;
 
 const ARROWS: Partial<Record<string, 'left' | 'right' | 'up' | 'down'>> = {
   ArrowLeft: 'left',

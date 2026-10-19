@@ -137,7 +137,8 @@ Ours: Greek letters (short ones only after a non-letter), structures (sqrt, frac
 calculus (`int` → bare `\int`, `defint`, sum, prod, lim, partial; no `dx` → `\differentialD`,
 the parser decides what is a differential), `''` → ordinary primes (not `\doubleprime`), and
 operators/relations. Built-in function names come from the registry (`functionShortcuts` in
-`core/decorate.ts`, call-only ones excluded) and defined names from `nameShortcuts`.
+`core/decorate.ts`, special functions included, Greek-named ones excluded) and defined names
+from `nameShortcuts`.
 
 **Built-in functions in input rows are commands** (`\lcm`, `\artanh`, `\erf`): the editor
 registers `functionMacros()` as MathLive macros with `captureSelection`, so a name is one unit
@@ -153,7 +154,8 @@ Functions of two or more arguments (gcd, lcm, binomial) are call-only like speci
 Word shortcuts are provisional while typing (`MathLiveEditor.tsx`): Backspace right after one
 fires undoes it (theta → Backspace → letters); another letter undoes it when the word goes on
 to spell a longer shortcut (binom → binomial, tan → artanh, which then fires) or when it needs
-brackets (`bracketOnly`: lcmab stays letters). Symbol shortcuts (≤, ″) are not affected.
+brackets (`bracketOnly` — call-only functions: lcmab and Six stay letters; for these any typed
+character but `(`, `_`, `^` or a space reverts too, so 2Ai+1 is 2·A·i+1). Symbol shortcuts (≤, ″) are not affected.
 
 **The `\` menu** replaces MathLive's LaTeX mode, whose suggestions list every command MathLive
 knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser

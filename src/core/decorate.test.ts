@@ -157,21 +157,27 @@ describe('upright display of recognised multi-letter names', () => {
     expect(row && decorateLatex(latex, row.names)).toBe('\\lcm\\left(4,6\\right)');
   });
 
-  it('offers inline shortcuts for built-in functions, except call-only ones', () => {
+  it('offers inline shortcuts for built-in functions', () => {
     const shortcuts = functionShortcuts();
     expect(shortcuts.sin).toBe('\\sin');
     expect(shortcuts.sech).toBe('\\sech');
     expect(shortcuts.lcm).toBe('\\lcm');
     expect(shortcuts.binomial).toBe('\\binomial');
-    expect([...bracketOnlyShortcuts()].sort()).toEqual(['binomial', 'gcd', 'lcm']);
+    expect(shortcuts.erf).toBe('\\erf');
+    expect(shortcuts.Si).toBe('\\Si');
+    expect(shortcuts.gamma).toBeUndefined(); // the Greek letter's shortcut
+    const bracketOnly = bracketOnlyShortcuts();
+    for (const name of ['binomial', 'gcd', 'lcm', 'erf', 'Si', 'besselJ']) {
+      expect(bracketOnly.has(name), name).toBe(true);
+    }
+    for (const name of ['sin', 'sinh', 'ln', 'gamma'])
+      expect(bracketOnly.has(name), name).toBe(false);
     // Every command the shortcuts and decoration produce is one the editor can display.
     const macros = functionMacros();
     for (const latex of Object.values(shortcuts)) {
       const name = latex.slice(1);
       expect(LATEX_FUNCTION_COMMANDS.has(name) || name in macros, name).toBe(true);
     }
-    expect(shortcuts.Si).toBeUndefined();
-    expect(shortcuts.erf).toBeUndefined();
     // Every shortcut parses back to a call of that function.
     for (const [name, latex] of Object.entries(shortcuts)) {
       const args = Array.from({ length: builtinFunctions.get(name)?.arity[0] ?? 1 }, () => '1');

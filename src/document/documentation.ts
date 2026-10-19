@@ -30,7 +30,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, Esc leaves the row, and the number on the left drags a row.',
   },
   {
-    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
+    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm, erf, Si), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
   },
   {
     note: 'Type \\ for a menu of everything MathSlate understands — structures, symbols, Greek letters and every function, in groups (hover over one for its name and description). Keep typing to filter it (\\fr, \\root), use the arrow keys to choose, and Enter, Tab or Space to insert; Esc closes it.',
@@ -247,7 +247,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Special functions' },
   {
-    note: 'Special functions appear in exact answers and can be typed. Their names only count when followed by brackets, so 2ζ, Γ, or Si without brackets stay ordinary symbols (Si is S·i), and C(x+1) is still C times (x+1).',
+    note: 'Special functions appear in exact answers and can be typed by name (erf, Si, besselJ). Their names only count when followed by brackets, so 2ζ, Γ, or Si without brackets stay ordinary symbols (Si is S·i: typing anything but a bracket after the name turns it back into letters), and C(x+1) is still C times (x+1).',
   },
 
   { note: '## Error functions' },
