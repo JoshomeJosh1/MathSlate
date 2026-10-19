@@ -204,9 +204,9 @@ class _Sequence:
         if self.bases:
             lo = min(self.bases)
             if k < lo:
-                raise MathSlateError(f"{self.name}_{{{k}}} is before the first term {self.name}_{{{lo}}}")
+                raise MathSlateError(f"{self.name}_{k} is before the first term, {self.name}_{lo}")
             if k - lo > _SEQUENCE_LIMIT:
-                raise MathSlateError(f"{self.name}_{{{k}}} is too far from the base case")
+                raise MathSlateError(f"{self.name}_{k} is too far from the base case to compute")
             for j in range(lo, k):
                 if j not in self.bases and j not in self.cache:
                     self.cache[j] = self.rule(Integer(j))
@@ -544,16 +544,33 @@ def _run_program(code):
     except MathSlateError as err:
         return json.dumps({"ok": False, "error": str(err)})
     except RecursionError:
-        return json.dumps({"ok": False, "error": "Too much recursion"})
+        return json.dumps({"ok": False, "error": "This goes too deep to compute (too much recursion)"})
     except ZeroDivisionError:
         return json.dumps({"ok": False, "error": "Division by zero"})
     except Exception as err:  # noqa: BLE001 - report anything else to the row
-        return json.dumps({"ok": False, "error": _MATRIX_ERRORS.get(type(err).__name__, f"{type(err).__name__}: {err}")})
+        return json.dumps({"ok": False, "error": _error_message(err)})
 
 
-# SymPy's matrix errors, in words (matched by class name: their module moved between versions).
-_MATRIX_ERRORS = {
+# SymPy's errors, in words (matched by class name: their module moved between versions).
+_ERRORS = {
     "ShapeError": "The matrix sizes do not fit: a product needs as many columns on the left as rows on the right, a sum the same size",
     "NonSquareMatrixError": "This needs a square matrix",
     "NonInvertibleMatrixError": "The matrix is not invertible (its determinant is 0)",
+    "OverflowError": "The numbers are too large to compute",
+    "MemoryError": "This needs too much memory to compute",
 }
+
+
+def _error_message(err):
+    """An error SymPy raised, for the row: in words where we know it, otherwise SymPy's own message
+    (often a useful sentence, e.g. for what it cannot solve) without Python's class names."""
+    name = type(err).__name__
+    if name in _ERRORS:
+        return _ERRORS[name]
+    text = str(err).strip()
+    if name == "NotImplementedError":
+        return f"SymPy cannot do this yet{': ' + text if text else ''}"
+    if name in ("NameError", "AttributeError", "KeyError", "IndexError") or not text:
+        # A bug of ours rather than a mathematical problem: say so, with the detail.
+        return f"Could not compute this (internal error: {name}{': ' + text if text else ''})"
+    return f"Could not compute this: {text}"

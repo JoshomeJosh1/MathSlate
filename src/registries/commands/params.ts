@@ -96,12 +96,12 @@ function readArg(
 ): ArgValue {
   if (latex === '' || /^\\placeholder\{\}$/.test(latex)) {
     if (p.optional) return { kind: 'empty' };
-    throw new ArgError('missing');
+    throw new ArgError('fill this in');
   }
   const expr = (text: string): Expr => {
     const r = resolve(text);
     if (!r.ok) throw new ArgError(r.error);
-    if (r.statement.kind !== 'expr') throw new ArgError('expected an expression');
+    if (r.statement.kind !== 'expr') throw new ArgError('needs an expression, not an equation');
     refs.push(...r.refs);
     return r.statement.expr;
   };
@@ -110,7 +110,8 @@ function readArg(
       return { kind: 'variable', name: variableOf(expr(latex)) };
     case 'count': {
       const e = expr(latex);
-      if (e.kind !== 'num' || !/^[0-9]+$/.test(e.value)) throw new ArgError('a whole number');
+      if (e.kind !== 'num' || !/^[0-9]+$/.test(e.value))
+        throw new ArgError('needs a whole number, e.g. 2');
       return { kind: 'count', value: Number(e.value) };
     }
     case 'expr':
@@ -146,7 +147,7 @@ function readArg(
 
 function variableOf(e: Expr): Name {
   if (e.kind === 'var') return e.name;
-  throw new ArgError('expected a variable');
+  throw new ArgError('needs a variable, e.g. x');
 }
 
 function defaultVariable(ctx: CommandContext): Name | undefined {

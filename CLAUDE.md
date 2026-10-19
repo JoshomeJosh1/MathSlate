@@ -314,7 +314,7 @@ products via `_mul`, constants, function results, answers). Matrix commands
 (`commands/defs/det.ts`, …) apply those functions via `runFunction`; `shapeOf` knows whether a
 row is a matrix and often its size (`matrixSize` follows names, products, transposes), and
 `matrixRelevance` ranks commands by square / other / vector. SymPy's matrix errors are reworded
-(`_MATRIX_ERRORS`).
+(`_ERRORS`; any other SymPy error becomes a sentence without Python class names, `_error_message` in `runtime.py`).
 Nerdamer declines matrix functions.
 
 ### Special functions

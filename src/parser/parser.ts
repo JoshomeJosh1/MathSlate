@@ -295,7 +295,11 @@ class Parser {
         };
       }
       if (this.isDelim(this.peek(), '}')) {
-        throw new MathError('Empty group', spanOf(t.span, this.peek().span));
+        const what = owner.kind === 'sub' ? 'subscript' : owner.kind === 'sup' ? 'exponent' : 'box';
+        throw new MathError(
+          `Empty ${what}: write something in it or delete it`,
+          spanOf(t.span, this.peek().span),
+        );
       }
       const inner = this.parseRelation();
       this.expectDelim('}', '}', t.span);
@@ -340,7 +344,7 @@ class Parser {
     const t = this.next();
     switch (t.kind) {
       case 'num':
-        if (t.value === '.') throw new MathError('Invalid number', t.span);
+        if (t.value === '.') throw new MathError('A decimal point needs digits, e.g. 0.5', t.span);
         return { type: 'num', value: t.value, span: t.span };
       case 'letter':
         return { type: 'letter', name: t.name, span: t.span };
@@ -380,7 +384,10 @@ class Parser {
     if (open.delim === '{') {
       // Plain TeX grouping: {x+1} is just x+1.
       if (this.isDelim(this.peek(), '}')) {
-        throw new MathError('Empty group', spanOf(open.span, this.peek().span));
+        throw new MathError(
+          'Empty braces { }: write something inside or delete them',
+          spanOf(open.span, this.peek().span),
+        );
       }
       const inner = this.parseRelation();
       this.expectDelim('}', '}', open.span);
@@ -424,7 +431,7 @@ class Parser {
       return { ...only, env: info.group === 'paren' ? 'pmatrix' : 'bmatrix', span };
     }
     if (items.length === 0 && info.group === 'paren')
-      throw new MathError('Empty parentheses', span);
+      throw new MathError('Empty brackets ( ): write something inside or delete them', span);
     return { type: 'group', delim: info.group, items, span };
   }
 
@@ -509,7 +516,7 @@ class Parser {
         }
         if (row.length > 0) rows.push(row);
         const span = spanOf(begin.span, t.span);
-        if (rows.length === 0) throw new MathError('Empty matrix', span);
+        if (rows.length === 0) throw new MathError('The matrix is empty', span);
         const width = rows[0]?.length ?? 0;
         const bad = rows.find((r) => r.length !== width);
         if (bad) {
@@ -521,7 +528,7 @@ class Parser {
         throw new MathError(`Missing \\end{${begin.env}}`, spanOf(begin.span, t.span));
       }
       if (t.kind === 'amp' || t.kind === 'rowsep') {
-        throw new MathError('Empty matrix entry', t.span);
+        throw new MathError('A matrix entry is empty: fill it in', t.span);
       }
       row.push(this.parseRelation());
       const sep = this.peek();
@@ -550,10 +557,10 @@ class Parser {
     for (let s = this.peek(); s.kind === 'sub' || s.kind === 'sup'; s = this.peek()) {
       this.next();
       if (s.kind === 'sub') {
-        if (sub) throw new MathError('Double subscript', s.span);
+        if (sub) throw new MathError('Double subscript: use braces, e.g. x_{12}', s.span);
         sub = this.parseScriptArg(s);
       } else {
-        if (power) throw new MathError('Double exponent', s.span);
+        if (power) throw new MathError('Double exponent: use braces, e.g. x^{2^{3}}', s.span);
         power = this.parseScriptArg(s);
       }
     }

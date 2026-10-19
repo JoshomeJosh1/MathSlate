@@ -538,7 +538,7 @@ class Resolver {
       let node: Expr;
       if (primes.length > 0) {
         if (info.kind !== 'function') {
-          throw new MathError('Prime notation is only supported for your own functions', span);
+          throw new MathError("′ only works on functions you define: f'(x) after f(x) = …", span);
         }
         const order = primes.reduce((n, p) => n + p.count, 0);
         node = {
@@ -647,7 +647,7 @@ class Resolver {
           };
           break;
         case 'prime':
-          throw new MathError('Prime (′) can only follow a function name', w.span);
+          throw new MathError("′ must follow the name of a function you define: f'(x)", w.span);
       }
     }
     return out;
@@ -911,7 +911,7 @@ function isParenGroup(f: Factor | undefined): boolean {
 /** The variable of an integral, derivative, limit or sum: a single letter (Latin or Greek). */
 function boundName(cst: Cst): Name {
   if (cst.type === 'letter') return makeName(cst.name);
-  throw new MathError('Expected a single-letter variable', cst.span);
+  throw new MathError('The variable must be a single letter, e.g. x', cst.span);
 }
 
 function isLatinLetter(f: Factor): boolean {

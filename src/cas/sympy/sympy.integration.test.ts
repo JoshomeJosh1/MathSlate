@@ -265,7 +265,7 @@ describe('commands with arguments', { timeout: 60_000 }, () => {
 
   it('reports a bad argument on its output', async () => {
     expect(await last([['x^2', ['derivative', { order: 'x' }]]])).toEqual([
-      'derivative: !order: a whole number',
+      'derivative: !order: needs a whole number, e.g. 2',
     ]);
     expect(await last([['5\\unit{m}', ['convert', { unit: 'furlong' }]]])).toEqual([
       'convert: !to: unknown unit "furlong"',
