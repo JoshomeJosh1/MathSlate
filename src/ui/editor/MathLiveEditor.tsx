@@ -74,6 +74,10 @@ export function MathLiveEditor({
     keepRowsAboveKeyboard();
     mf.menuItems = [];
     mf.smartFence = true;
+    // Typed characters never take the style of the one before the caret: by default MathLive
+    // continues an upright \mathrm{speed}, so "speed*3" became \mathrm{speed\cdot3}. Upright text
+    // only comes from shortcuts and decoration (core/decorate.ts).
+    mf.onInsertStyle = () => ({});
     // MathLive's own command suggestions (for LaTeX typed after "\") list every command it
     // knows; we show our own menu instead (see openMenu).
     mf.popoverPolicy = 'off';
