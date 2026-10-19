@@ -2,6 +2,7 @@ import { makeName, type ConstantId, type Expr, type Name, type RelOp } from '../
 import type { MulForm } from '../../parser/cst';
 import { printLatex } from '../../parser/printLatex';
 import type { CasExpr, CasValue } from '../types';
+import { numberExpr } from '../number';
 
 /** JSON shapes produced by runtime.py's `_tree`. */
 export type SympyTree =
@@ -62,8 +63,9 @@ export function treeToExpr(t: SympyTree): Expr | null {
   };
   switch (t.t) {
     case 'int':
-    case 'float':
       return { kind: 'num', value: t.v, span };
+    case 'float':
+      return numberExpr(t.v, span);
     case 'sym':
       return { kind: 'var', name: parseNameKey(t.name), span };
     case 'const':

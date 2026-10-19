@@ -1,7 +1,8 @@
 import * as Comlink from 'comlink';
-import type { Name } from '../../parser/ast';
+import type { Expr, Name } from '../../parser/ast';
 import { printLatex } from '../../parser/printLatex';
 import { InlineError } from '../inline';
+import { numberExpr } from '../number';
 import type { ProgramRunner } from '../runner';
 import type {
   BackendStatus,
@@ -205,7 +206,8 @@ function decimal(text: string): CasExpr {
   const value = String(Number(Number(text).toPrecision(15)));
   const negative = value.startsWith('-');
   const digits = negative ? value.slice(1) : value;
-  const num = { kind: 'num' as const, value: digits, span: { start: 0, end: 0 } };
-  const expr = negative ? { kind: 'neg' as const, arg: num, span: num.span } : num;
+  const span = { start: 0, end: 0 };
+  const num = numberExpr(digits, span);
+  const expr: Expr = negative ? { kind: 'neg', arg: num, span } : num;
   return { expr, latex: printLatex(expr) };
 }
