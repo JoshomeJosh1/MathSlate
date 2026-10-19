@@ -534,6 +534,18 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Units: metre, gram, second, ampere, kelvin, mole, newton, joule, watt, pascal, hertz, coulomb, volt, ohm and litre with every SI prefix, quecto to quetta (km, mg, µs, pg, dam, GW, …); minute, hour, day, year; inch, foot, yard, mile; tonne, pound, ounce; mph; watt-hour, calorie, electronvolt; bar, atm, psi.',
   },
 
+  { folder: 'Using results' },
+  {
+    note: 'ans is the nearest result above the row (type ans). Hidden results count too, so ans after x²+1 is x²+1.',
+  },
+  '\\frac13+\\frac16',
+  'ans\\cdot4',
+  {
+    note: "Every command's output has a label in its gutter: out1, out2, … Use it anywhere in the slate as out_k (type out_ then the number). Rows that use a result update when it changes.",
+  },
+  ['x^3-2x', 'derivative'],
+  '{OUT_PREVIOUS}+1',
+
   { folder: 'Live dependencies' },
   { note: 'Change k and watch every row that depends on it update.' },
   'k=2',
@@ -553,6 +565,9 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Results come from SymPy, running in your browser. While it loads (a few seconds on first visit), Nerdamer answers instantly; those results are marked "via Nerdamer" and upgrade automatically. Choose the preferred system with the CAS menu.',
   },
 ];
+
+/** In a documentation row: out_k for the output attached last. */
+const OUT_PREVIOUS = '{OUT_PREVIOUS}';
 
 export function documentationDoc(): Doc {
   let doc: Doc = { version: 1, rows: [], interpretations: {}, nextOutputLabel: 1 };
@@ -574,7 +589,9 @@ export function documentationDoc(): Doc {
       add(entry.note, 'note');
       continue;
     }
-    const [latex, ...commandIds] = Array.isArray(entry) ? entry : [entry];
+    const [written, ...commandIds] = Array.isArray(entry) ? entry : [entry];
+    // OUT_PREVIOUS: the label of the output attached last (labels depend on everything before).
+    const latex = written.replace(OUT_PREVIOUS, `out_{${doc.nextOutputLabel - 1}}`);
     const id = add(latex);
     for (const c of commandIds) {
       doc = typeof c === 'string' ? addOutput(doc, id, c) : addOutput(doc, id, c[0], c[1]);

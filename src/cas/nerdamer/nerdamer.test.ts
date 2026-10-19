@@ -82,6 +82,30 @@ describe('units, through Nerdamer', () => {
   });
 });
 
+describe('ans and out_k', () => {
+  it('ans is the nearest result above', async () => {
+    expect(await last(['2+3', 'ans\\cdot2'])).toEqual(['10']);
+    // A hidden automatic result counts (x²+1 adds nothing, but it is still a result).
+    expect(await last(['x^2+1', 'ans+1'])).toEqual(['2+x^{2}']);
+    // In a definition, ans is the result above the definition's row.
+    expect(await last(['3', 'a=ans\\cdot2', '100', 'a+1'])).toEqual(['7']);
+  });
+
+  it('out_k is the output labelled k', async () => {
+    expect(await last([['x^2-1', 'expand'], 'x+1', 'out_1+1'])).toEqual(['x^{2}']);
+  });
+
+  it('a user definition of ans wins', async () => {
+    expect(await last(['ans=5', '7', 'ans+1'])).toEqual(['6']);
+  });
+
+  it('explains what cannot be used', async () => {
+    expect(await last(['ans+1'])).toEqual(['!There is no result above this row for ans to use']);
+    expect(await last(['1', 'out_9'])).toEqual(['!There is no out_9']);
+    expect(await last(['out_x'])).toEqual(['!out needs the number of an output: out_3']);
+  });
+});
+
 describe('matrices through Nerdamer', () => {
   it('shows a 1×1 matrix as a number', async () => {
     expect(

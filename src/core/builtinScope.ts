@@ -27,8 +27,14 @@ export function createBuiltinScope(): SymbolTable {
       entries.push({ ...info, key, canonical: f.name, callOnly: true });
     }
   }
+  // References to results (core/outputRefs.ts): ans, the nearest result above, and out_k, an
+  // output by its label. Shown upright like defined names; a user's own ans or out wins.
+  entries.push({ key: ANS, kind: 'variable' }, { key: OUT, kind: 'sequence' });
   return new SymbolTable(entries);
 }
+
+export const ANS = 'ans';
+export const OUT = 'out';
 
 /** Whether a built-in function only means itself when followed by brackets. */
 export function needsBrackets(f: BuiltinFunction): boolean {

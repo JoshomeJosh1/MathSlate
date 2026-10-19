@@ -14,7 +14,16 @@ import {
 } from '../registries/commands';
 import { analyzeDocument, type RowAnalysis } from './analyze';
 import { buildDependencies } from './deps';
-import { shapeOf, targetOf } from './shape';
+import type { Definition, Expr, Statement } from '../parser/ast';
+import {
+  OutputRefError,
+  refDefinition,
+  renameInDefinition,
+  renameOutputRefs,
+  usesOutputRefs,
+  type OutputRef,
+} from './outputRefs';
+import { shapeOf, targetOf, type Target } from './shape';
 import { withUnits } from './units';
 
 /**
@@ -90,6 +99,10 @@ export class Engine {
   private idle: Promise<void> = Promise.resolve();
 
   private readonly cas: CasBackend;
+  /** The latest value of each output, hidden automatic results included (for ans and out_k). */
+  private values = new Map<string, CasValue>();
+  /** The request key each output last finished for (not provisionally). */
+  private done = new Map<string, string>();
 
   constructor(cas: CasBackend, options: EngineOptions = {}) {
     // Units are handled here for every backend (see core/units.ts).
@@ -111,6 +124,7 @@ export class Engine {
   /** Forget which results are current (e.g. after switching backends) and recompute all. */
   invalidate(): void {
     this.keys = new Map();
+    this.done = new Map();
     this.schedule(0);
   }
 
@@ -154,40 +168,31 @@ export class Engine {
     const jobs: Job[] = [];
     const keys = new Map<string, string>();
 
-    analyses.forEach((analysis, i) => {
-      const row = doc.rows[i];
-      if (!row) return;
-      const view: RowView = {
-        rowId: row.id,
-        analysis,
-        error: null,
-        outputs: [],
-        suggestions: [],
-        context: null,
-      };
-      rows.set(row.id, view);
-      if (analysis.error) {
-        view.error = { message: analysis.error.message, span: analysis.error.span };
-        return;
-      }
-      const cycle = deps.cycles.get(i);
-      if (cycle) {
-        view.error = { message: cycle };
-        return;
-      }
-      const statement = analysis.statement;
-      const target = statement && targetOf(statement);
-      if (!statement || !target) return;
-      const blocker = deps.blockedBy(i);
-      if (blocker !== null) {
-        view.error = { message: `Depends on line ${blocker + 1}, which has an error` };
-        return;
-      }
+    // Names the document defines itself (its own ans or out wins over the results).
+    const userDefined = new Set(analyses.flatMap((a) => (a.defines ? [a.defines] : [])));
+    /** Rows that use results (ans, out_k): built after the others, once the results are known. */
+    const deferred: {
+      i: number;
+      row: Doc['rows'][number];
+      view: RowView;
+      analysis: RowAnalysis;
+      statement: Statement;
+      baseEnv: Definition[];
+    }[] = [];
 
-      const env = deps.environment(i);
+    const build = (
+      row: Doc['rows'][number],
+      i: number,
+      view: RowView,
+      analysis: RowAnalysis,
+      statement: Statement,
+      target: Target,
+      env: Definition[],
+      refKey: string,
+    ): void => {
       const ctx: CommandContext = { statement, target, env, facts: shapeOf(target.expr, env) };
       const envKey = env.map(statementToSexpr).join(';');
-      const baseKey = `${statementToSexpr(statement)}|${envKey}`;
+      const baseKey = `${statementToSexpr(statement)}|${envKey}|${refKey}`;
       const prev = previous.get(row.id);
 
       const addJob = (
@@ -197,6 +202,8 @@ export class Engine {
         const key = `${output.commandId}|${baseKey}|${job.keyExtra ?? ''}`;
         keys.set(output.id, key);
         const old = prev?.outputs.find((o) => o.id === output.id);
+        // A finished automatic result that adds nothing is hidden: keep it so, don't recompute.
+        if (!old && output.commandId === 'auto' && this.done.get(output.id) === key) return;
         const unchanged = old && this.keys.get(output.id) === key && old.state !== 'pending';
         view.outputs.push(
           unchanged
@@ -287,7 +294,104 @@ export class Engine {
           command,
           title: command.title(ctx, defaultArgs(command, ctx, read)),
         }));
+    };
+
+    analyses.forEach((analysis, i) => {
+      const row = doc.rows[i];
+      if (!row) return;
+      const view: RowView = {
+        rowId: row.id,
+        analysis,
+        error: null,
+        outputs: [],
+        suggestions: [],
+        context: null,
+      };
+      rows.set(row.id, view);
+      if (analysis.error) {
+        view.error = { message: analysis.error.message, span: analysis.error.span };
+        return;
+      }
+      const cycle = deps.cycles.get(i);
+      if (cycle) {
+        view.error = { message: cycle };
+        return;
+      }
+      const statement = analysis.statement;
+      const target = statement && targetOf(statement);
+      if (!statement || !target) return;
+      const blocker = deps.blockedBy(i);
+      if (blocker !== null) {
+        view.error = { message: `Depends on line ${blocker + 1}, which has an error` };
+        return;
+      }
+
+      const baseEnv = deps.environment(i);
+      // Rows that use results (ans, out_k) are built once the results they use are known.
+      const usesResults =
+        usesOutputRefs(target.expr, userDefined) ||
+        baseEnv.some((d) => usesOutputRefs(d.body, userDefined));
+      if (usesResults) {
+        deferred.push({ i, row, view, analysis, statement, baseEnv });
+        return;
+      }
+      build(row, i, view, analysis, statement, target, baseEnv, '');
     });
+
+    // Rows using results: rename each use and define it as the result's value, or wait for it.
+    const waiting: RowView[] = [];
+    const rowOf = new Map<Statement | null, number>(analyses.map((a, j) => [a.statement, j]));
+    for (const d of deferred) {
+      const computing = new Set(jobs.map((j) => j.outputId));
+      const found = new Map<string, OutputRef>();
+      try {
+        const rename = (e: Expr) => renameOutputRefs(e, d.i, userDefined, found);
+        const statement = renameStatement(d.statement, rename);
+        const env = d.baseEnv.map((def) =>
+          renameInDefinition(def, rowOf.get(def) ?? d.i, userDefined, found),
+        );
+        const defs: Definition[] = [];
+        let pending = false;
+        for (const ref of found.values()) {
+          const value = this.refValue(ref, d.i, doc, analyses, computing);
+          if (value === 'pending') pending = true;
+          else defs.push(refDefinition(ref, value));
+        }
+        const target = targetOf(statement);
+        if (!target) continue;
+        if (pending) {
+          // Show the old results as stale until the results this row uses are ready.
+          const prev = previous.get(d.row.id);
+          d.view.outputs = (prev?.outputs ?? []).map((o) => ({
+            ...o,
+            state: 'pending',
+            stale: o.value !== undefined,
+          }));
+          waiting.push(d.view);
+          continue;
+        }
+        build(
+          d.row,
+          d.i,
+          d.view,
+          d.analysis,
+          statement,
+          target,
+          [...defs, ...env],
+          defs.map(statementToSexpr).join(';'),
+        );
+      } catch (e) {
+        if (!(e instanceof OutputRefError)) throw e;
+        d.view.error = { message: e.message };
+      }
+    }
+    if (waiting.length > 0 && jobs.length === 0) {
+      // Nothing left to compute, so what they wait for depends on them.
+      for (const view of waiting) {
+        view.outputs = [];
+        view.error = { message: 'This row uses a result that depends on this row' };
+      }
+    }
 
     this.keys = keys;
     this.publish(rows);
@@ -307,10 +411,57 @@ export class Engine {
       if (generation !== this.generation) return;
       this.apply(job, result, false);
     }
+    // Rows waiting for results computed just now: compute them with those results.
+    if (waiting.length > 0 && jobs.length > 0) this.schedule(0);
+  }
+
+  /**
+   * The value a result reference stands for: the nearest result above `ref.row` (ans) or the
+   * output labelled k; 'pending' while it is being computed. `row` is the row using it.
+   */
+  private refValue(
+    ref: OutputRef,
+    row: number,
+    doc: Doc,
+    analyses: readonly RowAnalysis[],
+    computing: ReadonlySet<string>,
+  ): Expr | 'pending' {
+    const valueOf = (id: string, what: string): Expr | 'pending' | null => {
+      if (computing.has(id)) return 'pending';
+      const v = this.values.get(id);
+      return v ? exprOfValue(v, what) : null;
+    };
+    if (ref.kind === 'ans') {
+      for (let k = ref.row - 1; k >= 0; k--) {
+        const r = doc.rows[k];
+        const statement = analyses[k]?.statement;
+        if (!r || r.kind) continue;
+        const auto = statement?.kind === 'expr' || statement?.kind === 'defConst';
+        const ids = [...(auto ? [`${r.id}:auto`] : []), ...r.outputs.map((o) => o.id)];
+        // The last result shown under that row (commands come after the automatic one).
+        for (const id of ids.reverse()) {
+          const v = valueOf(id, 'ans');
+          if (v !== null) return v;
+        }
+      }
+      throw new OutputRefError('There is no result above this row for ans to use');
+    }
+    const name = `out_${ref.label}`;
+    const k = doc.rows.findIndex((r) => r.outputs.some((o) => o.label === ref.label));
+    const spec = doc.rows[k]?.outputs.find((o) => o.label === ref.label);
+    if (!spec) throw new OutputRefError(`There is no ${name}`);
+    if (k === row) throw new OutputRefError(`${name} is a result of this row`);
+    const v = valueOf(spec.id, name);
+    if (v === null) throw new OutputRefError(`${name} has no value`);
+    return v;
   }
 
   /** Publishes one job's result into its output row. */
   private apply(job: Job, result: CasResult, refining: boolean): void {
+    if (result.ok) this.values.set(job.outputId, result.value);
+    else this.values.delete(job.outputId);
+    if (!refining && !result.provisional) this.done.set(job.outputId, job.key);
+    else this.done.delete(job.outputId);
     const current = new Map(this.snapshot.rows);
     const view = current.get(job.rowId);
     if (!view) return;
@@ -369,4 +520,33 @@ function addsNothing(
   if (value.latex === inputLatex) return true;
   const symbolic = value.expr !== null && shapeOf(value.expr, []).freeVars.length > 0;
   return symbolic && !computes;
+}
+
+/** A result as an expression to use in another row (one value only). */
+function exprOfValue(v: CasValue, what: string): Expr {
+  if (v.kind === 'expr' && v.expr) return v.expr;
+  if (v.kind === 'solutions') {
+    const [only, ...more] = v.solutions;
+    if (only?.expr && more.length === 0) return only.expr;
+    throw new OutputRefError(
+      only ? `${what} has several solutions; use one of them` : `${what} has no solutions`,
+    );
+  }
+  throw new OutputRefError(`${what} cannot be used in a calculation`);
+}
+
+/** A statement with its expression (or a definition's body) rewritten. */
+function renameStatement(s: Statement, f: (e: Expr) => Expr): Statement {
+  switch (s.kind) {
+    case 'empty':
+      return s;
+    case 'expr':
+      return { ...s, expr: f(s.expr) };
+    case 'relation': {
+      const e = f(s.expr);
+      return e.kind === 'relation' ? { ...s, expr: e } : s;
+    }
+    default:
+      return { ...s, body: f(s.body) };
+  }
 }

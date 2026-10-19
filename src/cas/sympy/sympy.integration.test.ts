@@ -160,6 +160,17 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
   });
 });
 
+describe('ans and out_k with SymPy', { timeout: 60_000 }, () => {
+  it('uses earlier results', async () => {
+    expect(await last(['\\frac13+\\frac16', 'ans\\cdot4'])).toEqual(['2']);
+    expect(await last([['x^2-4=0', 'solve'], 'out_1'])).toEqual([
+      '!out_1 has several solutions; use one of them',
+    ]);
+    expect(await last([['2x=6', 'solve'], 'out_1^2'])).toEqual(['9']);
+    expect(await last([['x^3', 'derivative'], 'out_1+1'])).toEqual(['3x^{2}+1']);
+  });
+});
+
 describe('commands with arguments', { timeout: 60_000 }, () => {
   it('uses the arguments, and the defaults for the rest', async () => {
     expect(await last([['x^2\\sin x', ['derivative', { order: '2' }]]])).toEqual([

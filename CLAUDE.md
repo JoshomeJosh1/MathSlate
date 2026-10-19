@@ -24,7 +24,7 @@ starting `#` are headings, `##` subheadings.
 | —         | Upright recognised names and subscripts; notes (`"`); documentation slate             | done    |
 | —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
 | —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
-| 4         | Command palette + arguments (done); `ans` / `out_k` references, promote by drag       | partial |
+| 4         | Command palette + arguments, `ans` / `out_k` (done); promote by drag                  | partial |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
@@ -185,6 +185,19 @@ defaults. The engine reads them with `readArgs`, in the document's context
 chip, searches commands (suggested for the row first), takes arguments typed after the name
 (`diff y 2`, attached at once) or in fields pre-filled with the defaults (Tab moves between
 them), and edits an attached command's arguments (click the output's title).
+
+### Using results: `ans` and `out_k` (`core/outputRefs.ts`)
+
+`ans` (the nearest result above, hidden automatic results included) and `out_k` (the output
+labelled k) are symbols of the builtin scope (`ANS`, `OUT` in `builtinScope.ts`; a document's own
+`ans`/`out` wins). The engine builds rows that use them (directly or through a definition) after
+the others: each use is renamed to a private symbol (`@ans_{row}` — in a definition, ans is the
+result above that definition's row — and `@out_{k}`) defined as the result's value
+(`Engine.values`, every output's latest value). A row whose result is still being computed
+shows pending and is recomputed once it is ready (`schedule(0)` after the jobs); results that
+depend on the row itself, have no value, or have several solutions are errors on the row.
+Hidden automatic results that finished for the current request are not recomputed
+(`Engine.done`), so waiting rows do not loop.
 
 ### Evaluation (`core/engine.ts`)
 
