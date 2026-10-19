@@ -183,8 +183,12 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
     expect(await last([`\\rref\\left(${A}\\right)`])).toEqual([
       '\\begin{bmatrix}1&0&-1\\\\0&1&2\\end{bmatrix}',
     ]);
+    // A basis, as a set either way.
     expect(await last([`\\nullspace\\left(${A}\\right)`])).toEqual([
-      '\\left(\\begin{bmatrix}1\\\\-2\\\\1\\end{bmatrix}\\right)',
+      '\\left\\lbrace \\begin{bmatrix}1\\\\-2\\\\1\\end{bmatrix}\\right\\rbrace',
+    ]);
+    expect(await last(['\\nullspace\\left(\\left\\lbrack1,2;3,4\\right\\rbrack\\right)'])).toEqual([
+      '\\left\\lbrace \\right\\rbrace',
     ]);
     expect(await last([M, ['M', 'det', 'inverse', 'rank']])).toEqual([
       '\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}',

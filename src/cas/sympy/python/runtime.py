@@ -104,8 +104,8 @@ def _rref(m):
 def _nullspace(m):
     if not isinstance(m, MatrixBase):
         raise MathSlateError("The null space needs a matrix")
-    basis = m.nullspace()
-    return Tuple(*basis) if basis else FiniteSet()
+    # A basis, written as a set either way: {v1, v2}, or {} when only 0 maps to 0.
+    return FiniteSet(*[ImmutableMatrix(v) for v in m.nullspace()])
 
 
 def _transpose(m):
