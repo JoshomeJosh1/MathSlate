@@ -12,6 +12,11 @@ export interface OutputSpec {
   label: number;
   /** Command id, or 'auto' for the row's automatic evaluation. */
   commandId: string;
+  /**
+   * Arguments the user set, by parameter name, as LaTeX (`{ variable: 'y', order: '2' }`).
+   * Parameters not listed use the command's default for the row, which follows the row.
+   */
+  args?: Readonly<Record<string, string>>;
 }
 
 /** A row that is not math: notes (plain text) and folders. Neither is evaluated. */
@@ -288,12 +293,38 @@ function omit(row: InputRow, key: 'folder' | 'collapsed'): InputRow {
 }
 
 /** Attaches a command's output row to an input row, with the next stable out_k label. */
-export function addOutput(doc: Doc, rowId: RowId, commandId: string): Doc {
+export function addOutput(
+  doc: Doc,
+  rowId: RowId,
+  commandId: string,
+  args: Readonly<Record<string, string>> = {},
+): Doc {
   const spec: OutputSpec = { id: newId(), label: doc.nextOutputLabel, commandId };
+  if (Object.keys(args).length > 0) spec.args = args;
   return {
     ...doc,
     nextOutputLabel: doc.nextOutputLabel + 1,
     rows: doc.rows.map((r) => (r.id === rowId ? { ...r, outputs: [...r.outputs, spec] } : r)),
+  };
+}
+
+/** Changes an attached command's arguments (an empty object: all defaults). */
+export function setOutputArgs(
+  doc: Doc,
+  rowId: RowId,
+  outputId: string,
+  args: Readonly<Record<string, string>>,
+): Doc {
+  const update = (o: OutputSpec): OutputSpec => {
+    if (o.id !== outputId) return o;
+    const copy: OutputSpec = { ...o };
+    if (Object.keys(args).length > 0) copy.args = args;
+    else delete copy.args;
+    return copy;
+  };
+  return {
+    ...doc,
+    rows: doc.rows.map((r) => (r.id === rowId ? { ...r, outputs: r.outputs.map(update) } : r)),
   };
 }
 

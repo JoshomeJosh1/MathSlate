@@ -7,6 +7,7 @@ import {
   moveRow,
   removeOutput,
   setCollapsed,
+  setOutputArgs,
   setRowKind,
   updateLatex,
   type Doc,
@@ -67,8 +68,11 @@ export const docActions = {
   setCollapsed(id: RowId, collapsed: boolean) {
     docStore.set((doc) => setCollapsed(doc, id, collapsed));
   },
-  addOutput(rowId: RowId, commandId: string) {
-    docStore.set((doc) => addOutput(doc, rowId, commandId));
+  addOutput(rowId: RowId, commandId: string, args: Readonly<Record<string, string>> = {}) {
+    docStore.set((doc) => addOutput(doc, rowId, commandId, args));
+  },
+  setOutputArgs(rowId: RowId, outputId: string, args: Readonly<Record<string, string>>) {
+    docStore.set((doc) => setOutputArgs(doc, rowId, outputId, args));
   },
   removeOutput(rowId: RowId, outputId: string) {
     docStore.set((doc) => removeOutput(doc, rowId, outputId));

@@ -1,6 +1,15 @@
 import type { Command, CommandContext } from './types';
 
 export type { Command, CommandContext } from './types';
+export {
+  ArgError,
+  defaultArgs,
+  readArgs,
+  type Args,
+  type ArgValue,
+  type CommandParam,
+  type Resolve,
+} from './params';
 
 // Every module in defs/ is picked up automatically (Vite resolves this glob at build time).
 const modules = import.meta.glob<{ default: Command }>('./defs/*.ts', { eager: true });

@@ -127,7 +127,7 @@ function substitute(expr: Expr, env: Env, bound: ReadonlySet<string>): Expr {
 }
 
 /** Replaces free occurrences of variables (by key) with expressions. */
-function replaceVars(expr: Expr, values: ReadonlyMap<string, Expr>): Expr {
+export function replaceVars(expr: Expr, values: ReadonlyMap<string, Expr>): Expr {
   const go = (x: Expr): Expr => replaceVars(x, values);
   const without = (name: Name) => {
     const next = new Map(values);

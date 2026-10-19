@@ -56,10 +56,49 @@ export interface AnalyzeOptions {
 
 const builtinScope = createBuiltinScope();
 
+/** A piece of LaTeX outside the rows (a command's argument), read in the document's context. */
+export type SnippetResult =
+  { ok: true; statement: Statement; refs: string[] } | { ok: false; error: string };
+
+export interface DocumentAnalysis {
+  rows: RowAnalysis[];
+  /**
+   * Reads LaTeX against the document's names (`a` in "series about x = a" is the row that
+   * defines a). `locals` are names bound where the snippet is used (a function's parameters).
+   */
+  resolve: (latex: string, locals?: readonly string[]) => SnippetResult;
+}
+
 export function analyzeRows(
   rows: readonly RowInput[],
-  { interpretationChoices = {} }: AnalyzeOptions = {},
+  options: AnalyzeOptions = {},
 ): RowAnalysis[] {
+  return analyzeDocument(rows, options).rows;
+}
+
+export function analyzeDocument(
+  rows: readonly RowInput[],
+  options: AnalyzeOptions = {},
+): DocumentAnalysis {
+  const { rows: analyses, table, resolveOptions } = analyze(rows, options);
+  const resolve = (latex: string, locals: readonly string[] = []): SnippetResult => {
+    try {
+      const cst = parseLatex(latex);
+      if (!cst) return { ok: false, error: 'Empty' };
+      const r = resolveRow(cst, null, table.withLocals([...locals]), resolveOptions);
+      return { ok: true, statement: r.statement, refs: [...r.refs] };
+    } catch (e) {
+      if (e instanceof MathError) return { ok: false, error: e.message };
+      throw e;
+    }
+  };
+  return { rows: analyses, resolve };
+}
+
+function analyze(
+  rows: readonly RowInput[],
+  { interpretationChoices = {} }: AnalyzeOptions,
+): { rows: RowAnalysis[]; table: SymbolTable; resolveOptions: ResolveOptions } {
   const options: ResolveOptions = {
     interpret: (symbol, form) => {
       const found = meaningOf(symbol, form, interpretationChoices);
@@ -153,7 +192,7 @@ export function analyzeRows(
         r.statement?.kind === 'defConst' && r.refs.includes(r.defines ?? '') ? [i] : [],
       ),
     );
-    if (selfReferencing.size === 0) return results;
+    if (selfReferencing.size === 0) return { rows: results, table, resolveOptions: options };
     excluded = new Set([...excluded, ...selfReferencing]);
   }
   throw new Error('analyzeRows: did not converge');

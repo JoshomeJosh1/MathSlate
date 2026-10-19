@@ -6,6 +6,7 @@ import sys
 import time
 from functools import reduce
 
+from mpmath.libmp import prec_to_dps
 from sympy import *  # noqa: F401,F403  (generated programs use SymPy names directly)
 from sympy.core.function import Application, AppliedUndef
 from sympy.core.relational import Relational
@@ -381,6 +382,10 @@ def _tree(e):
 
 
 def _float_str(f, digits=15):
+    """A decimal with 15 significant digits, or more if it was computed to more (N(e, 30))."""
+    precision = prec_to_dps(f._prec) if isinstance(f, Float) else digits
+    if precision > digits:
+        return str(Float(f, precision))
     s = format(float(f), f".{digits}g") if abs(float(f)) < 1e16 else str(f)
     return s
 

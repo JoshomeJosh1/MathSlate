@@ -363,8 +363,14 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
                 onDelete={() => {
                   docActions.deleteRow(row.id);
                 }}
-                onAddCommand={(command) => {
-                  docActions.addOutput(row.id, command.id);
+                onAddCommand={(command, args) => {
+                  docActions.addOutput(row.id, command.id, args);
+                }}
+                onSetOutputArgs={(outputId, args) => {
+                  docActions.setOutputArgs(row.id, outputId, args);
+                }}
+                onReturnFocus={() => {
+                  focusRow(row.id, true);
                 }}
                 onRemoveOutput={(outputId) => {
                   docActions.removeOutput(row.id, outputId);

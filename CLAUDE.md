@@ -24,7 +24,7 @@ starting `#` are headings, `##` subheadings.
 | —         | Upright recognised names and subscripts; notes (`"`); documentation slate             | done    |
 | —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
 | —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
-| 4         | `/` command palette, `ans` / `out_k` references, promote by drag                      | planned |
+| 4         | Command palette + arguments (done); `ans` / `out_k` references, promote by drag       | partial |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
@@ -172,6 +172,19 @@ each entry parses. `ui/editor/CommandMenu.tsx` renders it as a grid of tiles in 
 function's group is `BuiltinFunction.group`), name and description on hover; keys (typing
 filters, arrows move in the grid) are handled in `MathLiveEditor.tsx` while the field keeps
 focus; matching, layout and grid movement are in `matchCompletions.ts`.
+
+### Commands, arguments and the palette
+
+Commands (`registries/commands/defs/*.ts`) attach output rows (`OutputSpec`). They can take
+arguments (`params`, `registries/commands/params.ts`): an attached command stores only the
+arguments the user changed, as LaTeX (`OutputSpec.args`), so the rest keep following the row's
+defaults. The engine reads them with `readArgs`, in the document's context
+(`analyzeDocument(...).resolve`), and adds the definitions they use to the command's environment
+(`deps.environment(row, refs)`); a bad argument is an error on that output only. The palette
+(`ui/rows/CommandPalette.tsx`), opened with Ctrl+/ (editor action `palette`) or the "/ more…"
+chip, searches commands (suggested for the row first), takes arguments typed after the name
+(`diff y 2`, attached at once) or in fields pre-filled with the defaults (Tab moves between
+them), and edits an attached command's arguments (click the output's title).
 
 ### Evaluation (`core/engine.ts`)
 
@@ -333,10 +346,13 @@ Every new user-visible feature also gets an example in `src/document/documentati
   `question`, `options` (each with a `Meaning`), `defaultOption`, `promptOnFirstUse`. New constant
   ids also need `ConstantId` in `parser/ast.ts`, `printLatex.ts`, and each backend.
 - **Add a command**: one file in `src/registries/commands/defs/` default-exporting a `Command`:
-  `id` (stored in documents — never rename), `title(ctx)`, `slash`, `aliases`, `description`,
-  `appliesTo(ctx)` → relevance in [0, 1] from `ctx.facts` (`ShapeFacts`), and `run(ctx, cas)` —
-  usually `runOperation(ctx, cas, { op: … })`. Pick the variable with
-  `preferredVariable(ctx.facts)`. Attach it to a row in the documentation; add an end-to-end case.
+  `id` (stored in documents — never rename), `title(ctx, args)`, `slash`, `aliases`,
+  `description`, optional `params` (each: `name` — stored, never rename — `label`, `kind`
+  variable/count/expr/point/unit, `optional`, `default(ctx)` as LaTeX), `appliesTo(ctx)` →
+  relevance in [0, 1] from `ctx.facts` (`ShapeFacts`), and `run(ctx, cas, args)` — usually
+  `runOperation(ctx, cas, { op: … })` or `runFunction(ctx, cas, 'det')`. Read a variable with
+  `variableArg(ctx, args)` (falls back to the preferred variable). Attach it to a row in the
+  documentation (with arguments: `['latex', ['series', { at: 'x=1' }]]`); add an end-to-end case.
 - **Add a CAS operation**: add it to `CasOperation` in `src/cas/types.ts`, then per backend:
   SymPy → `SUPPORTED` in `SympyBackend.ts`, `Serializer.operation` in `serialize.ts` (+ a helper
   in `runtime.py` if needed); Nerdamer → `SUPPORTED` and `operationJob`, or leave it unsupported.

@@ -1,6 +1,10 @@
-import type { ShapeFacts, Target } from '../../core/shape';
-import type { Definition, Statement } from '../../parser/ast';
+import { preferredVariable, type ShapeFacts, type Target } from '../../core/shape';
+import type { Definition, Name, Statement } from '../../parser/ast';
+import { printName } from '../../parser/printLatex';
 import type { CasBackend, CasOperation, CasResult } from '../../cas/types';
+import type { Args, CommandParam } from './params';
+
+export type { Args, ArgValue, CommandParam } from './params';
 
 export interface CommandContext {
   statement: Statement;
@@ -14,16 +18,33 @@ export interface CommandContext {
 export interface Command {
   /** Stable id stored in documents. Never rename. */
   id: string;
-  /** Short label for chips and output rows: 'factor', 'd/dx'. May depend on the row (variable). */
-  title: (ctx: CommandContext) => string;
+  /**
+   * Short label for chips and output rows: 'factor', 'd/dx'. May depend on the row and the
+   * arguments ('d²/dy²').
+   */
+  title: (ctx: CommandContext, args: Args) => string;
   /** Typed after "/" in the command palette. */
   slash: string;
   aliases?: readonly string[];
   description: string;
+  /** Arguments, in the order they are typed after the name in the palette ("diff y 2"). */
+  params?: readonly CommandParam[];
   /** Relevance for this row in [0, 1]; 0 hides the command from suggestions. */
   appliesTo: (ctx: CommandContext) => number;
-  run: (ctx: CommandContext, cas: CasBackend) => Promise<CasResult>;
+  run: (ctx: CommandContext, cas: CasBackend, args: Args) => Promise<CasResult>;
 }
+
+/** A variable argument, or the row's preferred variable. */
+export function variableArg(ctx: CommandContext, args: Args, name = 'variable'): Name {
+  const a = args[name];
+  if (a?.kind === 'variable') return a.name;
+  if (a?.kind === 'point') return a.variable;
+  return preferredVariable(ctx.facts);
+}
+
+/** The default for a variable parameter: the row's preferred variable, as LaTeX. */
+export const preferredVariableLatex = (ctx: CommandContext) =>
+  printName(preferredVariable(ctx.facts));
 
 /** Helper for commands that apply a built-in function to the row's value: det(M), rref(M). */
 export function runFunction(ctx: CommandContext, cas: CasBackend, fn: string): Promise<CasResult> {

@@ -1,12 +1,13 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { MouseEvent, Ref } from 'react';
+import { useState, type MouseEvent, type Ref } from 'react';
 import { latexCompletions } from '../../core/completions';
 import { bracketOnlyShortcuts, functionMacros } from '../../core/decorate';
 import type { RowView } from '../../core/engine';
 import type { InputRow } from '../../document/model';
-import type { Command } from '../../registries/commands';
+import { commands, type Command } from '../../registries/commands';
 import { MathEditor, type EditorKeyAction, type MathEditorHandle } from '../editor';
+import { CommandPalette, type PaletteMode } from './CommandPalette';
 import { NoteEditor } from './NoteEditor';
 import { OutputRow } from './OutputRow';
 import { RowDebug, RowError } from './RowDiagnostics';
@@ -47,8 +48,11 @@ interface Props {
   /** Click on the row number: Shift selects; on a folder, a plain click collapses/expands. */
   onGutterClick: (event: MouseEvent) => void;
   onDelete: () => void;
-  onAddCommand: (command: Command) => void;
+  onAddCommand: (command: Command, args?: Record<string, string>) => void;
+  onSetOutputArgs: (outputId: string, args: Record<string, string>) => void;
   onRemoveOutput: (outputId: string) => void;
+  /** Puts the caret back in the row (after the command palette closes). */
+  onReturnFocus: () => void;
   onPromote: (latexRows: string[]) => void;
 }
 
@@ -67,6 +71,12 @@ export function RowItem(props: Props) {
     transition,
     isDragging,
   } = useSortable({ id: row.id, transition: { duration: 150, easing: 'ease-out' } });
+  /** The command palette, when open: adding a command, or editing an output's arguments. */
+  const [palette, setPalette] = useState<(PaletteMode & { outputId?: string }) | null>(null);
+  const closePalette = () => {
+    setPalette(null);
+    props.onReturnFocus();
+  };
   const isNote = row.kind === 'note';
   const isFolder = row.kind === 'folder';
   const isMath = !row.kind;
@@ -112,7 +122,10 @@ export function RowItem(props: Props) {
             ref={editorRef}
             value={row.latex}
             onChange={props.onChange}
-            onKeyAction={props.onKeyAction}
+            onKeyAction={(action) => {
+              if (action === 'palette') setPalette({ kind: 'add' });
+              else props.onKeyAction(action);
+            }}
             onFocus={props.onFocus}
             onBlur={props.onBlur}
             shortcuts={props.shortcuts}
@@ -153,6 +166,21 @@ export function RowItem(props: Props) {
         />
       )}
       {isMath && showDebug && <RowDebug latex={row.latex} analysis={view?.analysis} />}
+      {isMath && palette && (
+        <CommandPalette
+          mode={palette}
+          context={view?.context ?? null}
+          suggested={view?.suggestions.map((s) => s.command) ?? []}
+          onAttach={(commandId, args) => {
+            const outputId = palette.outputId;
+            const command = commands.get(commandId);
+            if (outputId) props.onSetOutputArgs(outputId, args);
+            else if (command) props.onAddCommand(command, args);
+            closePalette();
+          }}
+          onClose={closePalette}
+        />
+      )}
       {isMath &&
         view?.outputs.map((o) => (
           <OutputRow
@@ -166,10 +194,31 @@ export function RowItem(props: Props) {
                     props.onRemoveOutput(o.id);
                   },
                 })}
+            {...(commands.get(o.commandId)?.params?.length
+              ? {
+                  onEditArgs: () => {
+                    const spec = row.outputs.find((s) => s.id === o.id);
+                    setPalette({
+                      kind: 'edit',
+                      commandId: o.commandId,
+                      args: spec?.args ?? {},
+                      outputId: o.id,
+                    });
+                  },
+                }
+              : {})}
           />
         ))}
       {isMath && focused && view && (
-        <SuggestionChips suggestions={view.suggestions.slice(0, 5)} onPick={props.onAddCommand} />
+        <SuggestionChips
+          suggestions={view.suggestions.slice(0, 5)}
+          onPick={(command) => {
+            props.onAddCommand(command);
+          }}
+          onMore={() => {
+            setPalette({ kind: 'add' });
+          }}
+        />
       )}
     </div>
   );

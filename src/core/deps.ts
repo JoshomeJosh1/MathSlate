@@ -11,8 +11,11 @@ export interface DependencyInfo {
   cycles: Map<number, string>;
   /** Row index → indices of rows it depends on directly. */
   edges: number[][];
-  /** Definitions a row needs, transitively, definitions before their uses. */
-  environment(row: number): Definition[];
+  /**
+   * Definitions a row needs, transitively, definitions before their uses; `extraRefs` adds
+   * symbols the row does not read itself (a command argument's, as in "series about x = a").
+   */
+  environment(row: number, extraRefs?: readonly string[]): Definition[];
   /** Indices of rows whose (transitive) dependencies include a row with an error. */
   blockedBy(row: number): number | null;
 }
@@ -50,7 +53,7 @@ export function buildDependencies(rows: readonly RowAnalysis[]): DependencyInfo 
 
   const cycles = findCycles(rows, edges);
 
-  const environment = (row: number): Definition[] => {
+  const environment = (row: number, extraRefs: readonly string[] = []): Definition[] => {
     const out: Definition[] = [];
     const seen = new Set<number>();
     const visit = (i: number) => {
@@ -60,6 +63,7 @@ export function buildDependencies(rows: readonly RowAnalysis[]): DependencyInfo 
       const s = rows[i]?.statement ?? null;
       if (i !== row && isDefinition(s)) out.push(s);
     };
+    for (const key of extraRefs) for (const j of definers.get(key) ?? []) visit(j);
     visit(row);
     // A sequence rule row also needs its own base cases (and they need the rule).
     const self = rows[row];

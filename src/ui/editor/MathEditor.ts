@@ -15,7 +15,8 @@ export type EditorKeyAction =
   | 'toHeading' // `#` typed into an empty field: turn the row into a heading note
   | 'toFolder' // `@` typed into an empty field: turn the row into a folder
   | 'toMath' // Backspace in an empty note: turn it back into a math row
-  | 'escape'; // Esc: the field has let go of focus
+  | 'escape' // Esc: the field has let go of focus
+  | 'palette'; // Ctrl+/ (Cmd+/): open the command palette for this row
 
 export interface MathEditorHandle {
   focus: () => void;

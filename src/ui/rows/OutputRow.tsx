@@ -11,6 +11,8 @@ interface Props {
   onPromote?: (latexRows: string[]) => void;
   /** Remove an attached command output (auto outputs cannot be removed). */
   onRemove?: () => void;
+  /** Change the command's arguments (clicking its title); absent if it takes none. */
+  onEditArgs?: () => void;
 }
 
 function ValueView({ value }: { value: CasValue }) {
@@ -79,7 +81,7 @@ function CopyButton({ value }: { value: CasValue }) {
   );
 }
 
-export function OutputRow({ output, onPromote, onRemove }: Props) {
+export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
   const promotable = promotableLatex(output.value);
   return (
     <div className={`output-row${output.stale ? ' stale' : ''}`}>
@@ -90,7 +92,18 @@ export function OutputRow({ output, onPromote, onRemove }: Props) {
         {output.label !== null ? `out${output.label}` : '='}
       </div>
       <div className="output-body">
-        {output.title && <span className="output-title">{output.title}</span>}
+        {output.title &&
+          (onEditArgs ? (
+            <button
+              className="output-title output-title-button"
+              title="Change this command's arguments"
+              onClick={onEditArgs}
+            >
+              {output.title}
+            </button>
+          ) : (
+            <span className="output-title">{output.title}</span>
+          ))}
         {output.state === 'error' && output.provisional ? (
           // The fallback backend could not do it; the preferred one will once it has loaded.
           <span className="muted" title={output.error}>

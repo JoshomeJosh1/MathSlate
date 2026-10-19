@@ -293,6 +293,12 @@ export function MathLiveEditor({
         callbacks.current.onKeyAction?.('escape');
         return;
       }
+      if (ev.key === '/' && (ev.ctrlKey || ev.metaKey) && !ev.altKey) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        callbacks.current.onKeyAction?.('palette');
+        return;
+      }
       if (ev.key === '\\' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
         ev.preventDefault();
         ev.stopPropagation();

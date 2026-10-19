@@ -14,7 +14,8 @@ type Entry =
   | { note: string }
   | { folder: string; open?: boolean }
   | string
-  | [latex: string, ...commandIds: string[]];
+  /** A math row with commands attached: an id, or an id with arguments ({ unit: 'mi' }). */
+  | [latex: string, ...commands: (string | [id: string, args: Record<string, string>])[]];
 
 export const DOCUMENTATION: readonly Entry[] = [
   { note: '# MathSlate' },
@@ -448,12 +449,17 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\sum_{k=1}^{100}k',
   '\\sum_{n=1}^{\\infty}\\frac{1}{n^2}',
   '\\prod_{k=1}^{6}k',
-  { note: 'Or use commands on any expression.' },
-  ['x^2\\sin x', 'derivative'],
+  {
+    note: 'Or use commands on any expression: click a suggestion under the focused row, or press Ctrl+/ (or "/ more…") for the command palette. Commands take arguments — type them after the name ("diff y 2", "series x=1 4") or fill in the fields — and clicking an output\'s title changes them.',
+  },
+  ['x^2\\sin x', 'derivative', ['derivative', { order: '2' }]],
   ['h\\left(x\\right)=xe^{x}', 'derivative', 'integrate'],
-  ['\\frac{1}{1+x^2}', 'integrate'],
+  ['\\frac{1}{1+x^2}', 'integrate', ['integrate', { from: '0', to: '1' }]],
   ['\\frac{e^x-1}{x}', 'limit'],
-  ['\\cos x', 'series'],
+  ['\\frac{1}{x}', ['limit', { at: 'x\\to0^{+}' }]],
+  ['\\cos x', 'series', ['series', { at: 'x=\\pi', order: '3' }]],
+  ['x^2+y^2', ['substitute', { at: 'x=3' }], ['solve', { variable: 'y' }]],
+  ['\\pi', ['numeric', { digits: '30' }]],
 
   { folder: 'Matrices and vectors' },
   {
@@ -517,6 +523,8 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Results are shown in a unit the row used for that kind of quantity, else a named unit (N, J, W, Pa, …) or base units. Type -> and a unit to convert.',
   },
   '60\\unit{mi}\\to\\unit{km}',
+  { note: 'The convert command does the same as an output: choose the unit in its field.' },
+  ['26.2\\unit{mi}', ['convert', { unit: 'km' }]],
   '\\mathrm{pace}=12\\unit{km/h}',
   '\\mathrm{pace}\\cdot90\\unit{min}\\to\\unit{mi}',
   '3\\unit{kWh}\\to\\unit{MJ}',
@@ -568,7 +576,9 @@ export function documentationDoc(): Doc {
     }
     const [latex, ...commandIds] = Array.isArray(entry) ? entry : [entry];
     const id = add(latex);
-    for (const commandId of commandIds) doc = addOutput(doc, id, commandId);
+    for (const c of commandIds) {
+      doc = typeof c === 'string' ? addOutput(doc, id, c) : addOutput(doc, id, c[0], c[1]);
+    }
   }
   for (const f of folders) if (!f.open) doc = setCollapsed(doc, f.id, true);
   return doc;

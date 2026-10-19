@@ -26,14 +26,23 @@ function backend(): SympyBackend {
   });
 }
 
-/** Builds a document; `rows` entries are latex or [latex, ...commandIds]. */
-function makeDoc(rows: (string | [string, ...string[]])[]): Doc {
+/** A command id, or an id with arguments. */
+type Cmd = string | [string, Record<string, string>];
+type Row = string | [string, ...Cmd[]];
+
+/** Builds a document; `rows` entries are latex or [latex, ...commands]. */
+function makeDoc(rows: Row[]): Doc {
   let doc: Doc = { ...emptyDoc(), rows: [] };
   for (const r of rows) {
-    const [latex, ...commandIds] = Array.isArray(r) ? r : [r];
+    const [latex, ...commands] = Array.isArray(r) ? r : [r];
     const inserted = insertRowAfter(doc, null, latex);
     doc = inserted.doc;
-    for (const c of commandIds) doc = addOutput(doc, inserted.id, c);
+    for (const c of commands) {
+      doc =
+        typeof c === 'string'
+          ? addOutput(doc, inserted.id, c)
+          : addOutput(doc, inserted.id, c[0], c[1]);
+    }
   }
   return doc;
 }
@@ -56,7 +65,7 @@ function render(o: OutputView): string {
 }
 
 /** Runs the document through the engine and returns each row's outputs. */
-async function outputs(rows: (string | [string, ...string[]])[]): Promise<string[][]> {
+async function outputs(rows: Row[]): Promise<string[][]> {
   const doc = makeDoc(rows);
   const engine = new Engine(backend(), { debounceMs: 0 });
   engine.update(doc);
@@ -69,7 +78,7 @@ async function outputs(rows: (string | [string, ...string[]])[]): Promise<string
   });
 }
 
-async function last(rows: (string | [string, ...string[]])[]): Promise<string[]> {
+async function last(rows: Row[]): Promise<string[]> {
   return (await outputs(rows)).at(-1) ?? [];
 }
 
@@ -148,6 +157,49 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
   it('produces LaTeX our parser can read back (for promoting outputs)', async () => {
     const results = await outputs([['\\left(x+2\\right)^4', 'expand', 'factor', 'derivative']]);
     for (const line of results[0] ?? []) expect(line).not.toContain('!');
+  });
+});
+
+describe('commands with arguments', { timeout: 60_000 }, () => {
+  it('uses the arguments, and the defaults for the rest', async () => {
+    expect(await last([['x^2\\sin x', ['derivative', { order: '2' }]]])).toEqual([
+      'derivative: -x^{2}\\sin\\left(x\\right)+4x\\cos\\left(x\\right)+2\\sin\\left(x\\right)',
+    ]);
+    expect(await last([['xy^3', ['derivative', { variable: 'y' }]]])).toEqual([
+      'derivative: 3x\\cdot y^{2}',
+    ]);
+    expect(await last([['\\frac{1}{1+x^2}', ['integrate', { from: '0', to: '1' }]]])).toEqual([
+      'integrate: \\frac{\\pi}{4} ≈ 0.785398163397448',
+    ]);
+    expect(await last([['\\frac{1}{x}', ['limit', { at: 'x\\to0^{+}' }]]])).toEqual([
+      'limit: \\infty',
+    ]);
+    expect(await last([['e^x', ['series', { at: 'x=1', order: '2' }]]])).toEqual([
+      expect.stringMatching(/^series: /),
+    ]);
+    expect(await last([['x^2+y^2', ['substitute', { at: 'x=3' }]]])).toEqual([
+      'substitute: y^{2}+9',
+    ]);
+    expect(await last([['\\pi', ['numeric', { digits: '20' }]]])).toEqual([
+      '\\pi ≈ 3.14159265358979',
+      'numeric: 3.1415926535897932385',
+    ]);
+    expect(await last([['26.2\\unit{mi}', ['convert', { unit: 'km' }]]])).toEqual([
+      expect.stringMatching(/^convert: 42\.16\d*\\unit\{km\}/),
+    ]);
+  });
+
+  it('reads arguments in the document: names, and their definitions', async () => {
+    expect(await last(['a=2', ['x^2', ['substitute', { at: 'x=a' }]]])).toEqual(['substitute: 4']);
+  });
+
+  it('reports a bad argument on its output', async () => {
+    expect(await last([['x^2', ['derivative', { order: 'x' }]]])).toEqual([
+      'derivative: !order: a whole number',
+    ]);
+    expect(await last([['5\\unit{m}', ['convert', { unit: 'furlong' }]]])).toEqual([
+      'convert: !to: unknown unit "furlong"',
+    ]);
   });
 });
 

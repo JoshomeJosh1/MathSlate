@@ -7,8 +7,12 @@ import {
   suggestCommands,
   type Command,
   type CommandContext,
+  ArgError,
+  defaultArgs,
+  readArgs,
+  type Args,
 } from '../registries/commands';
-import { analyzeRows, type RowAnalysis } from './analyze';
+import { analyzeDocument, type RowAnalysis } from './analyze';
 import { buildDependencies } from './deps';
 import { shapeOf, targetOf } from './shape';
 import { withUnits } from './units';
@@ -49,6 +53,8 @@ export interface RowView {
   outputs: OutputView[];
   /** Relevant commands not yet attached, most relevant first, with row-specific titles. */
   suggestions: { command: Command; title: string }[];
+  /** What commands see for this row (null if it cannot run commands): for argument defaults. */
+  context: CommandContext | null;
 }
 
 export interface EngineSnapshot {
@@ -64,6 +70,8 @@ interface Job {
   preview?: () => Promise<CasResult>;
   /** Automatic evaluation: hide results that add nothing (see `addsNothing`). */
   auto?: { inputLatex: string; computes: boolean };
+  /** More of what the result depends on than the row: a command's arguments. */
+  keyExtra?: string;
 }
 
 export interface EngineOptions {
@@ -135,7 +143,7 @@ export class Engine {
     if (!doc) return;
     const generation = ++this.generation;
 
-    const analyses = analyzeRows(
+    const { rows: analyses, resolve } = analyzeDocument(
       // Notes and folder titles are not math.
       doc.rows.map((r) => ({ id: r.id, latex: r.kind ? '' : r.latex })),
       { interpretationChoices: doc.interpretations },
@@ -149,7 +157,14 @@ export class Engine {
     analyses.forEach((analysis, i) => {
       const row = doc.rows[i];
       if (!row) return;
-      const view: RowView = { rowId: row.id, analysis, error: null, outputs: [], suggestions: [] };
+      const view: RowView = {
+        rowId: row.id,
+        analysis,
+        error: null,
+        outputs: [],
+        suggestions: [],
+        context: null,
+      };
       rows.set(row.id, view);
       if (analysis.error) {
         view.error = { message: analysis.error.message, span: analysis.error.span };
@@ -177,9 +192,9 @@ export class Engine {
 
       const addJob = (
         output: Omit<OutputView, 'state'>,
-        job: Omit<Job, 'rowId' | 'outputId' | 'key'>,
+        job: Omit<Job, 'rowId' | 'outputId' | 'key'> & { keyExtra?: string },
       ) => {
-        const key = `${output.commandId}|${baseKey}`;
+        const key = `${output.commandId}|${baseKey}|${job.keyExtra ?? ''}`;
         keys.set(output.id, key);
         const old = prev?.outputs.find((o) => o.id === output.id);
         const unchanged = old && this.keys.get(output.id) === key && old.state !== 'pending';
@@ -225,7 +240,7 @@ export class Engine {
         addJob(
           { id: `${row.id}:auto`, commandId: 'auto', title: '', label: null },
           {
-            run: () => evaluate.run(ctx, this.cas),
+            run: () => evaluate.run(ctx, this.cas, {}),
             ...(preview ? { preview } : {}),
             auto: {
               inputLatex: printLatex(target.expr),
@@ -235,20 +250,43 @@ export class Engine {
         );
       }
 
-      // Commands attached by the user.
+      // Commands attached by the user, with their arguments (read in the document's context; a
+      // name an argument uses brings its definition into the command's environment).
+      const read = (latex: string) => resolve(latex, target.locals);
       for (const spec of row.outputs) {
         const command = commands.get(spec.commandId);
         if (!command) continue;
+        const base = { id: spec.id, commandId: spec.commandId, label: spec.label };
+        let parsed: { args: Args; refs: string[] };
+        try {
+          parsed = readArgs(command.params ?? [], spec.args, ctx, read);
+        } catch (e) {
+          if (!(e instanceof ArgError)) throw e;
+          const message = e.message;
+          addJob(
+            { ...base, title: command.title(ctx, {}) },
+            { run: () => Promise.resolve({ ok: false, error: message, backend: '' }) },
+          );
+          continue;
+        }
+        const { args, refs } = parsed;
+        const own = refs.length > 0 ? { ...ctx, env: deps.environment(i, refs) } : ctx;
+        const argKey = JSON.stringify(spec.args ?? {});
+        const ownEnvKey = own === ctx ? '' : own.env.map(statementToSexpr).join(';');
         addJob(
-          { id: spec.id, commandId: spec.commandId, title: command.title(ctx), label: spec.label },
-          { run: () => command.run(ctx, this.cas) },
+          { ...base, title: command.title(ctx, args) },
+          { run: () => command.run(own, this.cas, args), keyExtra: `${argKey}|${ownEnvKey}` },
         );
       }
 
+      view.context = ctx;
       const attached = new Set(row.outputs.map((o) => o.commandId));
       view.suggestions = suggestCommands(ctx)
         .filter((c) => !attached.has(c.id))
-        .map((command) => ({ command, title: command.title(ctx) }));
+        .map((command) => ({
+          command,
+          title: command.title(ctx, defaultArgs(command, ctx, read)),
+        }));
     });
 
     this.keys = keys;
