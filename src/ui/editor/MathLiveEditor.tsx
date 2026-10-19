@@ -294,7 +294,8 @@ export function MathLiveEditor({
         openMenu();
         return;
       }
-      if (matrixKey(ev)) {
+      // Matrix keys, except Backspace straight after a shortcut fired (mat → letters again).
+      if (!(fired && ev.key === 'Backspace') && matrixKey(ev)) {
         ev.preventDefault();
         ev.stopPropagation();
         typed = '';
