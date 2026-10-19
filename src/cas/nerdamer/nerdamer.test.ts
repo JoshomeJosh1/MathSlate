@@ -112,7 +112,9 @@ describe('ans and out_k', () => {
   it('explains what cannot be used', async () => {
     expect(await last(['ans+1'])).toEqual(['!There is no result above this row for ans to use']);
     expect(await last(['1', 'out_9'])).toEqual(['!There is no out_9']);
-    expect(await last(['out_x'])).toEqual(['!out needs the number of an output: out_3']);
+    // A letter index is a term of the results' sequence (\sum_{k=1}^{3} out_k): none here.
+    expect(await last(['out_x'])).toEqual(['!There are no outputs for out_k to use']);
+    expect(await last(['out_{1.5}'])).toEqual(['!Outputs are numbered 1, 2, 3, …: out_3']);
   });
 });
 

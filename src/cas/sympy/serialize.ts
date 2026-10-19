@@ -85,6 +85,16 @@ const FUNCTIONS: Record<string, Py> = {
   Bi: call('airybi'),
   ellipticK: call('elliptic_k'),
   ellipticE: call('elliptic_e'),
+  // Integer sequences
+  fibonacci: call('fibonacci'),
+  lucas: call('lucas'),
+  catalan: call('catalan'),
+  bell: call('bell'),
+  partition: call('partition'),
+  harmonic: call('harmonic'),
+  bernoulli: call('bernoulli'),
+  totient: call('totient'),
+  primepi: call('primepi'),
   // Matrices and vectors (helpers in runtime.py check shapes and explain mistakes)
   det: call('_det'),
   tr: call('_trace'),
@@ -148,8 +158,32 @@ class Serializer {
       string,
       { rule?: Definition & { kind: 'defSeq' }; bases: string[] }
     >();
-    const sequenceOrder: string[] = [];
-    for (const d of env) {
+    // A sequence is created after its last rule or base case, so definitions that use it (later
+    // in dependency order, e.g. c = a_3) find it.
+    const lastPart = new Map<string, number>();
+    env.forEach((d, i) => {
+      if (d.kind === 'defSeq' || d.kind === 'defSeqBase') lastPart.set(nameKey(d.name), i);
+    });
+    const emitSequence = (key: string) => {
+      const entry = sequences.get(key);
+      if (!entry) return;
+      if (!entry.rule) {
+        // Base cases without a rule are plain names (settled earlier), except the engine's own
+        // sequences (@out: the results, by label), which have only their terms.
+        if (key.startsWith('@')) {
+          lines.push(
+            `u_${pyId(key)} = _Sequence(${pyString(key)}, None, {${entry.bases.join(', ')}})`,
+          );
+        }
+        return;
+      }
+      const index = this.symbol(entry.rule.indexVar);
+      const body = this.expr(entry.rule.body, new Set([nameKey(entry.rule.indexVar)]));
+      lines.push(
+        `u_${pyId(key)} = _Sequence(${pyString(key)}, lambda ${index}: ${body}, {${entry.bases.join(', ')}})`,
+      );
+    };
+    for (const [i, d] of env.entries()) {
       const key = nameKey(d.name);
       const id = `u_${pyId(key)}`;
       switch (d.kind) {
@@ -172,22 +206,13 @@ class Serializer {
           if (!entry) {
             entry = { bases: [] };
             sequences.set(key, entry);
-            sequenceOrder.push(key);
           }
           if (d.kind === 'defSeq') entry.rule = d;
           else entry.bases.push(`${d.index}: ${this.expr(d.body, new Set())}`);
+          if (lastPart.get(key) === i) emitSequence(key);
           break;
         }
       }
-    }
-    for (const key of sequenceOrder) {
-      const entry = sequences.get(key);
-      if (!entry?.rule) continue; // base cases without a rule are plain names (settled earlier)
-      const index = this.symbol(entry.rule.indexVar);
-      const body = this.expr(entry.rule.body, new Set([nameKey(entry.rule.indexVar)]));
-      lines.push(
-        `u_${pyId(key)} = _Sequence(${pyString(key)}, lambda ${index}: ${body}, {${entry.bases.join(', ')}})`,
-      );
     }
     return lines;
   }
@@ -288,7 +313,8 @@ class Serializer {
       }
       case 'bigop': {
         const body = this.expr(e.operand, new Set([...locals, nameKey(e.index)]));
-        const fn = e.op === 'sum' ? 'summation' : 'product';
+        // Wrapped so sequence terms left by the expansion are evaluated (runtime.py _terms).
+        const fn = e.op === 'sum' ? '_summation' : '_product';
         return `${fn}(${body}, (${this.symbol(e.index)}, ${go(e.lower)}, ${go(e.upper)}))`;
       }
       case 'relation': {

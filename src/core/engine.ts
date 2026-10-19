@@ -17,6 +17,7 @@ import { buildDependencies } from './deps';
 import type { Definition, Expr, Statement } from '../parser/ast';
 import {
   OutputRefError,
+  outsDefinitions,
   refDefinition,
   renameInDefinition,
   renameOutputRefs,
@@ -353,6 +354,12 @@ export class Engine {
         const defs: Definition[] = [];
         let pending = false;
         for (const ref of found.values()) {
+          if (ref.kind === 'outs') {
+            const values = this.outsValues(d.i, doc, computing);
+            if (values === 'pending') pending = true;
+            else defs.push(...outsDefinitions(values));
+            continue;
+          }
           const value = this.refValue(ref, d.i, doc, analyses, computing);
           if (value === 'pending') pending = true;
           else defs.push(refDefinition(ref, value));
@@ -446,6 +453,7 @@ export class Engine {
       }
       throw new OutputRefError('There is no result above this row for ans to use');
     }
+    if (ref.kind === 'outs') throw new Error('The results sequence is defined by outsValues');
     const name = `out_${ref.label}`;
     const k = doc.rows.findIndex((r) => r.outputs.some((o) => o.label === ref.label));
     const spec = doc.rows[k]?.outputs.find((o) => o.label === ref.label);
@@ -454,6 +462,34 @@ export class Engine {
     const v = valueOf(spec.id, name);
     if (v === null) throw new OutputRefError(`${name} has no value`);
     return v;
+  }
+
+  /**
+   * The results as a sequence (out_k with k not a number): every output's value by label, except
+   * the outputs of `row` itself and results that are not a single value; 'pending' while any is
+   * being computed.
+   */
+  private outsValues(
+    row: number,
+    doc: Doc,
+    computing: ReadonlySet<string>,
+  ): Map<number, Expr> | 'pending' {
+    const values = new Map<number, Expr>();
+    for (const [k, r] of doc.rows.entries()) {
+      if (k === row) continue;
+      for (const o of r.outputs) {
+        if (computing.has(o.id)) return 'pending';
+        const v = this.values.get(o.id);
+        if (!v) continue;
+        try {
+          values.set(o.label, exprOfValue(v, `out_${o.label}`));
+        } catch (e) {
+          if (!(e instanceof OutputRefError)) throw e;
+        }
+      }
+    }
+    if (values.size === 0) throw new OutputRefError('There are no outputs for out_k to use');
+    return values;
   }
 
   /** Publishes one job's result into its output row. */

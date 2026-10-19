@@ -38,6 +38,32 @@ def _prime(n):
     return Function("p")(n)
 
 
+# Sequences by name: a term with a symbolic index stays an unevaluated function (p(k)), which
+# summation then expands term by term (p(1) + p(2) + …); _terms evaluates those terms.
+_SEQUENCES = {"p": _prime}
+
+
+def _terms(e):
+    """Evaluates sequence terms left with a number for an index (p(3) → 5)."""
+    if not isinstance(e, Basic):
+        return e
+    return e.replace(
+        lambda x: isinstance(x, AppliedUndef)
+        and x.func.__name__ in _SEQUENCES
+        and len(x.args) == 1
+        and x.args[0].is_Integer,
+        lambda x: _SEQUENCES[x.func.__name__](x.args[0]),
+    )
+
+
+def _summation(body, limits):
+    return _terms(summation(body, limits))
+
+
+def _product(body, limits):
+    return _terms(product(body, limits))
+
+
 # ----------------------------------------------------------------------------- matrices and vectors
 
 
@@ -158,15 +184,20 @@ class _Sequence:
 
     def __init__(self, name, rule, bases):
         self.name, self.rule, self.bases, self.cache = name, rule, dict(bases), {}
+        _SEQUENCES[name] = self
 
     def __call__(self, n):
         n = sympify(n)
         if not n.is_Integer:
             # Symbolic index: closed forms evaluate, recursive ones stay unevaluated.
-            return Function(self.name)(n) if self.bases else self.rule(n)
+            return Function(self.name)(n) if self.bases or self.rule is None else self.rule(n)
         k = int(n)
         if k in self.bases:
             return self.bases[k]
+        if self.rule is None:
+            # Only the listed terms exist (the results, out_k).
+            shown = self.name.lstrip("@")
+            raise MathSlateError(f"There is no {shown}_{k} with a single value to use")
         if k in self.cache:
             return self.cache[k]
         if self.bases:
@@ -290,6 +321,8 @@ _KNOWN_FUNCTIONS = {
     "floor", "sign", "binomial", "exp", "gcd", "lcm",
     "erf", "erfc", "erfi", "gamma", "lowergamma", "zeta", "digamma", "Si", "Ci", "Shi", "Chi",
     "Ei", "li", "LambertW",
+    "fibonacci", "lucas", "catalan", "bell", "partition", "harmonic", "bernoulli", "totient",
+    "primepi",
 }
 _RELATIONS = {"==": "=", "<": "<", ">": ">", "<=": "<=", ">=": ">=", "!=": "!="}
 
@@ -442,6 +475,11 @@ def _tidy(e):
 
 def _describe(result):
     result = _scalar(result)
+    if isinstance(result, Basic) and any(
+        x.func.__name__.startswith("@") for x in result.atoms(AppliedUndef)
+    ):
+        # A term of the results (out_k) whose k is not a number, e.g. a sum up to n.
+        raise MathSlateError("out_k needs a number for k (a sum over results needs number bounds)")
     if isinstance(result, tuple) and result and result[0] == "solutions":
         _, var, sols = result
         return {

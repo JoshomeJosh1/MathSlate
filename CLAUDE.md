@@ -25,9 +25,9 @@ starting `#` are headings, `##` subheadings.
 | —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
 | —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
 | 4         | Command palette + arguments, `ans` / `out_k`, promote (↧ or drag a result into place) | done    |
-| 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
+| 5         | Symbol interpretation prompts + row badges — dropped (e, i, π are reserved instead)   | dropped |
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
-| 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
+| 7         | `out_k` as a sequence (sums over results); sums over sequences; integer sequences     | done    |
 | 8         | URL share, error highlight inside the math field, perf (measured; see Performance)    | done    |
 
 ### Ideas (not started — ask before implementing)
@@ -228,7 +228,19 @@ result above that definition's row — and `@out_{k}`) defined as the result's v
 shows pending and is recomputed once it is ready (`schedule(0)` after the jobs); results that
 depend on the row itself, have no value, or have several solutions are errors on the row.
 Hidden automatic results that finished for the current request are not recomputed
-(`Engine.done`), so waiting rows do not loop.
+(`Engine.done`), so waiting rows do not loop. `out_k` with an index that is not a number
+(`\sum_{k=1}^{3} out_k`, `out_{j+1}`) is the results as a sequence: renamed to `@out` (ref kind
+`outs`), defined by one base case per output label with a single value, the row's own outputs
+excluded (`Engine.outsValues`, `outsDefinitions`). The serializer emits such rule-less `@`
+sequences as `_Sequence(name, None, terms)`; a missing term or a symbolic bound is an error.
+
+**Sequences in sums**: a term with a symbolic index stays an unevaluated function (`p(k)`), which
+`summation` expands term by term; the runtime's `_summation` / `_product` then evaluate those
+terms (`_terms`, through `_SEQUENCES`: every `_Sequence` and `_prime` register themselves).
+Sequences are emitted after their last rule/base case in dependency order, so a constant
+defined from a term (`c = a_3`) finds it. Other integer sequences are call-only built-in functions
+(`builtins/functions/defs/sequences.ts`: fibonacci, lucas, catalan, bell, partition, harmonic,
+bernoulli, totient, primepi), not subscripted letters, which would claim names like `C_1`.
 
 ### Evaluation (`core/engine.ts`)
 

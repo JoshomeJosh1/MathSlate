@@ -10,14 +10,27 @@ import { mapChildren } from './walk';
  * definition holding the result's value for each.
  */
 
-export type OutputRef = { kind: 'ans'; row: number } | { kind: 'out'; label: number };
+/**
+ * `outs`: out_k with an index that is not a number (\sum_{k=1}^{3} out_k): the results as a
+ * sequence, `@out`, whose terms are the outputs' values by label.
+ */
+export type OutputRef =
+  { kind: 'ans'; row: number } | { kind: 'out'; label: number } | { kind: 'outs' };
 
 /** The private symbol a reference is renamed to. */
 export function refName(ref: OutputRef): Name {
-  return ref.kind === 'ans'
-    ? makeName('@ans', String(ref.row))
-    : makeName('@out', String(ref.label));
+  switch (ref.kind) {
+    case 'ans':
+      return makeName('@ans', String(ref.row));
+    case 'out':
+      return makeName('@out', String(ref.label));
+    case 'outs':
+      return makeName(OUTS);
+  }
 }
+
+/** The sequence of results (out_k for a symbolic k). */
+const OUTS = '@out';
 
 export class OutputRefError extends Error {}
 
@@ -41,10 +54,18 @@ export function renameOutputRefs(
   }
   if (e.kind === 'index' && nameKey(e.seq) === OUT && !userDefined.has(OUT)) {
     const k = e.index;
-    if (k.kind !== 'num' || !/^[0-9]+$/.test(k.value)) {
-      throw new OutputRefError('out needs the number of an output: out_3');
+    if (k.kind === 'num' && /^[0-9]+$/.test(k.value)) {
+      return refer({ kind: 'out', label: Number(k.value) });
     }
-    return refer({ kind: 'out', label: Number(k.value) });
+    if (k.kind === 'num') throw new OutputRefError('Outputs are numbered 1, 2, 3, …: out_3');
+    // out_k, out_{k+1}: a term of the results' sequence.
+    const ref: OutputRef = { kind: 'outs' };
+    found.set(nameKey(refName(ref)), ref);
+    return {
+      ...e,
+      seq: refName(ref),
+      index: renameOutputRefs(k, row, userDefined, found),
+    };
   }
   return mapChildren(e, (c) => renameOutputRefs(c, row, userDefined, found));
 }
@@ -79,4 +100,15 @@ export function refDefinition(ref: OutputRef, value: Expr): Definition {
     body: value,
     nameSpan: { start: 0, end: 0 },
   };
+}
+
+/** The definitions of the results' sequence: one term per output label with a value. */
+export function outsDefinitions(values: ReadonlyMap<number, Expr>): Definition[] {
+  return [...values].map(([label, body]) => ({
+    kind: 'defSeqBase',
+    name: makeName(OUTS),
+    index: label,
+    body,
+    nameSpan: { start: 0, end: 0 },
+  }));
 }

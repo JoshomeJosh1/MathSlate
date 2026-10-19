@@ -169,6 +169,47 @@ describe('ans and out_k with SymPy', { timeout: 60_000 }, () => {
     expect(await last([['2x=6', 'solve'], 'out_1^2'])).toEqual(['9']);
     expect(await last([['x^3', 'derivative'], 'out_1+1'])).toEqual(['3x^{2}+1']);
   });
+
+  it('sums and multiplies the results as a sequence', async () => {
+    const outputs: Row[] = [
+      ['2', 'simplify'],
+      ['3', 'simplify'],
+      ['x^3', 'derivative'],
+    ];
+    expect(await last([...outputs, '\\sum_{k=1}^{2}out_k'])).toEqual(['5']);
+    expect(await last([...outputs, '\\prod_{k=1}^{2}out_k'])).toEqual(['6']);
+    expect(await last([...outputs, '\\sum_{k=1}^{3}out_k'])).toEqual(['3x^{2}+5']);
+    expect(await last([...outputs, 'out_{1+1}'])).toEqual(['3']);
+    expect(await last([...outputs, 's=\\sum_{k=1}^{2}out_k', 's+1'])).toEqual(['6']);
+    expect(await last([...outputs, '\\sum_{k=1}^{4}out_k'])).toEqual([
+      '!There is no out_4 with a single value to use',
+    ]);
+    expect(await last([...outputs, '\\sum_{k=1}^{n}out_k'])).toEqual([
+      '!out_k needs a number for k (a sum over results needs number bounds)',
+    ]);
+  });
+});
+
+describe('sequences with SymPy', { timeout: 60_000 }, () => {
+  it('sums and multiplies over built-in and recursive sequences', async () => {
+    expect(await last(['\\sum_{k=1}^{4}p_k'])).toEqual(['17']);
+    expect(await last(['\\prod_{k=1}^{3}p_k'])).toEqual(['30']);
+    expect(await last(['\\sum_{k=1}^{5}F_k'])).toEqual(['12']);
+    expect(await last(['b_1=1', 'b_n=2b_{n-1}', '\\sum_{k=1}^{4}b_k'])).toEqual(['15']);
+    // A constant defined from a sequence term (the sequence is defined first).
+    expect(await last(['a_n=n^2', 'c=a_3', 'c+1'])).toEqual(['10']);
+  });
+
+  it('has integer sequences as functions', async () => {
+    expect(await last(['catalan(5)'])).toEqual(['42']);
+    expect(await last(['lucas(10)'])).toEqual(['123']);
+    expect(await last(['bell(5)'])).toEqual(['52']);
+    expect(await last(['partition(10)'])).toEqual(['42']);
+    expect(await last(['harmonic(4)'])).toEqual(['\\frac{25}{12} ≈ 2.08333333333333']);
+    expect(await last(['totient(36)'])).toEqual(['12']);
+    expect(await last(['primepi(100)'])).toEqual(['25']);
+    expect(await last(['\\sum_{n=0}^{4}catalan(n)'])).toEqual(['23']);
+  });
 });
 
 describe('commands with arguments', { timeout: 60_000 }, () => {

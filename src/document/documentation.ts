@@ -250,6 +250,26 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\max\\left(\\pi,\\sqrt{10},\\frac{22}{7}\\right)',
   '\\min\\left(\\sin1,\\cos1\\right)',
 
+  { note: '## Integer sequences' },
+  { note: 'fibonacci(n) — Fibonacci numbers 0, 1, 1, 2, 3, 5, … (also written F_n).' },
+  'fibonacci(20)',
+  { note: 'lucas(n) — Lucas numbers 2, 1, 3, 4, 7, 11, …' },
+  'lucas(10)',
+  { note: 'catalan(n) — Catalan numbers 1, 1, 2, 5, 14, 42, …' },
+  'catalan(10)',
+  { note: 'bell(n) — Bell numbers: the ways to split a set of n things into groups.' },
+  'bell(5)',
+  { note: 'partition(n) — the ways to write n as a sum of positive integers.' },
+  'partition(10)',
+  { note: 'harmonic(n) — harmonic numbers 1 + 1/2 + … + 1/n.' },
+  'harmonic(4)',
+  { note: 'bernoulli(n) — Bernoulli numbers (B₁ = +1/2).' },
+  'bernoulli(10)',
+  { note: 'totient(n) — Euler’s totient φ(n): how many of 1 … n share no factor with n.' },
+  'totient(36)',
+  { note: 'primepi(n) — how many primes there are up to n.' },
+  'primepi(100)',
+
   { folder: 'Special functions' },
   {
     note: 'Special functions appear in exact answers and can be typed by name (erf, Si, besselJ). Their names only count when followed by brackets, so 2ζ, Γ, or Si without brackets stay ordinary symbols (Si is S·i: typing anything but a bracket after the name turns it back into letters), and C(x+1) is still C times (x+1).',
@@ -422,6 +442,12 @@ export const DOCUMENTATION: readonly Entry[] = [
   },
   'p_{100}',
   'F_{30}',
+  { note: 'Sums and products work over any sequence:' },
+  '\\sum_{k=1}^{10}p_k',
+  '\\sum_{k=1}^{5}u_k',
+  {
+    note: 'More integer sequences are built-in functions (Functions → Integer sequences): fibonacci(n), catalan(n), harmonic(n), …',
+  },
 
   { folder: 'Algebra' },
   { note: 'These rows have commands attached. Click a row to see more suggestions.' },
@@ -550,6 +576,11 @@ export const DOCUMENTATION: readonly Entry[] = [
   },
   ['x^3-2x', 'derivative'],
   '{OUT_PREVIOUS}+1',
+  {
+    note: 'With a letter for k, out_k is the sequence of all results: sum or multiply them with number bounds.',
+  },
+  ['x^2', 'derivative'],
+  '\\sum_{k={LABEL-1}}^{{LABEL}}out_k',
 
   { folder: 'Live dependencies' },
   { note: 'Change k and watch every row that depends on it update.' },
@@ -596,7 +627,12 @@ export function documentationDoc(): Doc {
     }
     const [written, ...commandIds] = Array.isArray(entry) ? entry : [entry];
     // OUT_PREVIOUS: the label of the output attached last (labels depend on everything before).
-    const latex = written.replace(OUT_PREVIOUS, `out_{${doc.nextOutputLabel - 1}}`);
+    // {LABEL} and {LABEL-1}: the labels of the last two outputs, as numbers.
+    const last = doc.nextOutputLabel - 1;
+    const latex = written
+      .replace(OUT_PREVIOUS, `out_{${last}}`)
+      .replaceAll('{LABEL}', String(last))
+      .replaceAll('{LABEL-1}', String(last - 1));
     const id = add(latex);
     for (const c of commandIds) {
       doc = typeof c === 'string' ? addOutput(doc, id, c) : addOutput(doc, id, c[0], c[1]);
