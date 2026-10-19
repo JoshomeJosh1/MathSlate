@@ -80,6 +80,7 @@ button {
 .header-actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap; /* phones: wrap instead of widening the page */
   gap: 8px;
   align-items: center;
 }

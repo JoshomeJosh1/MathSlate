@@ -66,7 +66,11 @@ export function MathLiveEditor({
     const mf = new MathfieldElement();
     if (ariaLabel) mf.setAttribute('aria-label', ariaLabel);
     container.appendChild(mf);
-    mf.mathVirtualKeyboardPolicy = 'manual';
+    // Phones and tablets get MathLive's math keyboard when a row is focused: MathLive never
+    // brings up the system keyboard (its input element is inputmode=none). Desktops are left
+    // alone ('auto' only applies to touch screens).
+    mf.mathVirtualKeyboardPolicy = 'auto';
+    keepRowsAboveKeyboard();
     mf.menuItems = [];
     mf.smartFence = true;
     // MathLive's own command suggestions (for LaTeX typed after "\") list every command it
@@ -200,7 +204,27 @@ export function MathLiveEditor({
       return true;
     };
 
+    /** Set while a physical key is handled, so onBeforeInput only acts for the math keyboard. */
+    let fromKey = false;
+    /**
+     * The math keyboard's keys reach MathLive as commands, not key events: its return key is
+     * "commit" (a line break) and its delete key "deleteBackward". Give them the meaning Enter
+     * and Backspace have on a physical keyboard.
+     */
+    const onBeforeInput = (ev: Event) => {
+      if (fromKey || !(ev instanceof InputEvent)) return;
+      if (ev.inputType === 'insertLineBreak') {
+        ev.preventDefault();
+        callbacks.current.onKeyAction?.('enter');
+      } else if (ev.inputType === 'deleteContentBackward' && mf.value === '') {
+        ev.preventDefault();
+        callbacks.current.onKeyAction?.('backspaceEmpty');
+      }
+    };
+
     const onKeyDown = (ev: KeyboardEvent) => {
+      fromKey = true;
+      queueMicrotask(() => (fromKey = false));
       const open = menuRef.current;
       if (open && menuKey(ev, open)) {
         ev.preventDefault();
@@ -334,6 +358,7 @@ export function MathLiveEditor({
     };
 
     mf.addEventListener('input', onInput);
+    mf.addEventListener('beforeinput', onBeforeInput);
     mf.addEventListener('keydown', onKeyDown, { capture: true });
     mf.addEventListener('move-out', onMoveOut);
     mf.addEventListener('pointerdown', onPointerDown);
@@ -343,6 +368,7 @@ export function MathLiveEditor({
 
     return () => {
       mf.removeEventListener('input', onInput);
+      mf.removeEventListener('beforeinput', onBeforeInput);
       mf.removeEventListener('keydown', onKeyDown, { capture: true });
       mf.removeEventListener('move-out', onMoveOut);
       mf.removeEventListener('pointerdown', onPointerDown);
@@ -380,6 +406,25 @@ export function MathLiveEditor({
       )}
     </>
   );
+}
+
+let keyboardWatched = false;
+/**
+ * The math keyboard covers the bottom of the window: pad the page by its height so the last
+ * rows can scroll above it, and bring the focused row into view when it opens.
+ */
+function keepRowsAboveKeyboard() {
+  if (keyboardWatched) return;
+  keyboardWatched = true;
+  const keyboard = window.mathVirtualKeyboard;
+  keyboard.addEventListener('geometrychange', () => {
+    const height = keyboard.visible ? keyboard.boundingRect.height : 0;
+    document.body.style.paddingBottom = height > 0 ? `${height}px` : '';
+    if (height > 0) {
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement) focused.scrollIntoView({ block: 'nearest' });
+    }
+  });
 }
 
 /** Keys that turn an empty math row into something else: " a note, # a heading, @ a folder. */

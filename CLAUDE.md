@@ -157,6 +157,12 @@ to spell a longer shortcut (binom → binomial, tan → artanh, which then fires
 brackets (`bracketOnly` — call-only functions: lcmab and Six stay letters; for these any typed
 character but `(`, `_`, `^` or a space reverts too, so 2Ai+1 is 2·A·i+1). Symbol shortcuts (≤, ″) are not affected.
 
+**Touch screens** get MathLive's math keyboard (`mathVirtualKeyboardPolicy = 'auto'`, which
+only applies on `pointer: coarse`); MathLive never raises the system keyboard (its input is
+`inputmode=none`). The keyboard's keys arrive as commands, not key events, so its return
+(`commit`) and delete on an empty row are mapped to Enter/Backspace through `beforeinput`, and
+the page is padded by the keyboard's height so rows can scroll above it.
+
 **The `\` menu** replaces MathLive's LaTeX mode, whose suggestions list every command MathLive
 knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser
 understands — structures/operators (a static list there), Greek letters (`GREEK`) and every
