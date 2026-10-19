@@ -92,7 +92,9 @@ button {
   align-items: center;
 }
 
-.header-actions > button {
+.header-actions > button,
+.open-dialog-buttons > button,
+.shared-banner > button {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
@@ -102,9 +104,23 @@ button {
   font-size: 0.85rem;
 }
 
-.header-actions > button:hover {
+.header-actions > button:hover,
+.open-dialog-buttons > button:hover,
+.shared-banner > button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* The suggested choice. */
+.open-dialog-buttons > button:first-child {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.open-dialog-buttons > button:first-child:hover {
+  color: #fff;
+  filter: brightness(1.1);
 }
 
 .cas-status-list {
@@ -885,4 +901,41 @@ button {
 
 .shared-banner .muted-button {
   color: var(--muted);
+}
+
+/* New / Documentation when the slate has content: where to open it (App.tsx). */
+.open-dialog {
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.25);
+}
+
+.open-dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+
+.open-dialog h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.open-dialog p {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.open-dialog .open-dialog-error {
+  color: var(--error);
+}
+
+.open-dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }

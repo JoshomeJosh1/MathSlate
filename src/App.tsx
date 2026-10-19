@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { preferences, usePreferences } from './app/preferences';
 import { useBackends } from './app/services';
 import { docActions, docStore } from './document/docStore';
 import { documentationDoc } from './document/documentation';
-import { emptyDoc } from './document/model';
+import { emptyDoc, type Doc } from './document/model';
+import { openInNewTab } from './document/persistence';
 import { replacedByLink, shareLink } from './document/share';
 import { useStore } from './document/store';
 import { RowList } from './ui/rows/RowList';
@@ -130,8 +131,73 @@ function hasContent(): boolean {
   return docStore.get().rows.some((r) => r.latex.trim() !== '');
 }
 
+/** A slate to open from the header: an empty one, or the documentation. */
+interface Opening {
+  title: string;
+  make: () => Doc;
+}
+
+/**
+ * Where to open a slate when the current one has content: in a new tab (its own saved slot, see
+ * persistence.ts), or in place of this one.
+ */
+function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="open-dialog"
+      aria-labelledby="open-dialog-title"
+      onClose={onClose}
+      onClick={(e) => {
+        // A click on the backdrop (the dialog element itself, outside its content) cancels.
+        if (e.target === dialog.current) dialog.current.close();
+      }}
+    >
+      <h2 id="open-dialog-title">{opening.title}</h2>
+      <p>This slate has content. Open the new one in another tab, or replace this one?</p>
+      {blocked && (
+        <p className="open-dialog-error">
+          The browser blocked the new tab; allow pop-ups, or replace.
+        </p>
+      )}
+      <div className="open-dialog-buttons">
+        <button
+          autoFocus
+          onClick={() => {
+            if (openInNewTab(opening.make())) dialog.current?.close();
+            else setBlocked(true);
+          }}
+        >
+          Open in new tab
+        </button>
+        <button
+          onClick={() => {
+            docActions.replace(opening.make());
+            dialog.current?.close();
+          }}
+        >
+          Replace this slate
+        </button>
+        <button className="muted-button" onClick={() => dialog.current?.close()}>
+          Cancel
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function App() {
   const [showDebug, setShowDebug] = useState(false);
+  const [opening, setOpening] = useState<Opening | null>(null);
+  const open = (next: Opening) => {
+    if (hasContent()) setOpening(next);
+    else docActions.replace(next.make());
+  };
   return (
     <div className="app">
       <header className="app-header">
@@ -140,9 +206,7 @@ export function App() {
         <div className="header-actions">
           <button
             onClick={() => {
-              if (!hasContent() || window.confirm('Replace this slate with a new empty one?')) {
-                docActions.replace(emptyDoc());
-              }
+              open({ title: 'New slate', make: emptyDoc });
             }}
           >
             New
@@ -150,9 +214,7 @@ export function App() {
           <button
             title="A slate that demonstrates everything MathSlate can do"
             onClick={() => {
-              if (!hasContent() || window.confirm('Replace this slate with the documentation?')) {
-                docActions.replace(documentationDoc());
-              }
+              open({ title: 'Documentation', make: documentationDoc });
             }}
           >
             Documentation
@@ -172,6 +234,14 @@ export function App() {
           </label>
         </div>
       </header>
+      {opening && (
+        <OpenSlateDialog
+          opening={opening}
+          onClose={() => {
+            setOpening(null);
+          }}
+        />
+      )}
       <main>
         <SharedBanner />
         <RowList showDebug={showDebug} />

@@ -1,7 +1,7 @@
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import { docStore } from './docStore';
 import { normalizeFolders, type Doc, type InputRow, type OutputSpec } from './model';
-import { hasSavedDoc, isDoc } from './persistence';
+import { hasSavedDoc, isDoc, slateKey } from './persistence';
 import { createStore } from './store';
 
 /**
@@ -122,7 +122,7 @@ export function shareLink(doc: Doc): string {
  * restore. Null once restored or dismissed (or when there was nothing of the user's to keep).
  * Kept in localStorage until then, so a reload does not lose it.
  */
-const PREVIOUS_KEY = 'mathslate.doc.beforeLink';
+const PREVIOUS_KEY = slateKey('beforeLink');
 
 function loadPrevious(): Doc | null {
   try {

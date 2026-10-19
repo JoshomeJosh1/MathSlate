@@ -1,8 +1,47 @@
 import { documentationDoc } from './documentation';
-import type { Doc } from './model';
+import { newId, type Doc } from './model';
 import type { Store } from './store';
 
-const STORAGE_KEY = 'mathslate.doc.v1';
+/**
+ * Where this tab's slate is saved. The main slate has one fixed slot; a slate opened in a new tab
+ * (New / Documentation → Open in new tab) has its own, named by `?slate=<id>` in the address,
+ * so tabs do not save over each other and a reload or bookmark finds it again.
+ */
+const MAIN_KEY = 'mathslate.doc.v1';
+const slotKey = (id: string) => `mathslate.doc.slate.${id}`;
+
+function currentSlate(): string | null {
+  try {
+    return new URLSearchParams(location.search).get('slate');
+  } catch {
+    return null; // no location (tests)
+  }
+}
+
+const slate = currentSlate();
+const STORAGE_KEY = slate ? slotKey(slate) : MAIN_KEY;
+
+/** A storage key for things kept alongside this tab's slate (e.g. the slate a link replaced). */
+export function slateKey(suffix: string): string {
+  return `${STORAGE_KEY}.${suffix}`;
+}
+
+/**
+ * Opens `doc` in a new tab, in a slot of its own. Returns false if it could not (storage or
+ * pop-ups blocked).
+ */
+export function openInNewTab(doc: Doc): boolean {
+  const id = newId();
+  try {
+    localStorage.setItem(slotKey(id), JSON.stringify(doc));
+  } catch {
+    return false;
+  }
+  const url = new URL(location.href);
+  url.hash = '';
+  url.searchParams.set('slate', id);
+  return window.open(url.toString(), '_blank') !== null;
+}
 
 /** Whether this browser has a slate of the user's saved (not just the first-visit default). */
 export function hasSavedDoc(): boolean {
