@@ -10,7 +10,7 @@ import {
 } from './ast';
 import type { Cst } from './cst';
 import type { DefinitionShape } from './definitions';
-import { subscriptText } from './definitions';
+import { children, subscriptText } from './definitions';
 import { MathError, spanOf, type Span } from './errors';
 import { functionAliasKey } from './functionNames';
 import { isCallable, isSequence, type SymbolInfo, type SymbolTable } from './symbols';
@@ -137,21 +137,6 @@ class Resolver {
     return factors;
   }
 
-  /** A bracket group that spells a unit (`[km]`, `[m/s^2]`), or null. */
-  private bracketUnit(cst: Cst & { type: 'group' }): UnitFactor[] | null {
-    const only = cst.items.length === 1 ? cst.items[0] : undefined;
-    const text = only && this.options.isUnit ? unitTextOf(only) : null;
-    if (text === null) return null;
-    try {
-      const factors = parseUnitText(text, cst.span);
-      if (!factors.every((f) => this.options.isUnit?.(f.symbol))) return null;
-      this.units.push({ span: cst.span, text: unitText(factors) });
-      return factors;
-    } catch {
-      return null;
-    }
-  }
-
   /** The target of `→`: `\unit{mi}` or `[mi]`. */
   private conversionTarget(cst: Cst): UnitFactor[] {
     if (cst.type === 'unit') return this.unitFactors(cst.text, cst.span);
@@ -160,14 +145,16 @@ class Resolver {
   }
 
   /**
-   * Square brackets that must hold a unit (after a factor, or after →): the unit, or an error
-   * that says what is wrong with it. `before` is the factor the brackets multiply.
+   * Square brackets around one thing hold a unit: the unit, or an error that says what is wrong
+   * with it. `before` is the factor the brackets multiply, if any (for the number-moving fix).
    */
   private requiredUnit(cst: Cst & { type: 'group' }, before: Factor | undefined): UnitFactor[] {
     const isUnit = this.options.isUnit ?? (() => true);
     const inner = cst.items[0];
     if (!inner)
       throw new MathError('Empty unit: write one inside the brackets, e.g. [km]', cst.span);
+    // Nothing in it is a unit (x+1): square brackets were meant as grouping.
+    if (!mentionsUnit(inner, isUnit)) throw new MathError(GROUPING, cst.span);
     const problem = unitProblem(inner);
     if (problem === 'number') {
       throw new MathError(`Numbers go before the unit${numberMoved(inner, before)}`, inner.span);
@@ -263,9 +250,9 @@ class Resolver {
           span,
         };
       case 'group': {
-        if (cst.delim === 'bracket') {
-          const factors = this.bracketUnit(cst);
-          if (factors) return { kind: 'unit', factors, span };
+        // Square brackets around one thing hold a unit; with commas they are a list.
+        if (isUnitBrackets(cst) && this.options.isUnit) {
+          return { kind: 'unit', factors: this.requiredUnit(cst, undefined), span };
         }
         const items = cst.items.map((c) => this.expr(c, scope));
         if (cst.delim === 'paren' && items.length === 1 && items[0]) return items[0];
@@ -723,7 +710,17 @@ function unwrap(item: Cst): Factor {
 
 const UNIT_GREEK: Partial<Record<string, string>> = { '\\mu': 'µ', '\\Omega': 'Ω' };
 
-const GROUPING = 'Square brackets after a value hold a unit, e.g. 5[km]; use ( ) to group';
+const GROUPING = 'Square brackets hold a unit, e.g. 5[km]; use ( ) to group';
+
+/** Whether any letter run inside spells a unit (or a unit symbol on its own). */
+function mentionsUnit(cst: Cst, isUnit: (s: string) => boolean): boolean {
+  const own =
+    cst.type === 'juxt' || cst.type === 'letter' || cst.type === 'opname' ? unitTextOf(cst) : null;
+  if (own !== null && isUnit(own)) return true;
+  if (cst.type === 'letter') return isUnit(UNIT_GREEK[cst.name] ?? cst.name);
+  if (cst.type === 'opname' || cst.type === 'fnapp') return isUnit(cst.name);
+  return children(cst).some((c) => mentionsUnit(c, isUnit));
+}
 
 /** Square brackets around one thing (not a list): a unit, or ordinary brackets. */
 function isUnitBrackets(cst: Cst): cst is Cst & { type: 'group' } {

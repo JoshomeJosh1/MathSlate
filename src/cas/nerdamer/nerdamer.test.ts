@@ -76,7 +76,9 @@ describe('units, through Nerdamer', () => {
     expect(await last(['5\\unit{m}+2\\unit{s}'])).toEqual(["!Can't add m and s"]);
     expect(await last(['5\\unit{m}\\to\\unit{s}'])).toEqual(["!Can't convert m to s"]);
     // Brackets after a value must hold a unit.
-    expect(await last(['3\\left[x\\right]'])).toEqual(['!Unknown unit "x"']);
+    expect(await last(['3\\left[x\\right]'])).toEqual([
+      '!Square brackets hold a unit, e.g. 5[km]; use ( ) to group',
+    ]);
   });
 });
 

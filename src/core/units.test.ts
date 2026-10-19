@@ -37,10 +37,12 @@ describe('units in rows', () => {
     ['d=5\\unit{km}\\to\\unit{mi}', '(def d (-> (* 5 [km]) [mi]))'],
     ['\\unit{furlong}', '!Unknown unit "furlong"'],
     ['5\\to 3', '!Convert to a unit, e.g. → [km]'],
-    // Elsewhere square brackets are ordinary brackets or lists.
-    ['\\left[x+1\\right]', '(list (+ x 1))'],
-    ['2+\\left[x\\right]', '(+ 2 (list x))'],
+    // Square brackets around one thing are a unit anywhere; with commas, a list.
+    ['\\left\\lbrack in\\right\\rbrack\\to\\left\\lbrack mm\\right\\rbrack', '(-> [in] [mm])'],
+    ['2+\\left[s\\right]', '(+ 2 [s])'],
     ['2\\left[1,2\\right]', '(* 2 (list 1 2))'],
+    ['\\left[x+1\\right]', '!Square brackets hold a unit, e.g. 5[km]; use ( ) to group'],
+    ['2+\\left[x\\right]', '!Square brackets hold a unit, e.g. 5[km]; use ( ) to group'],
   ])('%s → %s', (latex, expected) => {
     expect(sexpr(latex)).toBe(expected);
   });
@@ -64,11 +66,15 @@ describe('units in rows', () => {
     ],
     [
       '2\\left\\lbrack x+1\\right\\rbrack',
+      'Square brackets hold a unit, e.g. 5[km]; use ( ) to group',
+    ],
+    [
+      '2\\left\\lbrack s+1\\right\\rbrack',
       'A unit can\'t contain "+": multiply, divide or use powers, e.g. [kg·m/s^2]',
     ],
     [
       '2\\left\\lbrack\\sin x\\right\\rbrack',
-      'Square brackets after a value hold a unit, e.g. 5[km]; use ( ) to group',
+      'Square brackets hold a unit, e.g. 5[km]; use ( ) to group',
     ],
     ['5\\left\\lbrack\\right\\rbrack', 'Empty unit: write one inside the brackets, e.g. [km]'],
   ])('%s: %s', (latex, message) => {

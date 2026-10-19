@@ -207,10 +207,10 @@ next one answers (**fallback**, shown "via sympy").
 ### Units (`core/units.ts`, `registries/units/`)
 
 A unit is `\unit{km}` / `\unit{m/s^{2}}` in a row's LaTeX (AST `{ kind: 'unit', factors }`, text
-read by `parser/units.ts`); typed as `5[km]` — square brackets multiplied onto something (`5[km]`,
-`x[m]`) or after `→` must hold a unit, with specific errors otherwise (`requiredUnit` in
-`resolve.ts`: numbers inside, `+`, non-integer powers, unknown symbols with case/split
-suggestions); elsewhere brackets that spell a unit are one, others stay brackets/lists. Decoration
+read by `parser/units.ts`); typed as `5[km]` — square brackets around one thing always hold a unit
+(they are not grouping; with commas they are a list), with specific errors otherwise
+(`requiredUnit` in `resolve.ts`: "use ( ) to group" when nothing inside is a unit, numbers inside
+with the fix, `+`, non-integer powers, unknown symbols with case/split suggestions). Decoration
 rewrites units in brackets as `\unit{…}`. The editor
 draws `\unit` as a macro (`ui/editor/unitLatex.ts`: upright, faint brackets); a focused row shows
 its units as typed brackets again so they can be edited (`unitsToBrackets` in
