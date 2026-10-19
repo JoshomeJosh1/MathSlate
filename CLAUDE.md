@@ -75,7 +75,7 @@ src/
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
                    docStore.ts (app singleton + actions), persistence.ts (localStorage autosave),
                    documentation.ts (the documentation slate: first visit + Documentation button),
-                   share.ts (Share: the whole doc lz-compressed in the URL hash `#s=…`; opening
+                   share.ts (Share: the whole doc packed, deflated (fflate) and base64url in the URL hash `#s=…`; opening
                    a link keeps the user's slate in localStorage until the banner's "Back to my
                    slate" / "Keep this one"; the hash is removed so reloads do not reopen it)
   parser/          errors.ts (MathError + Span), lexer.ts, cst.ts, parser.ts (Pratt, LaTeX → CST),
