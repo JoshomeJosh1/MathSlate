@@ -25,7 +25,7 @@ export interface LatexCompletion {
 const symbols = (group: string, entries: [string, string, string][]): LatexCompletion[] =>
   entries.map(([name, latex, description]) => ({ name, latex, description, group }));
 
-/** A 2×2 matrix and a column vector of empty boxes (grow them with , and Enter). */
+/** A 2×2 matrix and a column vector of empty boxes (grow them with , and ;). */
 export const MATRIX_TEMPLATE = '\\begin{bmatrix}#?&#?\\\\#?&#?\\end{bmatrix}';
 export const VECTOR_TEMPLATE = '\\begin{bmatrix}#?\\\\#?\\end{bmatrix}';
 
@@ -35,8 +35,8 @@ const STRUCTURES: LatexCompletion[] = [
     ['sqrt', '\\sqrt{#?}', 'Square root'],
     ['nthroot', '\\sqrt[#?]{#?}', 'n-th root'],
     ['binom', '\\binom{#?}{#?}', 'Binomial coefficient (n choose k)'],
-    ['mat', MATRIX_TEMPLATE, 'Matrix: "," adds a column, Enter a row'],
-    ['vec', VECTOR_TEMPLATE, 'Column vector: Enter adds an entry'],
+    ['mat', MATRIX_TEMPLATE, 'Matrix: "," goes to the next entry, ";" to the next row'],
+    ['vec', VECTOR_TEMPLATE, 'Column vector: ";" goes to the next entry'],
   ]),
   ...symbols('Calculus', [
     ['int', '\\int', 'Integral (type _ and ^ for bounds), then dx'],

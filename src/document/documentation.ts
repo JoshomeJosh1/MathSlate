@@ -457,7 +457,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Matrices and vectors' },
   {
-    note: 'Type mat for a matrix and vec for a column vector. Inside one, "," adds a column, Enter adds a row, Tab and the arrow keys move between entries, and Backspace in an empty entry removes its empty row or column. Or type it in one go in square brackets, rows separated by semicolons: [1, 2; 3, 4] is a matrix and [1, 2, 3] a column vector.',
+    note: 'Type mat for a matrix and vec for a column vector. Inside one, type it as you would write it: "," goes to the next entry and ";" to the next row, adding a column or row when you reach the edge (mat 1,2;3,4). Tab and the arrow keys move between entries, and Backspace in an empty entry removes its empty row or column. Or type it in one go in square brackets: [1, 2; 3, 4] is a matrix and [1, 2, 3] a column vector.',
   },
   'M=\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}',
   'M^2',

@@ -230,8 +230,9 @@ menu offers; prefixed symbols are generated and must be unique (tested).
 
 Input: `mat` / `vec` (shortcuts and `\` menu) insert a 2×2 matrix / 2-entry column vector of
 boxes; inside a matrix (`matrixKey` in `MathLiveEditor.tsx`, using MathLive's internal model,
-checked at runtime) Enter goes to the next row or adds one, `,` to the next entry or adds a
-column, Backspace in an empty entry removes its all-empty row or column. Inline shorthand in
+checked at runtime) `;` goes to the next row or adds one, `,` to the next entry or adds a
+column (new entries get `\placeholder{}` boxes, `fillEmptyCells`), Backspace in an empty entry
+removes its all-empty row or column; Enter is not special (it adds a slate row). Inline shorthand in
 square brackets (parser `parseDelimited`): `[1, 2; 3, 4]` is a matrix, `[1, 2, 3]` a column vector
 (one entry in square brackets is a unit), rewritten as a bmatrix by decoration (`Rewrite`s from
 the resolver). Operations: `det`, `tr`, `rank`, `transpose`, `dot`, `cross`

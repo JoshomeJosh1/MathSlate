@@ -217,27 +217,35 @@ export function MathLiveEditor({
     };
 
     /**
-     * Growing a matrix as you type, with the caret in one of its cells: Enter adds a row below,
-     * "," a column to the right, and Backspace in an empty cell removes its row or column if it
-     * is all empty. Returns whether it handled the key.
+     * Growing a matrix as you type, as in [1, 2; 3, 4], with the caret in one of its cells: ";"
+     * goes to the next row (adding one at the bottom), "," to the next entry (adding a column at
+     * the end), and Backspace in an empty cell removes its row or column if it is all empty.
+     * Returns whether it handled the key.
      */
     const matrixKey = (ev: KeyboardEvent): boolean => {
-      if (ev.altKey || ev.metaKey || (ev.ctrlKey && ev.key !== 'Enter')) return false;
-      if (ev.key !== 'Enter' && ev.key !== ',' && ev.key !== 'Backspace') return false;
-      if (ev.key === 'Enter' && ev.shiftKey) return false;
+      if (ev.altKey || ev.metaKey || ev.ctrlKey) return false;
+      if (ev.key !== ';' && ev.key !== ',' && ev.key !== 'Backspace') return false;
       const cell = matrixCell(mf);
       if (!cell) return false;
       const { array, row, col } = cell;
-      // Enter and "," go to the next row or entry, and add one when there is none.
-      if (ev.key === 'Enter') {
+      const grow = (command: 'addRowAfter' | 'addColumnAfter', r: number, c: number) => {
+        applying = true;
+        mf.executeCommand(command);
+        // The new row or column's entries get empty boxes, like the rest of the template.
+        fillEmptyCells(mf, array);
+        moveToCell(mf, array, r, c);
+        applying = false;
+        return true;
+      };
+      if (ev.key === ';') {
         return row + 1 < array.rowCount
           ? moveToCell(mf, array, row + 1, 0)
-          : mf.executeCommand('addRowAfter');
+          : grow('addRowAfter', row + 1, 0);
       }
       if (ev.key === ',') {
         return col + 1 < array.colCount
           ? moveToCell(mf, array, row, col + 1)
-          : mf.executeCommand('addColumnAfter');
+          : grow('addColumnAfter', row, col + 1);
       }
       // Backspace in an empty entry (its box may be selected).
       if (!isEmptyCell(array.getCell(row, col))) return false;
@@ -536,6 +544,22 @@ function moveToCell(mf: MathfieldElement, array: InternalArray, row: number, col
     mf.position = model.offsetOf(last);
   }
   return true;
+}
+
+/** Puts an empty box in every matrix entry that has nothing in it (not even a box). */
+function fillEmptyCells(mf: MathfieldElement, array: InternalArray): void {
+  const model = internalModel(mf);
+  if (!model) return;
+  for (let r = 0; r < array.rowCount; r++) {
+    for (let c = 0; c < array.colCount; c++) {
+      const atoms = array.getCell(r, c);
+      const first = atoms?.[0];
+      if (first && atoms.every((a) => a.type === 'first')) {
+        mf.position = model.offsetOf(first);
+        mf.insert('\\placeholder{}', { selectionMode: 'after' });
+      }
+    }
+  }
 }
 
 /** The matrix, row and column the caret is directly in (not inside a fraction in a cell). */
