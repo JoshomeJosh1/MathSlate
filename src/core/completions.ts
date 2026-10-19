@@ -48,6 +48,10 @@ const STRUCTURES: LatexCompletion[] = [
     ['infty', '\\infty', 'Infinity'],
     ['to', '\\to', 'Arrow: in limits (x → 0), or to convert to a unit (→ [km])'],
   ]),
+  ...symbols('Results', [
+    ['ans', '\\mathrm{ans}', 'The nearest result above'],
+    ['out', '\\mathrm{out}_{#?}', 'An output by its label: out₃ is the output labelled 3'],
+  ]),
   ...symbols('Operators and relations', [
     ['cdot', '\\cdot', 'Multiplication dot'],
     ['times', '\\times', 'Multiplication cross'],

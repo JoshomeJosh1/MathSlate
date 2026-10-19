@@ -53,6 +53,11 @@ export const INLINE_SHORTCUTS: InlineShortcutDefinitions = {
   // "sin" waits to see whether "sinh" follows, so without this "sint" would end in "int" → s∫.
   sint: '\\sin t',
 
+  // Results (core/outputRefs.ts): ans, and out with a box for the output's number (typing
+  // anything but a digit there leaves the box: NUMBER_BOX in MathLiveEditor.tsx).
+  ans: notAfterLetter('\\mathrm{ans}'),
+  out: notAfterLetter('\\mathrm{out}_{#?}'),
+
   // Calculus. A bare integral sign (type _ and ^ after it for bounds); "defint" gives the boxes.
   // Not straight after a letter, so "point" or "print" stay letters (x int, with a space, works).
   int: notAfterLetter('\\int'),

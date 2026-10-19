@@ -31,7 +31,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type math as on paper: 2x, x^2 (type ^ for powers, → to leave them), / for fractions, sqrt, pi, theta. Enter adds a row, Backspace on an empty row deletes it, ↑/↓ move between rows, Esc leaves the row, and the number on the left drags a row.',
   },
   {
-    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm, erf, Si), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
+    note: 'Shortcuts: Greek letters by name (alpha, theta, Gamma), function names (sin, ln, lcm, erf, Si), sqrt, cbrt, nthroot, frac, binom, int, defint, sum, prod, lim, partial, infty, ans, out (then the number of an output), * for ·, times for ×, +- for ±, <= >= != for ≤ ≥ ≠, -> for →. Other letters stay letters: xy is x·y. If a word turns into a symbol you did not want, press Backspace straight away to get the letters back.',
   },
   {
     note: 'Type \\ for a menu of everything MathSlate understands — structures, symbols, Greek letters and every function, in groups (hover over one for its name and description). Keep typing to filter it (\\fr, \\root), use the arrow keys to choose, and Enter, Tab or Space to insert; Esc closes it.',
@@ -546,7 +546,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\frac13+\\frac16',
   'ans\\cdot4',
   {
-    note: "Every command's output has a label in its gutter: out₁, out₂, … Use it anywhere in the slate as out_k (type out_ then the number). Rows that use a result update when it changes.",
+    note: "Every command's output has a label in its gutter: out₁, out₂, … Use it anywhere in the slate as out_k: type out and the number (out3 gives out₃; what you type next goes after it). Rows that use a result update when it changes.",
   },
   ['x^3-2x', 'derivative'],
   '{OUT_PREVIOUS}+1',

@@ -117,6 +117,8 @@ export function MathLiveEditor({
     let fired: Fired | null = null;
     /** A word being spelled out after a shortcut was reverted (e.g. "binomi"). */
     let spelling: string | null = null;
+    /** The caret is in the number box of a NUMBER_BOX shortcut (out_□), digits typed so far. */
+    let numberBox = false;
     let applying = false;
 
     const wordKeys = () => Object.keys(mf.inlineShortcuts).filter((k) => /^[A-Za-z]{2,}$/.test(k));
@@ -152,6 +154,7 @@ export function MathLiveEditor({
         const { char, virtual } = pending;
         const key = firedShortcut(mf.inlineShortcuts, typed, pending, mf.value);
         fired = key ? { key, by: 'mathlive' } : virtual ? applyShortcut() : null;
+        if (fired && NUMBER_BOX.has(fired.key)) numberBox = true;
         if (spelling !== null && !key) {
           spelling += char;
           const word = spelling;
@@ -283,6 +286,7 @@ export function MathLiveEditor({
         ev.preventDefault();
         typed = '';
         spelling = null;
+        numberBox = false;
         revert(last);
       } else if (ev.inputType === 'deleteContentBackward' && mf.value === '') {
         ev.preventDefault();
@@ -300,6 +304,7 @@ export function MathLiveEditor({
         typed = '';
         pending = null;
         spelling = null;
+        numberBox = false;
       }
     };
 
@@ -307,11 +312,24 @@ export function MathLiveEditor({
      * A printable character is about to be typed, from a physical key or the math keyboard
      * (`virtual`, whose keys MathLive inserts without applying inline shortcuts: onInput then
      * applies them, see applyShortcut). `last` is the shortcut the previous character fired.
-     * Returns whether it turned that shortcut back into letters.
+     * Returns whether it changed the field (turned that shortcut back into letters, or left a
+     * number box).
      */
     const beforeChar = (char: string, last: Fired | null, virtual: boolean): boolean => {
       let reverted = false;
-      if (last && /^[A-Za-z]$/.test(char)) {
+      if (numberBox && !/^\d$/.test(char)) {
+        // Only digits go in out's box: anything else straight after "out" turns it back into
+        // letters; after its number, leaves the box (out₃+1, not out_{3+1}).
+        numberBox = false;
+        if (last && NUMBER_BOX.has(last.key)) {
+          revert(last);
+        } else {
+          applying = true;
+          mf.executeCommand('moveAfterParent');
+          applying = false;
+        }
+        reverted = true;
+      } else if (last && /^[A-Za-z]$/.test(char)) {
         // The longest word ending in this letter that extends the shortcut and could still
         // spell another one: "artanh" after "tan" fired (not just "tanh").
         const run = /[A-Za-z]*$/.exec(typed + char)?.[0] ?? '';
@@ -397,6 +415,7 @@ export function MathLiveEditor({
         typed = '';
         fired = null;
         spelling = null;
+        numberBox = false;
         openMenu();
         return;
       }
@@ -407,6 +426,7 @@ export function MathLiveEditor({
         typed = '';
         fired = null;
         spelling = null;
+        numberBox = false;
         callbacks.current.onChange(mf.value);
         return;
       }
@@ -417,6 +437,7 @@ export function MathLiveEditor({
         ev.stopPropagation();
         typed = '';
         spelling = null;
+        numberBox = false;
         revert(last);
         return;
       }
@@ -427,6 +448,7 @@ export function MathLiveEditor({
         ev.stopPropagation();
         typed = '';
         spelling = null;
+        numberBox = false;
         callbacks.current.onChange(mf.value);
         return;
       }
@@ -436,6 +458,7 @@ export function MathLiveEditor({
         typed = '';
         pending = null;
         spelling = null;
+        numberBox = false;
       }
       if (ev.key === 'Enter' && !ev.shiftKey) {
         ev.preventDefault();
@@ -464,6 +487,7 @@ export function MathLiveEditor({
       typed = '';
       fired = null;
       spelling = null;
+      numberBox = false;
       clickedUnit = pointOnUnit(mf, ev.clientX, ev.clientY);
     };
     /**
@@ -828,6 +852,9 @@ interface Fired {
   by: 'mathlive' | 'us';
   span?: { start: number; length: number };
 }
+
+/** Shortcuts whose box takes a number (out → out_□): other keys leave the box (see beforeChar). */
+const NUMBER_BOX = new Set(['out']);
 
 /** Typed characters that end a call-only name without its brackets (letters handled apart). */
 const BREAKS_CALL = /^[^A-Za-z(_^\s]$/;
