@@ -188,6 +188,15 @@ function dimensionOfAnswer(e: Expr): Dimension {
       if (degree === null) throw new UnitError('A root of a unit needs a number as its degree');
       return scaled(d, 1 / degree);
     }
+    case 'matrix': {
+      // A vector or matrix of quantities: every entry in the same unit (a 0 fits any).
+      const entries = e.rows.flat().filter((x) => !(x.kind === 'num' && Number(x.value) === 0));
+      const [first, ...rest] = entries.map(dimensionOfAnswer);
+      if (first && rest.some((d) => !sameDimension(first, d))) {
+        throw new UnitError('All entries of a vector or matrix must have the same units');
+      }
+      return first ?? {};
+    }
     case 'relation': {
       const [first, ...rest] = e.operands.map(dimensionOfAnswer);
       if (first && rest.some((d) => !sameDimension(first, d))) {

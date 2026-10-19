@@ -26,8 +26,8 @@ const symbols = (group: string, entries: [string, string, string][]): LatexCompl
   entries.map(([name, latex, description]) => ({ name, latex, description, group }));
 
 /** A 2×2 matrix and a column vector of empty boxes (grow them with , and Enter). */
-export const MATRIX_TEMPLATE = '\\begin{pmatrix}#?&#?\\\\#?&#?\\end{pmatrix}';
-export const VECTOR_TEMPLATE = '\\begin{pmatrix}#?\\\\#?\\end{pmatrix}';
+export const MATRIX_TEMPLATE = '\\begin{bmatrix}#?&#?\\\\#?&#?\\end{bmatrix}';
+export const VECTOR_TEMPLATE = '\\begin{bmatrix}#?\\\\#?\\end{bmatrix}';
 
 const STRUCTURES: LatexCompletion[] = [
   ...symbols('Structures', [

@@ -156,7 +156,7 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
   it('computes determinants, transposes, traces and ranks', async () => {
     expect(await last([M, '\\det M'])).toEqual(['-2']);
     expect(await last([M, '\\left|M\\right|'])).toEqual(['-2']);
-    expect(await last([M, 'M^{T}'])).toEqual(['\\begin{pmatrix}1&3\\\\2&4\\end{pmatrix}']);
+    expect(await last([M, 'M^{T}'])).toEqual(['\\begin{bmatrix}1&3\\\\2&4\\end{bmatrix}']);
     expect(await last([M, '\\tr M'])).toEqual(['5']);
     expect(await last(['\\rank\\left\\lbrack1,2;2,4\\right\\rbrack'])).toEqual(['1']);
     expect(await last(['T=2', 'x^{T}'])).toEqual(['x^{2}']); // T stays a variable
@@ -167,7 +167,7 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
     const w = 'w=\\left\\lbrack4,5,6\\right\\rbrack';
     expect(await last([u, w, 'u\\cdot w'])).toEqual(['32']);
     expect(await last([u, w, 'u\\times w'])).toEqual([
-      '\\begin{pmatrix}-3\\\\6\\\\-3\\end{pmatrix}',
+      '\\begin{bmatrix}-3\\\\6\\\\-3\\end{bmatrix}',
     ]);
     expect(await last([u, '\\left|u\\right|'])).toEqual(['\\sqrt{14} ≈ 3.74165738677394']);
     expect(await last(['2\\cdot3'])).toEqual(['6']); // still multiplication
@@ -178,7 +178,7 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
     expect(await last([v, 'v^{T}v'])).toEqual(['14']);
     expect(await last([v, 'v^{T}v+1'])).toEqual(['15']);
     expect(await last([v, 's=v^{T}v', 's+1'])).toEqual(['15']);
-    expect(await last(['\\begin{pmatrix}7\\end{pmatrix}'])).toEqual(['7']);
+    expect(await last(['\\begin{bmatrix}7\\end{bmatrix}'])).toEqual(['7']);
   });
 
   it('explains mistakes', async () => {
@@ -203,6 +203,9 @@ describe('units with SymPy', { timeout: 60_000 }, () => {
     expect(await last(['\\sqrt{9\\unit{m^{2}}}'])).toEqual(['3\\unit{m}']);
     expect(await last(['x\\unit{m}+2\\unit{m}'])).toEqual(['\\left(x+2\\right)\\unit{m}']);
     expect(await last(['5\\unit{m}+2\\unit{s}'])).toEqual(["!Can't add m and s"]);
+    const v = 'v=\\left\\lbrack3\\unit{m},4\\unit{m}\\right\\rbrack';
+    expect(await last([v, '2v'])).toEqual(['\\begin{bmatrix}6\\\\8\\end{bmatrix}\\unit{m}']);
+    expect(await last([v, '\\left|v\\right|'])).toEqual(['5\\unit{m}']);
     expect(await last([['3x\\unit{m}=12\\unit{m}', 'solve']])).toEqual(['solve: {4}']);
   });
 });

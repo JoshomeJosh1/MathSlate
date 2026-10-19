@@ -233,7 +233,7 @@ boxes; inside a matrix (`matrixKey` in `MathLiveEditor.tsx`, using MathLive's in
 checked at runtime) Enter goes to the next row or adds one, `,` to the next entry or adds a
 column, Backspace in an empty entry removes its all-empty row or column. Inline shorthand in
 square brackets (parser `parseDelimited`): `[1, 2; 3, 4]` is a matrix, `[1, 2, 3]` a column vector
-(one entry in square brackets is a unit), rewritten as a pmatrix by decoration (`Rewrite`s from
+(one entry in square brackets is a unit), rewritten as a bmatrix by decoration (`Rewrite`s from
 the resolver). Operations: `det`, `tr`, `rank`, `transpose`, `dot`, `cross`
 (`builtins/functions/defs/matrices.ts`) and notation handled in the SymPy runtime, so it depends
 on the values: `|M|` determinant / `|v|` length (`_abs`), `u\cdot v` dot and `u\times v` cross

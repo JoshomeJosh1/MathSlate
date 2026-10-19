@@ -118,7 +118,7 @@ export function printLatex(e: Expr): string {
     case 'index':
       return `${printName(e.seq)}_{${printLatex(e.index)}}`;
     case 'matrix':
-      return `\\begin{pmatrix}${e.rows.map((r) => r.map(printLatex).join('&')).join('\\\\')}\\end{pmatrix}`;
+      return `\\begin{bmatrix}${e.rows.map((r) => r.map(printLatex).join('&')).join('\\\\')}\\end{bmatrix}`;
     case 'abs':
       return `\\left|${printLatex(e.arg)}\\right|`;
     case 'root':

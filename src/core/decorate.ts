@@ -18,7 +18,7 @@ export function decorateLatex(
   rewrites: readonly Rewrite[] = [],
 ): string {
   const edits: { start: number; end: number; text: string }[] = [];
-  // Shorthand in its proper form: [km] → \unit{km} (light brackets), [1, 2; 3, 4] → a pmatrix.
+  // Shorthand in its proper form: [km] → \unit{km} (light brackets), [1, 2; 3, 4] → a bmatrix.
   for (const r of rewrites) edits.push({ ...r.span, text: r.latex });
   // "->" left as typed (the editor's shortcut does not always fire) becomes an arrow.
   for (const m of latex.matchAll(/->/g)) {

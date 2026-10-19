@@ -49,7 +49,7 @@ export interface ResolveOptions {
 
 /**
  * Shorthand in the source to show in its proper form once the row is left: a unit in square
- * brackets (`[km]` → `\unit{km}`), a matrix typed inline (`[1, 2; 3, 4]` → a pmatrix).
+ * brackets (`[km]` → `\unit{km}`), a matrix typed inline (`[1, 2; 3, 4]` → a bmatrix).
  */
 export interface Rewrite {
   span: Span;
