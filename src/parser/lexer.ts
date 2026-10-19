@@ -27,6 +27,7 @@ export type Token =
   | { kind: 'sub'; span: Span } // _
   | { kind: 'sup'; span: Span } // ^
   | { kind: 'comma'; span: Span }
+  | { kind: 'semicolon'; span: Span } // ; between matrix rows: [1, 2; 3, 4]
   | { kind: 'amp'; span: Span } // & (matrix column separator)
   | { kind: 'rowsep'; span: Span } // \\ (matrix row separator)
   | { kind: 'bang'; span: Span } // ! factorial
@@ -311,6 +312,11 @@ export function tokenize(src: string): Token[] {
         push({ kind: 'placeholder', span: span() });
         continue;
       }
+      // Transpose: M^\top, M^\intercal (M^T and M^\mathsf{T} are the letter T).
+      if (name === 'top' || name === 'intercal') {
+        push({ kind: 'letter', name: 'T', span: span() });
+        continue;
+      }
       if (name === 'unit') {
         const text = readBracedText(start);
         push({ kind: 'unit', text, span: span() });
@@ -398,6 +404,9 @@ export function tokenize(src: string): Token[] {
         break;
       case ',':
         push({ kind: 'comma', span });
+        break;
+      case ';':
+        push({ kind: 'semicolon', span });
         break;
       case '&':
         push({ kind: 'amp', span });

@@ -1,4 +1,5 @@
 import type { InlineShortcutDefinitions } from 'mathlive';
+import { MATRIX_TEMPLATE, VECTOR_TEMPLATE } from '../../core/completions';
 import { GREEK } from '../../parser/lexer';
 
 /**
@@ -45,6 +46,9 @@ export const INLINE_SHORTCUTS: InlineShortcutDefinitions = {
   nthroot: '\\sqrt[#?]{#?}',
   frac: '\\frac{#?}{#?}',
   binom: '\\binom{#?}{#?}',
+  // Not straight after a letter: "format" stays letters.
+  mat: notAfterLetter(MATRIX_TEMPLATE),
+  vec: notAfterLetter(VECTOR_TEMPLATE),
 
   // "sin" waits to see whether "sinh" follows, so without this "sint" would end in "int" → s∫.
   sint: '\\sin t',

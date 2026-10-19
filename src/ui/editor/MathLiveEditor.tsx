@@ -216,6 +216,40 @@ export function MathLiveEditor({
       return true;
     };
 
+    /**
+     * Growing a matrix as you type, with the caret in one of its cells: Enter adds a row below,
+     * "," a column to the right, and Backspace in an empty cell removes its row or column if it
+     * is all empty. Returns whether it handled the key.
+     */
+    const matrixKey = (ev: KeyboardEvent): boolean => {
+      if (ev.altKey || ev.metaKey || (ev.ctrlKey && ev.key !== 'Enter')) return false;
+      if (ev.key !== 'Enter' && ev.key !== ',' && ev.key !== 'Backspace') return false;
+      if (ev.key === 'Enter' && ev.shiftKey) return false;
+      const cell = matrixCell(mf);
+      if (!cell) return false;
+      const { array, row, col } = cell;
+      // Enter and "," go to the next row or entry, and add one when there is none.
+      if (ev.key === 'Enter') {
+        return row + 1 < array.rowCount
+          ? moveToCell(mf, array, row + 1, 0)
+          : mf.executeCommand('addRowAfter');
+      }
+      if (ev.key === ',') {
+        return col + 1 < array.colCount
+          ? moveToCell(mf, array, row, col + 1)
+          : mf.executeCommand('addColumnAfter');
+      }
+      // Backspace in an empty entry (its box may be selected).
+      if (!isEmptyCell(array.getCell(row, col))) return false;
+      const rowEmpty = Array.from({ length: array.colCount }, (_, c) => array.getCell(row, c));
+      const colEmpty = Array.from({ length: array.rowCount }, (_, r) => array.getCell(r, col));
+      if (array.rowCount > 1 && rowEmpty.every(isEmptyCell)) return mf.executeCommand('removeRow');
+      if (array.colCount > 1 && colEmpty.every(isEmptyCell)) {
+        return mf.executeCommand('removeColumn');
+      }
+      return false;
+    };
+
     /** Set while a physical key is handled, so onBeforeInput only acts for the math keyboard. */
     let fromKey = false;
     /**
@@ -258,6 +292,15 @@ export function MathLiveEditor({
         fired = null;
         spelling = null;
         openMenu();
+        return;
+      }
+      if (matrixKey(ev)) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        typed = '';
+        fired = null;
+        spelling = null;
+        callbacks.current.onChange(mf.value);
         return;
       }
       const last = fired;
@@ -449,6 +492,69 @@ export function MathLiveEditor({
     </>
   );
 }
+
+/**
+ * MathLive's model, which its public API does not expose: only what matrix editing needs (the
+ * caret's atom, its parent array and cell). Checked for at runtime, so an upgrade that changes it
+ * turns matrix keys off instead of breaking typing.
+ */
+interface InternalAtom {
+  type?: string;
+  parent?: InternalAtom;
+  parentBranch?: unknown;
+}
+interface InternalArray extends InternalAtom {
+  rowCount: number;
+  colCount: number;
+  getCell(row: number, column: number): InternalAtom[] | undefined;
+}
+interface InternalModel {
+  position: number;
+  at(offset: number): InternalAtom | undefined;
+  offsetOf(atom: InternalAtom): number;
+}
+
+function internalModel(mf: MathfieldElement): InternalModel | null {
+  const model = (mf as unknown as { _mathfield?: { model?: InternalModel } })._mathfield?.model;
+  return typeof model?.at === 'function' && typeof model.offsetOf === 'function' ? model : null;
+}
+
+/** Puts the caret at the end of a matrix entry, or selects its empty box so typing fills it. */
+function moveToCell(mf: MathfieldElement, array: InternalArray, row: number, col: number): boolean {
+  const model = internalModel(mf);
+  const atoms = array.getCell(row, col);
+  const first = atoms?.[0];
+  const last = atoms?.[atoms.length - 1];
+  if (!model || !first || !last) return false;
+  if (isEmptyCell(atoms) && first !== last) {
+    mf.selection = {
+      ranges: [[model.offsetOf(first), model.offsetOf(last)]],
+      direction: 'forward',
+    };
+  } else {
+    mf.position = model.offsetOf(last);
+  }
+  return true;
+}
+
+/** The matrix, row and column the caret is directly in (not inside a fraction in a cell). */
+function matrixCell(
+  mf: MathfieldElement,
+): { array: InternalArray; row: number; col: number } | null {
+  const model = internalModel(mf);
+  if (!model) return null;
+  const atom = model.at(model.position);
+  const parent = atom?.parent;
+  const branch = atom?.parentBranch;
+  if (parent?.type !== 'array' || !Array.isArray(branch)) return null;
+  const [row, col] = branch as unknown[];
+  if (typeof row !== 'number' || typeof col !== 'number') return null;
+  const array = parent as InternalArray;
+  return typeof array.getCell === 'function' ? { array, row, col } : null;
+}
+
+const isEmptyCell = (cell: InternalAtom[] | undefined) =>
+  !cell || cell.every((a) => a.type === 'first' || a.type === 'placeholder');
 
 /**
  * Whether a point is on a unit as drawn: between a pair of its faint brackets (on a bracket

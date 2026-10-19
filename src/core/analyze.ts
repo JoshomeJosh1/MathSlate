@@ -13,7 +13,7 @@ import {
   resolveRow,
   type NameOccurrence,
   type ResolveOptions,
-  type UnitOccurrence,
+  type Rewrite,
 } from '../parser/resolve';
 import { meaningOf } from '../registries/interpretations';
 import { isUnitSymbol } from './units';
@@ -45,8 +45,8 @@ export interface RowAnalysis {
   interpretations: Map<string, string>;
   /** Multi-letter names in the source and whether they are recognised (for upright display). */
   names: NameOccurrence[];
-  /** Units typed in square brackets, rewritten as `\unit{…}` (see decorate.ts). */
-  units: UnitOccurrence[];
+  /** Shorthand shown in its proper form once the row is left: [km], [1, 2; 3, 4] (decorate.ts). */
+  rewrites: Rewrite[];
 }
 
 export interface AnalyzeOptions {
@@ -107,7 +107,7 @@ export function analyzeRows(
           refs: [],
           interpretations: new Map(),
           names: [],
-          units: [],
+          rewrites: [],
         };
       }
       try {
@@ -132,7 +132,7 @@ export function analyzeRows(
             ...definedNameOccurrence(shape),
             ...r.names,
           ],
-          units: r.units,
+          rewrites: r.rewrites,
         };
       } catch (e) {
         if (!(e instanceof MathError)) throw e;
@@ -144,7 +144,7 @@ export function analyzeRows(
           refs: [],
           interpretations: new Map(),
           names: [],
-          units: [],
+          rewrites: [],
         };
       }
     });

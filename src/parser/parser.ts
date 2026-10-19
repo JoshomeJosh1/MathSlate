@@ -30,6 +30,9 @@ const MATRIX_ENVS = new Set([
   'smallmatrix',
 ]);
 
+/** The `env` of a matrix typed inline in square brackets ([1, 2; 3, 4]), shown as a pmatrix. */
+export const INLINE_MATRIX = 'inline';
+
 const OPENERS: Partial<Record<Delim, { close: Delim; group: GroupDelim; label: string }>> = {
   '(': { close: ')', group: 'paren', label: ')' },
   '[': { close: ']', group: 'bracket', label: ']' },
@@ -389,11 +392,14 @@ class Parser {
     const savedIntegrand = this.integrandDepth;
     this.absDepth = 0;
     this.integrandDepth = 0; // a "d x" inside parentheses is not the integral's differential
-    const items: Cst[] = [];
+    // Items separated by commas; in square brackets, rows separated by semicolons.
+    const rows: Cst[][] = [[]];
     if (!this.isDelim(this.peek(), info.close)) {
       for (;;) {
-        items.push(this.parseRelation());
-        if (this.peek().kind !== 'comma') break;
+        rows[rows.length - 1]?.push(this.parseRelation());
+        const sep = this.peek();
+        if (sep.kind === 'semicolon' && info.group === 'bracket') rows.push([]);
+        else if (sep.kind !== 'comma') break;
         this.next();
       }
     }
@@ -401,6 +407,17 @@ class Parser {
     this.absDepth = saved;
     this.integrandDepth = savedIntegrand;
     const span = spanOf(open.span, close.span);
+    const items = rows[0] ?? [];
+    // Square brackets with several entries are a matrix written inline: [1, 2; 3, 4], or a
+    // column vector: [1, 2, 3]. (One entry in square brackets is a unit.)
+    if (info.group === 'bracket' && (rows.length > 1 || items.length > 1)) {
+      const matrix = rows.length > 1 ? rows : items.map((item) => [item]);
+      const width = matrix[0]?.length ?? 0;
+      if (matrix.some((r) => r.length !== width)) {
+        throw new MathError('All matrix rows must have the same number of entries', span);
+      }
+      return { type: 'matrix', env: INLINE_MATRIX, rows: matrix, span };
+    }
     // SymPy prints matrices as \left[\begin{matrix}…\end{matrix}\right]; fold the brackets in.
     const only = items.length === 1 ? items[0] : undefined;
     if (only?.type === 'matrix' && only.env === 'matrix' && info.group !== 'set') {

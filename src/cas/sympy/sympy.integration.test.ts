@@ -151,6 +151,40 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
   });
 });
 
+describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
+  const M = 'M=\\left\\lbrack1,2;3,4\\right\\rbrack';
+  it('computes determinants, transposes, traces and ranks', async () => {
+    expect(await last([M, '\\det M'])).toEqual(['-2']);
+    expect(await last([M, '\\left|M\\right|'])).toEqual(['-2']);
+    expect(await last([M, 'M^{T}'])).toEqual(['\\begin{pmatrix}1&3\\\\2&4\\end{pmatrix}']);
+    expect(await last([M, '\\tr M'])).toEqual(['5']);
+    expect(await last(['\\rank\\left\\lbrack1,2;2,4\\right\\rbrack'])).toEqual(['1']);
+    expect(await last(['T=2', 'x^{T}'])).toEqual(['x^{2}']); // T stays a variable
+  });
+
+  it('computes dot and cross products and lengths', async () => {
+    const u = 'u=\\left\\lbrack1,2,3\\right\\rbrack';
+    const w = 'w=\\left\\lbrack4,5,6\\right\\rbrack';
+    expect(await last([u, w, 'u\\cdot w'])).toEqual(['32']);
+    expect(await last([u, w, 'u\\times w'])).toEqual([
+      '\\begin{pmatrix}-3\\\\6\\\\-3\\end{pmatrix}',
+    ]);
+    expect(await last([u, '\\left|u\\right|'])).toEqual(['\\sqrt{14} ≈ 3.74165738677394']);
+    expect(await last(['2\\cdot3'])).toEqual(['6']); // still multiplication
+  });
+
+  it('explains mistakes', async () => {
+    expect(await last(['\\det\\left\\lbrack1,2,3\\right\\rbrack'])).toEqual([
+      '!The determinant needs a square matrix, not 3×1',
+    ]);
+    expect(
+      await last(['\\left\\lbrack1,2;3,4\\right\\rbrack\\left\\lbrack1,2,3\\right\\rbrack']),
+    ).toEqual([
+      '!The matrix sizes do not fit: a product needs as many columns on the left as rows on the right, a sum the same size',
+    ]);
+  });
+});
+
 describe('units with SymPy', { timeout: 60_000 }, () => {
   it('computes, converts and checks units', async () => {
     expect(await last(['5\\unit{km}+300\\unit{m}'])).toEqual(['5.3\\unit{km}']);

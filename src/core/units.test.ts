@@ -40,7 +40,7 @@ describe('units in rows', () => {
     // Square brackets around one thing are a unit anywhere; with commas, a list.
     ['\\left\\lbrack in\\right\\rbrack\\to\\left\\lbrack mm\\right\\rbrack', '(-> [in] [mm])'],
     ['2+\\left[s\\right]', '(+ 2 [s])'],
-    ['2\\left[1,2\\right]', '(* 2 (list 1 2))'],
+    ['2\\left[1,2\\right]', '(* 2 [[1] [2]])'],
     ['\\left[x+1\\right]', '!Square brackets hold a unit, e.g. 5[km]; use ( ) to group'],
     ['2+\\left[x\\right]', '!Square brackets hold a unit, e.g. 5[km]; use ( ) to group'],
   ])('%s → %s', (latex, expected) => {
@@ -97,7 +97,7 @@ describe('units in rows', () => {
   it('rewrites units typed in brackets as \\unit{…}', () => {
     const latex = '5\\left[km\\right]+3\\left\\lbrack m\\right\\rbrack';
     const [row] = analyzeRows([{ id: 'r', latex }]);
-    expect(row && decorateLatex(latex, row.names, row.units)).toBe('5\\unit{km}+3\\unit{m}');
+    expect(row && decorateLatex(latex, row.names, row.rewrites)).toBe('5\\unit{km}+3\\unit{m}');
   });
 });
 

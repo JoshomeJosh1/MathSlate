@@ -26,7 +26,7 @@ starting `#` are headings, `##` subheadings.
 | —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
 | 4         | `/` command palette, `ans` / `out_k` references, promote by drag                      | planned |
 | 5         | Symbol interpretation prompts + row badges (registry + resolution already done)       | planned |
-| 6         | Matrix commands (det, inverse, transpose, eigenvalues, dot, cross)                    | planned |
+| 6         | Matrix input and operations (det, transpose, dot, cross, …); eigen/rref commands next | partial |
 | 7         | `out_k` built-in sequence; more built-in sequences                                    | planned |
 | 8         | URL share, error highlight inside the math field, perf                                | planned |
 
@@ -225,6 +225,21 @@ base units remain). Rational amounts are shown as decimals (5.3 km). The registr
 (`registries/units/defs/*.ts`, auto-discovered) lists each unit's symbol, name, dimension, exact
 decimal factor and SI prefixes (`'all'`: quecto to quetta), and `menu`, the prefixed forms the `\`
 menu offers; prefixed symbols are generated and must be unique (tested).
+
+### Matrices and vectors
+
+Input: `mat` / `vec` (shortcuts and `\` menu) insert a 2×2 matrix / 2-entry column vector of
+boxes; inside a matrix (`matrixKey` in `MathLiveEditor.tsx`, using MathLive's internal model,
+checked at runtime) Enter goes to the next row or adds one, `,` to the next entry or adds a
+column, Backspace in an empty entry removes its all-empty row or column. Inline shorthand in
+square brackets (parser `parseDelimited`): `[1, 2; 3, 4]` is a matrix, `[1, 2, 3]` a column vector
+(one entry in square brackets is a unit), rewritten as a pmatrix by decoration (`Rewrite`s from
+the resolver). Operations: `det`, `tr`, `rank`, `transpose`, `dot`, `cross`
+(`builtins/functions/defs/matrices.ts`) and notation handled in the SymPy runtime, so it depends
+on the values: `|M|` determinant / `|v|` length (`_abs`), `u\cdot v` dot and `u\times v` cross
+product between vectors (`_cdot`, `_times`, else multiplication), `M^T` / `M^\top` transpose
+unless `T` is defined (`_pow_T`). SymPy's matrix errors are reworded (`_MATRIX_ERRORS`).
+Nerdamer declines matrix functions.
 
 ### Special functions
 

@@ -187,7 +187,14 @@ describe('matrices and lists', () => {
     ['A=\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}', '(def A [[1 2] [3 4]])'],
     [['A=\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}', '2A'], '(* 2 A)'],
     ['\\left(1,2\\right)', '(tuple 1 2)'],
-    ['\\left\\lbrack1,2,3\\right\\rbrack', '(list 1 2 3)'],
+    // Square brackets: a column vector, or a matrix with rows separated by semicolons.
+    ['\\left\\lbrack1,2,3\\right\\rbrack', '[[1] [2] [3]]'],
+    ['\\left\\lbrack1,2;3,4\\right\\rbrack', '[[1 2] [3 4]]'],
+    [
+      '\\left\\lbrack1,2;3\\right\\rbrack',
+      '!All matrix rows must have the same number of entries @0-30',
+    ],
+    ['\\left(1,2,3\\right)', '(tuple 1 2 3)'],
     ['\\left\\lbrace1,2\\right\\rbrace', '(set 1 2)'],
   ]);
 });

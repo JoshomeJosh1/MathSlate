@@ -85,6 +85,13 @@ const FUNCTIONS: Record<string, Py> = {
   Bi: call('airybi'),
   ellipticK: call('elliptic_k'),
   ellipticE: call('elliptic_e'),
+  // Matrices and vectors (helpers in runtime.py check shapes and explain mistakes)
+  det: call('_det'),
+  tr: call('_trace'),
+  rank: call('_rank'),
+  transpose: call('_transpose'),
+  dot: call('_dot'),
+  cross: call('_cross'),
 };
 
 /** Built-in sequences (by interpretation, e.g. p_n → primes) → SymPy. */
@@ -195,6 +202,19 @@ class Serializer {
       case 'neg':
         return `(-${go(e.arg)})`;
       case 'binary': {
+        // · and × between vectors are the dot and cross product (a product otherwise); M^T is
+        // the transpose of a matrix (a power otherwise, so T can still be a variable).
+        if (e.op === 'mul' && e.form === 'cdot') return `_cdot(${go(e.left)}, ${go(e.right)})`;
+        if (e.op === 'mul' && e.form === 'times') return `_times(${go(e.left)}, ${go(e.right)})`;
+        if (
+          e.op === 'pow' &&
+          e.right.kind === 'var' &&
+          nameKey(e.right.name) === 'T' &&
+          !locals.has('T') &&
+          this.defined.get('T') === undefined
+        ) {
+          return `_pow_T(${go(e.left)}, ${go(e.right)})`;
+        }
         const op = { add: '+', sub: '-', mul: '*', div: '/', pow: '**' }[e.op];
         return `(${go(e.left)} ${op} ${go(e.right)})`;
       }
@@ -226,7 +246,8 @@ class Serializer {
       case 'matrix':
         return `Matrix([${e.rows.map((r) => `[${r.map(go).join(', ')}]`).join(', ')}])`;
       case 'abs':
-        return `Abs(${go(e.arg)})`;
+        // |M| is a determinant, |v| a vector's length (_abs in runtime.py).
+        return `_abs(${go(e.arg)})`;
       case 'root':
         return e.degree ? `root(${go(e.arg)}, ${go(e.degree)})` : `sqrt(${go(e.arg)})`;
       case 'list': {

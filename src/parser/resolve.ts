@@ -14,6 +14,8 @@ import { children, subscriptText } from './definitions';
 import { MathError, spanOf, type Span } from './errors';
 import { functionAliasKey } from './functionNames';
 import { isCallable, isSequence, type SymbolInfo, type SymbolTable } from './symbols';
+import { INLINE_MATRIX } from './parser';
+import { printLatex } from './printLatex';
 import { parseUnitText, unitText } from './units';
 
 /**
@@ -45,11 +47,13 @@ export interface ResolveOptions {
   isUnit?: (symbol: string) => boolean;
 }
 
-/** A unit written in square brackets (`[km]`), to be rewritten as `\unit{km}`. */
-export interface UnitOccurrence {
+/**
+ * Shorthand in the source to show in its proper form once the row is left: a unit in square
+ * brackets (`[km]` → `\unit{km}`), a matrix typed inline (`[1, 2; 3, 4]` → a pmatrix).
+ */
+export interface Rewrite {
   span: Span;
-  /** The unit's text for `\unit{…}`. */
-  text: string;
+  latex: string;
 }
 
 /** A multi-letter name in the source, and what it resolved to. */
@@ -75,8 +79,8 @@ export interface ResolvedRow {
   interpretations: Map<string, string>;
   /** Multi-letter names in the source, for upright display of recognised names. */
   names: NameOccurrence[];
-  /** Units typed in square brackets, for rewriting as `\unit{…}`. */
-  units: UnitOccurrence[];
+  /** Shorthand to show in its proper form: units in brackets, inline matrices. */
+  rewrites: Rewrite[];
 }
 
 export function resolveRow(
@@ -92,7 +96,7 @@ export function resolveRow(
     refs: r.refs,
     interpretations: r.interpretations,
     names: r.names,
-    units: r.units,
+    rewrites: r.rewrites,
   };
 }
 
@@ -122,7 +126,7 @@ class Resolver {
   readonly refs = new Set<string>();
   readonly interpretations = new Map<string, string>();
   readonly names: NameOccurrence[] = [];
-  readonly units: UnitOccurrence[] = [];
+  readonly rewrites: Rewrite[] = [];
 
   constructor(private readonly options: ResolveOptions) {}
 
@@ -172,7 +176,7 @@ class Resolver {
         );
       }
     }
-    this.units.push({ span: cst.span, text: unitText(factors) });
+    this.rewrites.push({ span: cst.span, latex: `\\unit{${unitText(factors)}}` });
     return factors;
   }
 
@@ -289,12 +293,16 @@ class Resolver {
         return this.call(makeName('binomial'), [cst.n, cst.k], scope, span);
       case 'abs':
         return { kind: 'abs', arg: this.expr(cst.arg, scope), span };
-      case 'matrix':
-        return {
+      case 'matrix': {
+        const node: Expr = {
           kind: 'matrix',
           rows: cst.rows.map((r) => r.map((c) => this.expr(c, scope))),
           span,
         };
+        // [1, 2; 3, 4] is shown as the matrix it is once the row is left.
+        if (cst.env === INLINE_MATRIX) this.rewrites.push({ span, latex: printLatex(node) });
+        return node;
+      }
       case 'fnapp':
         return this.functionApplication(cst, scope);
       case 'relation':

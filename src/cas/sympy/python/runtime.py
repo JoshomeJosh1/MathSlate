@@ -37,6 +37,77 @@ def _prime(n):
     return Function("p")(n)
 
 
+# ----------------------------------------------------------------------------- matrices and vectors
+
+
+def _is_vector(m):
+    return isinstance(m, MatrixBase) and (m.rows == 1 or m.cols == 1)
+
+
+def _square(m, what):
+    if not isinstance(m, MatrixBase):
+        raise MathSlateError(f"The {what} needs a matrix")
+    if m.rows != m.cols:
+        raise MathSlateError(f"The {what} needs a square matrix, not {m.rows}×{m.cols}")
+    return m
+
+
+def _det(m):
+    return _square(m, "determinant").det()
+
+
+def _trace(m):
+    return _square(m, "trace").trace()
+
+
+def _rank(m):
+    if not isinstance(m, MatrixBase):
+        raise MathSlateError("The rank needs a matrix")
+    return Integer(m.rank())
+
+
+def _transpose(m):
+    return m.T if isinstance(m, MatrixBase) else m
+
+
+def _dot(a, b):
+    if not (_is_vector(a) and _is_vector(b)):
+        raise MathSlateError("The dot product needs two vectors")
+    if len(a) != len(b):
+        raise MathSlateError(f"The vectors have different lengths ({len(a)} and {len(b)})")
+    return expand(sum(x * y for x, y in zip(a, b)))
+
+
+def _cross(a, b):
+    if not (_is_vector(a) and _is_vector(b)) or len(a) != 3 or len(b) != 3:
+        raise MathSlateError("The cross product needs two vectors of length 3")
+    return Matrix(list(a)).cross(Matrix(list(b)))
+
+
+def _cdot(a, b):
+    """u·v: the dot product of two vectors, otherwise multiplication."""
+    return _dot(a, b) if _is_vector(a) and _is_vector(b) else a * b
+
+
+def _times(a, b):
+    """u×v: the cross product of two vectors, otherwise multiplication."""
+    return _cross(a, b) if _is_vector(a) and _is_vector(b) else a * b
+
+
+def _abs(x):
+    """|v|: a vector's length; |M|: a determinant; |x|: absolute value."""
+    if _is_vector(x):
+        return sqrt(sum(v**2 for v in x))
+    if isinstance(x, MatrixBase):
+        return _det(x)
+    return Abs(x)
+
+
+def _pow_T(a, t):
+    """M^T: the transpose of a matrix, otherwise a power of T."""
+    return a.T if isinstance(a, MatrixBase) else a**t
+
+
 class _Sequence:
     """A user sequence: rule(n) with optional base cases, memoised and filled bottom-up so deep
     recursion (a_{1000}) does not hit Python's recursion limit."""
@@ -363,4 +434,12 @@ def _run_program(code):
     except ZeroDivisionError:
         return json.dumps({"ok": False, "error": "Division by zero"})
     except Exception as err:  # noqa: BLE001 - report anything else to the row
-        return json.dumps({"ok": False, "error": f"{type(err).__name__}: {err}"})
+        return json.dumps({"ok": False, "error": _MATRIX_ERRORS.get(type(err).__name__, f"{type(err).__name__}: {err}")})
+
+
+# SymPy's matrix errors, in words (matched by class name: their module moved between versions).
+_MATRIX_ERRORS = {
+    "ShapeError": "The matrix sizes do not fit: a product needs as many columns on the left as rows on the right, a sum the same size",
+    "NonSquareMatrixError": "This needs a square matrix",
+    "NonInvertibleMatrixError": "The matrix is not invertible (its determinant is 0)",
+}
