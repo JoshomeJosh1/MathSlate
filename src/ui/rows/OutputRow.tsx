@@ -89,7 +89,13 @@ export function OutputRow({ output, onPromote, onRemove, onEditArgs }: Props) {
         className="output-gutter"
         title={output.label ? `Refer to this as out_${output.label}` : undefined}
       >
-        {output.label !== null ? `out${output.label}` : '='}
+        {output.label !== null ? (
+          <span className="output-label">
+            out<sub>{output.label}</sub>
+          </span>
+        ) : (
+          '='
+        )}
       </div>
       <div className="output-body">
         {output.title &&

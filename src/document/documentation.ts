@@ -40,7 +40,7 @@ export const DOCUMENTATION: readonly Entry[] = [
     note: 'Type " in an empty row to turn it into a note like this one, or # for a heading. Backspace in an empty note turns it back into math.',
   },
   {
-    note: 'Results appear in tinted output rows. Under the row you are editing, suggested commands appear: click one to add it as an output row (labelled out1, out2, …). ↧ copies a result into a new row; × removes an output.',
+    note: 'Results appear in tinted output rows. Under the row you are editing, suggested commands appear: click one to add it as an output row (labelled out₁, out₂, …). ↧ copies a result into a new row; × removes an output.',
   },
 
   { folder: 'Folders and notes' },
@@ -541,7 +541,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\frac13+\\frac16',
   'ans\\cdot4',
   {
-    note: "Every command's output has a label in its gutter: out1, out2, … Use it anywhere in the slate as out_k (type out_ then the number). Rows that use a result update when it changes.",
+    note: "Every command's output has a label in its gutter: out₁, out₂, … Use it anywhere in the slate as out_k (type out_ then the number). Rows that use a result update when it changes.",
   },
   ['x^3-2x', 'derivative'],
   '{OUT_PREVIOUS}+1',

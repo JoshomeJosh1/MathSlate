@@ -407,6 +407,19 @@ button {
   border-right: 2px solid var(--accent);
 }
 
+/* out_k, drawn as it looks in a row: upright "out" in the math font, the number subscripted. */
+.output-label {
+  font-family: KaTeX_Main, 'Times New Roman', serif;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.output-label sub {
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: -0.4em;
+}
+
 .output-body {
   flex: 1;
   min-width: 0;
