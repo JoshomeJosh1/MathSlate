@@ -148,13 +148,17 @@ class Serializer {
       const key = nameKey(d.name);
       const id = `u_${pyId(key)}`;
       switch (d.kind) {
+        // A 1×1 matrix value is a number (_scalar in runtime.py).
         case 'defConst':
-          lines.push(`${id} = ${this.expr(d.body, new Set())}`);
+          lines.push(`${id} = _scalar(${this.expr(d.body, new Set())})`);
           break;
         case 'defFunc': {
           const params = d.params.map((p) => this.symbol(p));
           const locals = new Set(d.params.map(nameKey));
-          lines.push(`def ${id}(${params.join(', ')}):`, `    return ${this.expr(d.body, locals)}`);
+          lines.push(
+            `def ${id}(${params.join(', ')}):`,
+            `    return _scalar(${this.expr(d.body, locals)})`,
+          );
           break;
         }
         case 'defSeq':
@@ -206,6 +210,8 @@ class Serializer {
         // the transpose of a matrix (a power otherwise, so T can still be a variable).
         if (e.op === 'mul' && e.form === 'cdot') return `_cdot(${go(e.left)}, ${go(e.right)})`;
         if (e.op === 'mul' && e.form === 'times') return `_times(${go(e.left)}, ${go(e.right)})`;
+        // A row times a column is a 1×1 matrix: the number in it (so vᵀw + 1 works).
+        if (e.op === 'mul') return `_mul(${go(e.left)}, ${go(e.right)})`;
         if (
           e.op === 'pow' &&
           e.right.kind === 'var' &&

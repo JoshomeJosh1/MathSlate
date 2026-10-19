@@ -40,6 +40,17 @@ def _prime(n):
 # ----------------------------------------------------------------------------- matrices and vectors
 
 
+def _scalar(x):
+    """A 1×1 matrix is the number in it (vᵀw, a row times a column, is a number)."""
+    if isinstance(x, MatrixBase) and x.rows == 1 and x.cols == 1:
+        return x[0, 0]
+    return x
+
+
+def _mul(a, b):
+    return _scalar(a * b)
+
+
 def _is_vector(m):
     return isinstance(m, MatrixBase) and (m.rows == 1 or m.cols == 1)
 
@@ -86,12 +97,12 @@ def _cross(a, b):
 
 def _cdot(a, b):
     """u·v: the dot product of two vectors, otherwise multiplication."""
-    return _dot(a, b) if _is_vector(a) and _is_vector(b) else a * b
+    return _dot(a, b) if _is_vector(a) and _is_vector(b) else _mul(a, b)
 
 
 def _times(a, b):
     """u×v: the cross product of two vectors, otherwise multiplication."""
-    return _cross(a, b) if _is_vector(a) and _is_vector(b) else a * b
+    return _cross(a, b) if _is_vector(a) and _is_vector(b) else _mul(a, b)
 
 
 def _abs(x):
@@ -393,6 +404,7 @@ def _tidy(e):
 
 
 def _describe(result):
+    result = _scalar(result)
     if isinstance(result, tuple) and result and result[0] == "solutions":
         _, var, sols = result
         return {

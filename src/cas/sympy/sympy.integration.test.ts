@@ -173,6 +173,14 @@ describe('matrices and vectors with SymPy', { timeout: 60_000 }, () => {
     expect(await last(['2\\cdot3'])).toEqual(['6']); // still multiplication
   });
 
+  it('treats a 1×1 matrix as a number', async () => {
+    const v = 'v=\\left\\lbrack1,2,3\\right\\rbrack';
+    expect(await last([v, 'v^{T}v'])).toEqual(['14']);
+    expect(await last([v, 'v^{T}v+1'])).toEqual(['15']);
+    expect(await last([v, 's=v^{T}v', 's+1'])).toEqual(['15']);
+    expect(await last(['\\begin{pmatrix}7\\end{pmatrix}'])).toEqual(['7']);
+  });
+
   it('explains mistakes', async () => {
     expect(await last(['\\det\\left\\lbrack1,2,3\\right\\rbrack'])).toEqual([
       '!The determinant needs a square matrix, not 3×1',

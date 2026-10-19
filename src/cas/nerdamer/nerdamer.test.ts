@@ -82,6 +82,14 @@ describe('units, through Nerdamer', () => {
   });
 });
 
+describe('matrices through Nerdamer', () => {
+  it('shows a 1×1 matrix as a number', async () => {
+    expect(
+      await last(['\\begin{pmatrix}1&2&3\\end{pmatrix}\\begin{pmatrix}4\\\\5\\\\6\\end{pmatrix}']),
+    ).toEqual(['32']);
+  });
+});
+
 describe('Nerdamer backend end to end', () => {
   it('evaluates exactly, with decimals', async () => {
     expect(await last(['\\frac13+\\frac16'])).toEqual(['\\frac{1}{2}']);

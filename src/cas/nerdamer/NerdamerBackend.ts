@@ -171,6 +171,9 @@ export function toResult(
   let expr;
   try {
     expr = parseNerdamerText(reply.text, names);
+    // A 1×1 matrix (a row times a column) is the number in it, as with SymPy.
+    const only = expr.kind === 'matrix' && expr.rows.length === 1 ? expr.rows[0] : undefined;
+    if (only?.length === 1 && only[0]) expr = only[0];
   } catch (e) {
     if (e instanceof TextParseError) {
       return {
