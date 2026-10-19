@@ -465,7 +465,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Units' },
   {
-    note: 'Type a unit in square brackets after a number: 5[km], 9.81[m/s^2]. Once you leave the row the unit is shown upright in faint brackets; click back into the row to edit it as typed. Units in brackets never clash with your own names: m is a variable, [m] is metres. You can also pick units from the \\ menu.',
+    note: 'Type a unit in square brackets after a number: 5[km], 9.81[m/s^2]. Once you leave the row the unit is shown upright in faint brackets; click back into the row to edit it as typed. Units in brackets never clash with your own names: m is a variable, [m] is metres. Square brackets right after a value always hold a unit, so group with ( ) instead. You can also pick units from the \\ menu.',
   },
   '5\\unit{km}+300\\unit{m}',
   '\\mathrm{mass}=70\\unit{kg}',

@@ -35,11 +35,47 @@ describe('units in rows', () => {
     ['5\\unit{km}\\to\\unit{mi}', '(-> (* 5 [km]) [mi])'],
     ['5\\unit{km}\\to\\left[mi\\right]', '(-> (* 5 [km]) [mi])'],
     ['d=5\\unit{km}\\to\\unit{mi}', '(def d (-> (* 5 [km]) [mi]))'],
-    // Brackets that do not spell a unit are ordinary brackets.
-    ['2\\left[x+1\\right]', '(* 2 (list (+ x 1)))'],
     ['\\unit{furlong}', '!Unknown unit "furlong"'],
     ['5\\to 3', '!Convert to a unit, e.g. → [km]'],
+    // Elsewhere square brackets are ordinary brackets or lists.
+    ['\\left[x+1\\right]', '(list (+ x 1))'],
+    ['2+\\left[x\\right]', '(+ 2 (list x))'],
+    ['2\\left[1,2\\right]', '(* 2 (list 1 2))'],
   ])('%s → %s', (latex, expected) => {
+    expect(sexpr(latex)).toBe(expected);
+  });
+
+  // Square brackets multiplied onto something, or after →, must hold a unit.
+  it.each([
+    ['10\\left\\lbrack2A/s^2\\right\\rbrack', 'Numbers go before the unit: 20[A/s^2]'],
+    ['10\\left\\lbrack\\frac{2A}{s^2}\\right\\rbrack', 'Numbers go before the unit: 20[A/s^2]'],
+    ['3\\left\\lbrack1000m\\right\\rbrack', 'Numbers go before the unit: 3000[m]'],
+    [
+      '1\\left\\lbrack g\\right\\rbrack\\to\\left\\lbrack\\mu g+1\\right\\rbrack',
+      'A unit can\'t contain "+": multiply, divide or use powers, e.g. [kg·m/s^2]',
+    ],
+    ['5\\left\\lbrack mc\\right\\rbrack', 'Unknown unit "mc"'],
+    ['5\\left\\lbrack Kg\\right\\rbrack', 'Unknown unit "Kg". Did you mean kg?'],
+    ['5\\left\\lbrack kmh\\right\\rbrack', 'Unknown unit "kmh". Did you mean km/h?'],
+    ['5\\left\\lbrack Nm\\right\\rbrack', 'Unknown unit "Nm". Did you mean nm or N·m?'],
+    [
+      '5\\left\\lbrack m^x\\right\\rbrack',
+      'Unit powers must be whole numbers, e.g. [m^2] or [s^{-1}]',
+    ],
+    [
+      '2\\left\\lbrack x+1\\right\\rbrack',
+      'A unit can\'t contain "+": multiply, divide or use powers, e.g. [kg·m/s^2]',
+    ],
+    [
+      '2\\left\\lbrack\\sin x\\right\\rbrack',
+      'Square brackets after a value hold a unit, e.g. 5[km]; use ( ) to group',
+    ],
+    ['5\\left\\lbrack\\right\\rbrack', 'Empty unit: write one inside the brackets, e.g. [km]'],
+  ])('%s: %s', (latex, message) => {
+    expect(sexpr(latex)).toBe(`!${message}`);
+  });
+
+  it.each([['5\\unit{km}', '(* 5 [km])']])('%s → %s', (latex, expected) => {
     expect(sexpr(latex)).toBe(expected);
   });
 

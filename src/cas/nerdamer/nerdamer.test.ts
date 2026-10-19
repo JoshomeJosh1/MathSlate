@@ -75,8 +75,8 @@ describe('units, through Nerdamer', () => {
   it('rejects mismatched units', async () => {
     expect(await last(['5\\unit{m}+2\\unit{s}'])).toEqual(["!Can't add m and s"]);
     expect(await last(['5\\unit{m}\\to\\unit{s}'])).toEqual(["!Can't convert m to s"]);
-    // Brackets that do not spell a unit keep their ordinary meaning.
-    expect(await last(['3\\left[x\\right]'])).toEqual([]);
+    // Brackets after a value must hold a unit.
+    expect(await last(['3\\left[x\\right]'])).toEqual(['!Unknown unit "x"']);
   });
 });
 

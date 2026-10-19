@@ -155,8 +155,37 @@ class Resolver {
   /** The target of `→`: `\unit{mi}` or `[mi]`. */
   private conversionTarget(cst: Cst): UnitFactor[] {
     if (cst.type === 'unit') return this.unitFactors(cst.text, cst.span);
-    const factors = cst.type === 'group' && cst.delim === 'bracket' ? this.bracketUnit(cst) : null;
-    if (!factors) throw new MathError('Convert to a unit, e.g. → [km]', cst.span);
+    if (isUnitBrackets(cst)) return this.requiredUnit(cst, undefined);
+    throw new MathError('Convert to a unit, e.g. → [km]', cst.span);
+  }
+
+  /**
+   * Square brackets that must hold a unit (after a factor, or after →): the unit, or an error
+   * that says what is wrong with it. `before` is the factor the brackets multiply.
+   */
+  private requiredUnit(cst: Cst & { type: 'group' }, before: Factor | undefined): UnitFactor[] {
+    const isUnit = this.options.isUnit ?? (() => true);
+    const inner = cst.items[0];
+    if (!inner)
+      throw new MathError('Empty unit: write one inside the brackets, e.g. [km]', cst.span);
+    const problem = unitProblem(inner);
+    if (problem === 'number') {
+      throw new MathError(`Numbers go before the unit${numberMoved(inner, before)}`, inner.span);
+    }
+    if (problem) throw new MathError(problem, problem === GROUPING ? cst.span : inner.span);
+    const text = unitTextOf(inner);
+    if (text === null) throw new MathError(GROUPING, cst.span);
+    const factors = parseUnitText(text, inner.span);
+    for (const f of factors) {
+      if (!isUnit(f.symbol)) {
+        const guess = suggestUnit(f.symbol, isUnit);
+        throw new MathError(
+          `Unknown unit "${f.symbol}"${guess ? `. Did you mean ${guess}?` : ''}`,
+          inner.span,
+        );
+      }
+    }
+    this.units.push({ span: cst.span, text: unitText(factors) });
     return factors;
   }
 
@@ -355,6 +384,14 @@ class Resolver {
         const { expr, consumedNext } = this.named(f, f.core.name, factors[k + 1], scope);
         out.push(expr);
         if (consumedNext) k++;
+      } else if (k > 0 && isUnitBrackets(f.core) && this.options.isUnit) {
+        // Square brackets multiplied onto something (5[km], x[m]) always hold a unit.
+        const unit: Expr = {
+          kind: 'unit',
+          factors: this.requiredUnit(f.core, factors[k - 1]),
+          span: f.core.span,
+        };
+        out.push(this.applyWrappers(unit, f.wrappers, scope));
       } else {
         out.push(this.applyWrappers(this.expr(f.core, scope), f.wrappers, scope));
       }
@@ -685,6 +722,132 @@ function unwrap(item: Cst): Factor {
 }
 
 const UNIT_GREEK: Partial<Record<string, string>> = { '\\mu': 'µ', '\\Omega': 'Ω' };
+
+const GROUPING = 'Square brackets after a value hold a unit, e.g. 5[km]; use ( ) to group';
+
+/** Square brackets around one thing (not a list): a unit, or ordinary brackets. */
+function isUnitBrackets(cst: Cst): cst is Cst & { type: 'group' } {
+  return cst.type === 'group' && cst.delim === 'bracket' && cst.items.length <= 1;
+}
+
+/**
+ * What stops the inside of unit brackets from being a unit: 'number' (numbers go before the
+ * unit), a message, or null if it is made of the right parts (its symbols are checked later).
+ */
+function unitProblem(cst: Cst): string | null {
+  switch (cst.type) {
+    case 'num':
+      return 'number';
+    case 'letter':
+    case 'opname':
+      return null;
+    case 'fnapp':
+      return cst.arg || cst.sub || cst.power ? GROUPING : null;
+    case 'juxt':
+      return firstProblem(cst.items);
+    case 'binary':
+      if (cst.op === 'add' || cst.op === 'sub') {
+        return `A unit can't contain "${cst.op === 'add' ? '+' : '−'}": multiply, divide or use powers, e.g. [kg·m/s^2]`;
+      }
+      return firstProblem([cst.left, cst.right]);
+    case 'frac':
+      return firstProblem([cst.num, cst.den]);
+    case 'pow': {
+      const base = unitProblem(cst.base);
+      if (base) return base;
+      const exp = cst.exp.type === 'neg' ? cst.exp.arg : cst.exp;
+      return exp.type === 'num' && /^[0-9]+$/.test(exp.value)
+        ? null
+        : 'Unit powers must be whole numbers, e.g. [m^2] or [s^{-1}]';
+    }
+    case 'group':
+      return cst.delim === 'paren' && cst.items.length === 1 && cst.items[0]
+        ? unitProblem(cst.items[0])
+        : GROUPING;
+    case 'neg':
+      return 'A unit cannot be negative: put the minus sign before the number';
+    default:
+      return GROUPING;
+  }
+}
+
+function firstProblem(items: Cst[]): string | null {
+  let number = false;
+  for (const item of items) {
+    const p = unitProblem(item);
+    if (p === 'number') number = true;
+    else if (p) return p;
+  }
+  return number ? 'number' : null;
+}
+
+/**
+ * The fix for numbers inside unit brackets, when it is simple (numbers multiplying the unit's
+ * numerator): 10[2A/s^2] → ": 20[A/s^2]". Empty otherwise.
+ */
+function numberMoved(inner: Cst, before: Factor | undefined): string {
+  const numbers: number[] = [];
+  const rest = (c: Cst): string | null => {
+    if (c.type === 'num') {
+      numbers.push(Number(c.value));
+      return '';
+    }
+    if (c.type === 'juxt') {
+      const parts = c.items.map(rest);
+      return parts.every((p) => p !== null) ? parts.join('') : null;
+    }
+    if (c.type === 'binary' && c.op === 'mul') {
+      const l = rest(c.left);
+      const r = rest(c.right);
+      return l === null || r === null ? null : [l, r].filter(Boolean).join('·');
+    }
+    return unitTextOf(c);
+  };
+  let text: string | null;
+  if (inner.type === 'binary' && inner.op === 'div') {
+    const numerator = rest(inner.left);
+    const denominator = unitTextOf(inner.right);
+    text = numerator && denominator ? `${numerator}/${denominator}` : null;
+  } else if (inner.type === 'frac') {
+    const numerator = rest(inner.num);
+    const denominator = unitTextOf(inner.den);
+    text = numerator && denominator ? `${numerator}/${denominator}` : null;
+  } else {
+    text = rest(inner);
+  }
+  if (!text || numbers.length === 0) return '';
+  const outside =
+    before && before.wrappers.length === 0 && before.core.type === 'num'
+      ? Number(before.core.value)
+      : 1;
+  const amount = numbers.reduce((a, b) => a * b, outside);
+  return `: ${String(Number(amount.toPrecision(15)))}[${text.replace(/\^\{(-?[0-9]+)\}/g, '^$1')}]`;
+}
+
+/**
+ * A guess for an unknown unit symbol: the same letters in another case (Kg → kg, KM → km), or
+ * two units run together (kmh → km/h, Nm → N·m: per time unit, else a product).
+ */
+function suggestUnit(symbol: string, isUnit: (s: string) => boolean): string | null {
+  const guesses: string[] = [];
+  const caseFix = [symbol.toLowerCase(), symbol.charAt(0) + symbol.slice(1).toLowerCase()].find(
+    (c) => c !== symbol && isUnit(c),
+  );
+  if (caseFix) guesses.push(caseFix);
+  const TIME = new Set(['s', 'min', 'h', 'd', 'yr', 'ms']);
+  for (let k = 1; k < symbol.length; k++) {
+    const a = symbol.slice(0, k);
+    const b = symbol.slice(k);
+    // Only readings people write: a rate (km/h) or a named unit times another (N·m, kW·h).
+    const product = /^[a-zµ]{0,2}[NJWVACΩ]$/.test(a);
+    if (isUnit(a) && isUnit(b) && (TIME.has(b) || product)) {
+      guesses.push(TIME.has(b) && !product ? `${a}/${b}` : `${a}·${b}`);
+      break;
+    }
+  }
+  // Both can fit (Nm: nanometres or newton-metres), so offer both.
+  return guesses.length > 0 ? guesses.join(' or ') : null;
+}
 
 /**
  * What the inside of square brackets says as unit text, if it is made only of letters, powers,
