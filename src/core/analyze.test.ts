@@ -307,6 +307,15 @@ describe('symbol interpretations', () => {
     expect(row && render(row)).toBe('(+ (^ e x) p_{5})');
   });
 
+  it('reads C_n, L_n, H_n, B_n as names until the document chooses the sequence', () => {
+    const [plain] = withChoices({}, 'C_5+L_1+H_2+B_3');
+    expect(plain && render(plain)).toBe('(+ (+ (+ C_{5} L_{1}) H_{2}) B_{3})');
+    // The row still records the letters it read, so it can ask about them.
+    expect([...(plain?.interpretations.keys() ?? [])].sort()).toEqual(['B', 'C', 'H', 'L']);
+    const [chosen] = withChoices({ C: 'catalan', H: 'harmonic' }, 'C_5+H_2');
+    expect(chosen && render(chosen)).toBe('(+ (_ C 5) (_ H 2))');
+  });
+
   it('records which interpretations each row used', () => {
     const result = withChoices({ i: 'variable' }, 'e+i', 'p_2', '\\pi', 'x');
     expect(result.map((r) => Object.fromEntries(r.interpretations))).toEqual([

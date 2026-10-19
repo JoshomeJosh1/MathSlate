@@ -9,7 +9,7 @@ const imaginaryUnit: Interpretation = {
     { id: 'variable', label: 'variable', meaning: { kind: 'variable' } },
   ],
   defaultOption: 'imaginary',
-  promptOnFirstUse: true,
+  promptOnFirstUse: false, // a reserved constant (core/analyze.ts): no prompt
 };
 
 export default imaginaryUnit;

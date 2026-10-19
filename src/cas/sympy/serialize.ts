@@ -113,6 +113,10 @@ const FUNCTIONS: Record<string, Py> = {
 const SEQUENCES: Record<string, Py> = {
   p: call('_prime'),
   F: call('fibonacci'),
+  C: call('catalan'),
+  L: call('lucas'),
+  H: call('harmonic'),
+  B: call('bernoulli'),
 };
 
 const RELATIONS = { '=': 'Eq', '<': 'Lt', '>': 'Gt', '<=': 'Le', '>=': 'Ge', '!=': 'Ne' } as const;

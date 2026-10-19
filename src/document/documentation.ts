@@ -446,7 +446,15 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\sum_{k=1}^{10}p_k',
   '\\sum_{k=1}^{5}u_k',
   {
-    note: 'More integer sequences are built-in functions (Functions → Integer sequences): fibonacci(n), catalan(n), harmonic(n), …',
+    note: 'More built-in sequences: C_n Catalan, L_n Lucas, H_n harmonic and B_n Bernoulli numbers. In a new slate these letters are ordinary names until you choose: the first row using one asks (C₅: Catalan number, or keep as a variable?). This slate has chosen them all. A row using a built-in sequence shows a badge (like Cₙ Catalan number); click it to change.',
+  },
+  'C_{10}',
+  'L_{10}',
+  'H_{5}',
+  'B_{4}',
+  '\\sum_{k=0}^{5}C_k',
+  {
+    note: 'The same sequences, and more, are also built-in functions (Functions → Integer sequences): fibonacci(n), catalan(n), harmonic(n), …',
   },
 
   { folder: 'Algebra' },
@@ -606,7 +614,13 @@ export const DOCUMENTATION: readonly Entry[] = [
 const OUT_PREVIOUS = '{OUT_PREVIOUS}';
 
 export function documentationDoc(): Doc {
-  let doc: Doc = { version: 1, rows: [], interpretations: {}, nextOutputLabel: 1 };
+  let doc: Doc = {
+    version: 1,
+    rows: [],
+    // The built-in sequences that start as names (C_n, …) are chosen, to show them working.
+    interpretations: { C: 'catalan', L: 'lucas', H: 'harmonic', B: 'bernoulli' },
+    nextOutputLabel: 1,
+  };
   // The last row added: inserting after it keeps later entries in the same folder.
   let last: string | null = null;
   const folders: { id: string; open: boolean }[] = [];

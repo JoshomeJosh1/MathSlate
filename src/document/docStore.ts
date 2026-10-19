@@ -109,6 +109,13 @@ export const docActions = {
       return next;
     });
   },
+  /** What a symbol means in this document (an option id of its interpretation). */
+  setInterpretation(symbol: string, optionId: string) {
+    docStore.set((doc) => ({
+      ...doc,
+      interpretations: { ...doc.interpretations, [symbol]: optionId },
+    }));
+  },
   replace(doc: Doc) {
     docStore.set(doc);
   },

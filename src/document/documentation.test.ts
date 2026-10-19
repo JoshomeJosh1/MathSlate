@@ -74,7 +74,10 @@ function children(e: Expr): Expr[] {
 describe('documentation slate', () => {
   const doc = documentationDoc();
   const math = doc.rows.filter((r) => !r.kind);
-  const analyses = analyzeRows(math.map((r) => ({ id: r.id, latex: r.latex })));
+  const analyses = analyzeRows(
+    math.map((r) => ({ id: r.id, latex: r.latex })),
+    { interpretationChoices: doc.interpretations },
+  );
   const deps = buildDependencies(analyses);
   const statements = analyses.flatMap((a) => (a.statement ? [a.statement] : []));
   const seen = collect(statements);

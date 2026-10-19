@@ -9,7 +9,7 @@ const primes: Interpretation = {
     { id: 'variable', label: 'variable', meaning: { kind: 'variable' } },
   ],
   defaultOption: 'primes',
-  promptOnFirstUse: true,
+  promptOnFirstUse: false, // on by default; the row badge switches it off
 };
 
 export default primes;

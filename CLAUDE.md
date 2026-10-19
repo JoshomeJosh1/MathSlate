@@ -14,21 +14,21 @@ starting `#` are headings, `##` subheadings.
 
 ## Status
 
-| Milestone | Scope                                                                                 | State   |
-| --------- | ------------------------------------------------------------------------------------- | ------- |
-| 1         | Scaffold, MathLive rows (add/delete/reorder), LaTeX debug, localStorage, Pages deploy | done    |
-| 2         | Parser (lexer, Pratt CST, definitions, symbol table, resolver, printer) + tests       | done    |
-| 3         | SymPy worker, CasBackend + router, engine, dependency graph, auto-eval, commands      | done    |
-| 3b        | Nerdamer backend (instant, provisional while SymPy loads), per-document CAS choice    | done    |
-| 3c        | Calculus notation: ∫ (indefinite → symbolic, definite → numeric), d/dx, ∂, lim, Σ, Π  | done    |
-| —         | Upright recognised names and subscripts; notes (`"`); documentation slate             | done    |
-| —         | Folders (one level, organise only); `\` menu; curated shortcuts                       | done    |
-| —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                          | done    |
-| 4         | Command palette + arguments, `ans` / `out_k`, promote (↧ or drag a result into place) | done    |
-| 5         | Symbol interpretation prompts + row badges — dropped (e, i, π are reserved instead)   | dropped |
-| 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands            | done    |
-| 7         | `out_k` as a sequence (sums over results); sums over sequences; integer sequences     | done    |
-| 8         | URL share, error highlight inside the math field, perf (measured; see Performance)    | done    |
+| Milestone | Scope                                                                                     | State |
+| --------- | ----------------------------------------------------------------------------------------- | ----- |
+| 1         | Scaffold, MathLive rows (add/delete/reorder), LaTeX debug, localStorage, Pages deploy     | done  |
+| 2         | Parser (lexer, Pratt CST, definitions, symbol table, resolver, printer) + tests           | done  |
+| 3         | SymPy worker, CasBackend + router, engine, dependency graph, auto-eval, commands          | done  |
+| 3b        | Nerdamer backend (instant, provisional while SymPy loads), per-document CAS choice        | done  |
+| 3c        | Calculus notation: ∫ (indefinite → symbolic, definite → numeric), d/dx, ∂, lim, Σ, Π      | done  |
+| —         | Upright recognised names and subscripts; notes (`"`); documentation slate                 | done  |
+| —         | Folders (one level, organise only); `\` menu; curated shortcuts                           | done  |
+| —         | Units and conversions (`5[km]`, `→ [mi]`), for every backend                              | done  |
+| 4         | Command palette + arguments, `ans` / `out_k`, promote (↧ or drag a result into place)     | done  |
+| 5         | Interpretation prompts + badges, for sequences (C_n, L_n, H_n, B_n ask; e, i, π reserved) | done  |
+| 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands                | done  |
+| 7         | `out_k` as a sequence (sums over results); sums over sequences; integer sequences         | done  |
+| 8         | URL share, error highlight inside the math field, perf (measured; see Performance)        | done  |
 
 ### Ideas (not started — ask before implementing)
 
@@ -333,8 +333,14 @@ Definite integrals keep any closed form SymPy finds, special functions included.
 
 - **The AST is CAS-agnostic.** Backend knowledge lives only in `src/cas/<backend>/`.
 - **Constants and built-in sequences are interpretations, not symbols.** `e`, `i`, `π`, `p_n`,
-  `F_n` apply to otherwise undefined names; the document stores choices per symbol
-  (`Doc.interpretations`). A bare `p` is a variable; only `p_5` uses primes.
+  `F_n`, `C_n`, `L_n`, `H_n`, `B_n` apply to otherwise undefined names; the document stores
+  choices per symbol (`Doc.interpretations`, `docActions.setInterpretation`). A bare `p` is a
+  variable; only `p_5` uses primes. `p_n` / `F_n` are sequences by default; Catalan `C_n`, Lucas
+  `L_n`, harmonic `H_n` and Bernoulli `B_n` start as plain names (`defaultOption: 'variable'`) and
+  ask (`promptOnFirstUse`): the first visible row using an undecided letter shows the question
+  (`ui/rows/SequencePrompt.tsx`, computed in `RowList`), and rows show a badge for a letter read
+  as a sequence (or explicitly kept a variable) that reopens the choice. The analysis records
+  every interpreted letter a row reads (`RowAnalysis.interpretations`), whichever meaning.
 - **Reserved names** (`reservedNameError` in `core/analyze.ts`): a row cannot define a built-in
   function, `e`, `i`, `π` (exact results contain them, so a redefinition would change what results
   mean) or `ans` / `out` — an error on that row. They can still be bound (`\sum_{i=1}^n`, a

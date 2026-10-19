@@ -21,12 +21,14 @@ import { decoratedRow, functionShortcuts, nameShortcuts } from '../../core/decor
 import { docActions, docStore } from '../../document/docStore';
 import type { InputRow, RowId } from '../../document/model';
 import { useStore } from '../../document/store';
+import { findInterpretation, type Interpretation } from '../../registries/interpretations';
 import type { EditorKeyAction, MathEditorHandle } from '../editor';
 import { dropTarget, sameTarget, type DropTarget } from './dropTarget';
 import { RESULT_ROWS_TYPE, resultDrop, type ResultDrop } from './resultDrop';
 import { RowItem, type OutlinePiece } from './RowItem';
 
 const FUNCTION_SHORTCUTS = functionShortcuts();
+const NO_PROMPTS: Interpretation[] = [];
 
 /**
  * The row a dragged row is over: the one under the pointer (by the rows' positions when the drag
@@ -362,6 +364,20 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
   const labelText = draggedRow ? dragLabel(draggedRow, dragging?.target, byId) : null;
   const outline = dropOutline(visible, dragging?.id, dragging?.target);
 
+  // Subscripted letters the document has not decided on (C_5: Catalan number or a name?): the
+  // first visible row using each asks (SequencePrompt.tsx).
+  const sequencePrompts = new Map<RowId, Interpretation[]>();
+  const asked = new Set<string>();
+  for (const row of visible) {
+    for (const symbol of engine.rows.get(row.id)?.analysis.interpretations.keys() ?? []) {
+      const interpretation = findInterpretation(symbol, 'subscripted');
+      if (!interpretation?.promptOnFirstUse || symbol in doc.interpretations || asked.has(symbol))
+        continue;
+      asked.add(symbol);
+      sequencePrompts.set(row.id, [...(sequencePrompts.get(row.id) ?? []), interpretation]);
+    }
+  }
+
   return (
     <div
       className="row-list"
@@ -448,6 +464,11 @@ export function RowList({ showDebug }: { showDebug: boolean }) {
                   let after = row.id;
                   for (const latex of latexRows) after = docActions.insertRowAfter(after, latex);
                   focusRow(after);
+                }}
+                sequencePrompts={sequencePrompts.get(row.id) ?? NO_PROMPTS}
+                choices={doc.interpretations}
+                onChooseInterpretation={(symbol, optionId) => {
+                  docActions.setInterpretation(symbol, optionId);
                 }}
               />
             );

@@ -1009,3 +1009,54 @@ button {
 .slate-delete:hover {
   color: var(--error);
 }
+
+/* Built-in sequences on subscripted letters (SequencePrompt.tsx): the question, and the badge. */
+.sequence-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-left: 40px;
+  padding: 2px 8px 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sequence-prompt button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.sequence-prompt button:hover,
+.sequence-prompt button.chosen {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sequence-badge {
+  align-self: center;
+  flex: none;
+  margin-right: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sequence-badge:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sequence-badge.plain {
+  border-style: dashed;
+}

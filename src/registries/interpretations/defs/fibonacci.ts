@@ -9,7 +9,7 @@ const fibonacci: Interpretation = {
     { id: 'variable', label: 'variable', meaning: { kind: 'variable' } },
   ],
   defaultOption: 'fibonacci',
-  promptOnFirstUse: true,
+  promptOnFirstUse: false, // on by default; the row badge switches it off
 };
 
 export default fibonacci;

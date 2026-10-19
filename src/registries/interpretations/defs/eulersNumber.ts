@@ -9,7 +9,7 @@ const eulersNumber: Interpretation = {
     { id: 'variable', label: 'variable', meaning: { kind: 'variable' } },
   ],
   defaultOption: 'euler',
-  promptOnFirstUse: true,
+  promptOnFirstUse: false, // a reserved constant (core/analyze.ts): no prompt
 };
 
 export default eulersNumber;

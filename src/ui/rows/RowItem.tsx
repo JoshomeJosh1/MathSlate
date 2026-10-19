@@ -6,11 +6,13 @@ import { bracketOnlyShortcuts, functionMacros } from '../../core/decorate';
 import type { RowView } from '../../core/engine';
 import type { InputRow } from '../../document/model';
 import { commands, type Command } from '../../registries/commands';
+import { findInterpretation, type Interpretation } from '../../registries/interpretations';
 import { MathEditor, type EditorKeyAction, type MathEditorHandle } from '../editor';
 import { CommandPalette, type PaletteMode } from './CommandPalette';
 import { NoteEditor } from './NoteEditor';
 import { OutputRow } from './OutputRow';
 import { RowDebug, RowError } from './RowDiagnostics';
+import { SequenceBadge, SequencePrompt } from './SequencePrompt';
 import { SuggestionChips } from './SuggestionChips';
 
 // Built-in functions display as single units (\lcm) and lcm/gcd/binomial need brackets.
@@ -54,6 +56,11 @@ interface Props {
   /** Puts the caret back in the row (after the command palette closes). */
   onReturnFocus: () => void;
   onPromote: (latexRows: string[]) => void;
+  /** Subscripted letters this row asks about (the first row using one the document has not decided). */
+  sequencePrompts: readonly Interpretation[];
+  /** The document's choices of meaning, by symbol. */
+  choices: Readonly<Record<string, string>>;
+  onChooseInterpretation: (symbol: string, optionId: string) => void;
 }
 
 /**
@@ -73,6 +80,19 @@ export function RowItem(props: Props) {
   } = useSortable({ id: row.id, transition: { duration: 150, easing: 'ease-out' } });
   /** The command palette, when open: adding a command, or editing an output's arguments. */
   const [palette, setPalette] = useState<(PaletteMode & { outputId?: string }) | null>(null);
+  /** A sequence badge was clicked: its letter's choice is shown again. */
+  const [choosing, setChoosing] = useState<string | null>(null);
+  // Subscripted letters this row reads with a built-in meaning (p_5, C_3), and the option used.
+  const sequenceUses = [...(view?.analysis.interpretations ?? [])].flatMap(([symbol, option]) => {
+    const interpretation = findInterpretation(symbol, 'subscripted');
+    return interpretation ? [{ interpretation, option }] : [];
+  });
+  const prompts = [
+    ...props.sequencePrompts,
+    ...sequenceUses
+      .map((u) => u.interpretation)
+      .filter((i) => i.symbol === choosing && !props.sequencePrompts.includes(i)),
+  ];
   const closePalette = () => {
     setPalette(null);
     props.onReturnFocus();
@@ -151,6 +171,18 @@ export function RowItem(props: Props) {
             {props.folderSize} {props.folderSize === 1 ? 'row' : 'rows'}
           </span>
         )}
+        {isMath &&
+          sequenceUses.map(({ interpretation, option }) => (
+            <SequenceBadge
+              key={interpretation.symbol}
+              interpretation={interpretation}
+              optionId={option}
+              chosen={interpretation.symbol in props.choices}
+              onClick={() => {
+                setChoosing((c) => (c === interpretation.symbol ? null : interpretation.symbol));
+              }}
+            />
+          ))}
         <button
           className="row-delete"
           title={isFolder ? 'Delete folder (keeps its rows)' : 'Delete row'}
@@ -168,6 +200,18 @@ export function RowItem(props: Props) {
           {...(view.error.span && showDebug ? { span: view.error.span } : {})}
         />
       )}
+      {isMath &&
+        prompts.map((interpretation) => (
+          <SequencePrompt
+            key={interpretation.symbol}
+            interpretation={interpretation}
+            chosen={props.choices[interpretation.symbol]}
+            onChoose={(optionId) => {
+              props.onChooseInterpretation(interpretation.symbol, optionId);
+              setChoosing(null);
+            }}
+          />
+        ))}
       {isMath && showDebug && <RowDebug latex={row.latex} analysis={view?.analysis} />}
       {isMath && palette && (
         <CommandPalette
