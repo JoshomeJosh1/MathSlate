@@ -259,6 +259,10 @@ export function tokenize(src: string): Token[] {
         pushDelim(delimCmd, start);
         continue;
       }
+      if (name === 'langle' || name === 'rangle') {
+        const at = sizing ? { start: sizingStart, end: i } : span();
+        throw new MathError('Angle brackets ⟨ ⟩ are reserved for later: use ( ) to group', at);
+      }
       if (sizing) throw new MathError(`Unsupported delimiter "\\${name}"`, span());
       if (IGNORED.has(name)) continue;
       if (GREEK.has(name)) {

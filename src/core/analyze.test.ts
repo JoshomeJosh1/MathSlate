@@ -222,6 +222,10 @@ describe('errors with positions', () => {
     ['2^3^4', '!Double exponent: use braces, e.g. x^{2^{3}} @3-4'],
     ['x_1_2', '!Double subscript: use braces, e.g. x_{12} @3-4'],
     ['\\foo', '!Unknown command "\\foo" @0-4'],
+    [
+      '\\left\\langle x\\right\\rangle',
+      '!Angle brackets ⟨ ⟩ are reserved for later: use ( ) to group @0-12',
+    ],
     ['\\sin', '!"\\sin" needs an argument @0-4'],
     ['\\hom x', '!Unknown function "\\hom" @0-6'],
     [

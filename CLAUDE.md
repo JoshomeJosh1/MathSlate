@@ -201,8 +201,8 @@ caught on `mode-change`, switched back, and opens our menu. The layout is our ow
 capitals), and only the symbols and structures letters cannot produce (+ − × ÷ = xʸ √ ( ) [ ]
 \ , . |x| ! < >); sin, pi, int, theta, -> are typed and the shortcuts make them (symbol
 shortcuts like `->` and `<=` are applied for the math keyboard too, `applyShortcut`).
-Shift and long-press give related keys (= → ≠, < → ≤, xʸ → xₙ / x² / x⁻¹, [ → mat / vec,
-\ → ans / out, digits → xᵈ / x_d). Then **f(x)** (functions, inverses, ∫, ∫ₐᵇ, d/dx, ∂, Σ, Π, lim, ∞,
+Shift and long-press give related keys (= → ≠, < → ≤, xʸ → xₙ / x² / x⁻¹, ( ) → { },
+digits → xᵈ / x_d; [ and \ have none). Angle brackets `\langle` / `\rangle` are reserved (an error). Then **f(x)** (functions, inverses, ∫, ∫ₐᵇ, d/dx, ∂, Σ, Π, lim, ∞,
 binomial, mat, vec, ans, out), **123** (a calculator numpad) and MathLive's **αβγ**. Labels are
 plain text with Unicode super/subscripts: HTML `<sup>` and LaTeX templates render badly in
 keycaps. Characters are typed keys (`key`), not inserted LaTeX, so shortcuts, subscript digits

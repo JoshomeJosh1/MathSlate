@@ -87,21 +87,16 @@ const greater = typed('>', '>', {
   shift: insert('\\ge', '≥'),
   variants: [insert('\\ge', '≥')],
 });
-const open = typed('(', '(', { shift: typed('|', '|') });
-const close = typed(')');
-const openSquare = typed('[', '[', {
-  tooltip: 'A unit [km], or a list or matrix [1, 2; 3, 4]',
-  shift: matrix,
-  variants: [matrix, vector],
-});
+// Braces (a set {1, 2, 3}) on shift and long-press of the round brackets.
+const openBrace = typed('{', '{');
+const closeBrace = typed('}', '}');
+const open = typed('(', '(', { shift: openBrace, variants: [openBrace] });
+const close = typed(')', ')', { shift: closeBrace, variants: [closeBrace] });
+const openSquare = typed('[', '[', { tooltip: 'A unit [km], or a list or matrix [1, 2; 3, 4]' });
 const closeSquare = typed(']');
 const comma = typed(',', ',', { shift: typed(';'), variants: [typed(';')] });
 const factorial = typed('!', '!', { shift: typed('%'), variants: [typed('%')] });
-const menu = typed('\\', '\\', {
-  tooltip: 'Everything MathSlate understands (the \\ menu)',
-  shift: ans,
-  variants: [ans, out],
-});
+const menu = typed('\\', '\\', { tooltip: 'Everything MathSlate understands (the \\ menu)' });
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
 /** Digits: shift makes the power xᵈ, long-press gives the power or the subscript xₐ. */
