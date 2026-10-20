@@ -207,6 +207,10 @@ binomial, mat, vec, ans, out), **123** (a calculator numpad) and MathLive's **α
 plain text with Unicode super/subscripts: HTML `<sup>` and LaTeX templates render badly in
 keycaps. Characters are typed keys (`key`), not inserted LaTeX, so shortcuts, subscript digits
 and the matrix keys apply to them; `keyboardLayouts.test.ts` checks every inserted LaTeX parses.
+`|x|` types `|` (a smart fence like `(`: no empty box). MathLive closes a long-press's variants
+panel on the release that ends the press (it expects a slide onto a variant);
+`keepVariantsOpen` in `MathLiveEditor.tsx` swallows that release so the panel stays to be
+tapped, and the keyboard has `-webkit-touch-callout: none` against iOS's callout.
 
 **The `\` menu** replaces MathLive's LaTeX mode, whose suggestions list every command MathLive
 knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser

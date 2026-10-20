@@ -939,12 +939,34 @@ let keyboardWatched = false;
  * The math keyboard covers the bottom of the window: pad the page by its height so the last
  * rows can scroll above it, and bring the focused row into view when it opens.
  */
+/**
+ * Long-press on a key opens its variants (MathLive), but MathLive closes the panel on the next
+ * pointer release anywhere, so it only works by sliding onto a variant without lifting the
+ * finger. Here the release that ends the long press itself (and an iOS cancel during it) leaves
+ * the panel open, to tap a variant; any later release outside the panel closes it as before.
+ */
+function keepVariantsOpen() {
+  const panelOpen = () => document.querySelector('.MLK__variant-panel.is-visible') !== null;
+  let openAtPress = false;
+  window.addEventListener('pointerdown', () => (openAtPress = panelOpen()), { capture: true });
+  const keepOpen = (ev: PointerEvent) => {
+    const panel = document.querySelector('.MLK__variant-panel.is-visible');
+    if (!panel || openAtPress || (ev.target instanceof Node && panel.contains(ev.target))) return;
+    // The panel opened during this press: its release (or cancel) must not close it.
+    openAtPress = true;
+    ev.stopPropagation();
+  };
+  window.addEventListener('pointerup', keepOpen, { capture: true });
+  window.addEventListener('pointercancel', keepOpen, { capture: true });
+}
+
 function keepRowsAboveKeyboard() {
   if (keyboardWatched) return;
   keyboardWatched = true;
   const keyboard = window.mathVirtualKeyboard;
   // MathSlate's own layers (keyboardLayouts.ts) instead of MathLive's defaults.
   keyboard.layouts = KEYBOARD_LAYOUTS;
+  keepVariantsOpen();
   keyboard.addEventListener('geometrychange', () => {
     const height = keyboard.visible ? keyboard.boundingRect.height : 0;
     document.body.style.paddingBottom = height > 0 ? `${height}px` : '';

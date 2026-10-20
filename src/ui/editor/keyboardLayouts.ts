@@ -56,9 +56,8 @@ const root = insert('\\sqrt{#?}', '√', {
   shift: insert('\\sqrt[#?]{#?}', 'ⁿ√'),
   variants: [insert('\\sqrt[3]{#?}', '∛'), insert('\\sqrt[#?]{#?}', 'ⁿ√')],
 });
-const abs = insert('\\left|#?\\right|', '|x|', {
-  tooltip: 'Absolute value, length or determinant',
-});
+// Typed like a bracket: MathLive's smart fences pair it (no empty box; deleting leaves nothing).
+const abs = typed('|', '|x|', { tooltip: 'Absolute value, length or determinant' });
 const matrix = insert(MATRIX_TEMPLATE, 'mat', {
   class: 'small',
   tooltip: 'Matrix: , goes to the next entry, ; to the next row',
