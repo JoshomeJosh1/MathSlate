@@ -94,7 +94,9 @@ const open = typed('(', '(', { shift: openBrace, variants: [openBrace] });
 const close = typed(')', ')', { shift: closeBrace, variants: [closeBrace] });
 const openSquare = typed('[', '[', { tooltip: 'A unit [km], or a list or matrix [1, 2; 3, 4]' });
 const closeSquare = typed(']');
-const comma = typed(',');
+// @ and # (a folder or a heading, typed in an empty row) on shift and long-press.
+const comma = typed(',', ',', { shift: typed('@'), variants: [typed('@')] });
+const semicolon = typed(';', ';', { shift: typed('#'), variants: [typed('#')] });
 const factorial = typed('!', '!', { shift: typed('%'), variants: [typed('%')] });
 const menu = typed('\\', '\\', { tooltip: 'Everything MathSlate understands (the \\ menu)' });
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
@@ -125,10 +127,10 @@ const MATH: VirtualKeyboardLayout = {
     [
       menu,
       comma,
-      typed(';'),
+      semicolon,
       typed('.'),
-      root,
       factorial,
+      root,
       less,
       greater,
       LEFT,

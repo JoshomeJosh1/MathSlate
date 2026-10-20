@@ -305,6 +305,15 @@ export function MathLiveEditor({
         openMenu();
         return;
       }
+      // # and @ in an empty row make a heading or a folder, as from a physical keyboard (the
+      // keyboard's # arrives as \#).
+      const char = ev.data === '\\#' ? '#' : data;
+      const emptyRowAction = char !== null && mf.value === '' ? EMPTY_ROW_KEYS[char] : undefined;
+      if (emptyRowAction) {
+        ev.preventDefault();
+        callbacks.current.onKeyAction?.(emptyRowAction);
+        return;
+      }
       const matrix =
         data === ',' || data === ';'
           ? data
