@@ -110,7 +110,7 @@ const digit = (d: string): Key => {
 const chars = (keys: string): string[] => keys.split(/(?=.)/);
 
 const MATH: VirtualKeyboardLayout = {
-  label: 'Math',
+  label: 'abc',
   tooltip: 'Letters, numbers and symbols',
   rows: [
     chars('1234567890').map(digit),
