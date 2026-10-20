@@ -2,159 +2,242 @@ import type { VirtualKeyboardKeycap, VirtualKeyboardLayout } from 'mathlive';
 import { MATRIX_TEMPLATE, VECTOR_TEMPLATE } from '../../core/completions';
 
 /**
- * The math keyboard on touch screens: MathSlate's own layers instead of MathLive's defaults, which
- * offer much MathSlate does not compute with (∀, ∃, Re/Im, a preset ∫₀^∞ …). Two layers of our own
- * — "123" (numbers, variables, operators, brackets) and "f(x)" (functions, calculus, matrices,
- * results) — then MathLive's letters and Greek letters.
+ * The math keyboard on touch screens. The main tab has every letter, a row of digits and the
+ * symbols and structures that letters cannot produce; anything that can be typed as letters (sin,
+ * pi, int, theta, -> for →) is left to the shortcuts. Tabs for functions and calculus (f(x)), a
+ * calculator numpad (123) and Greek letters (MathLive's own) hold the rest at full size.
+ * Long-presses (variants) and shift give related keys: = → ≠, < → ≤, [ → a matrix, …
  *
- * Characters are sent as typed keys (`key`), not inserted LaTeX, so they go through the same
- * handling as a physical keyboard: shortcuts (sin, theta), subscript digits (x1 → x₁), matrix
- * , and ;, and \ for the command menu (MathLiveEditor.tsx). Structures are inserted as LaTeX:
- * `#?` is an empty box, `#@` the atom before the caret (x then ^ makes a power of x).
+ * Labels are text or HTML, never LaTeX templates (whose empty boxes rendered badly). Characters
+ * are sent as typed keys (`key`), so they go through the same handling as a physical keyboard
+ * (MathLiveEditor.tsx): shortcuts, subscript digits (x1 → x₁), matrix , and ;, and \ for the
+ * command menu. Structures are inserted as LaTeX: `#?` is an empty box, `#@` the atom before the
+ * caret (x then xʸ makes a power of x).
  */
 
 type Key = string | Partial<VirtualKeyboardKeycap>;
+type Extra = Partial<VirtualKeyboardKeycap>;
 
-/** A key that types a character, shown as LaTeX. */
-const typed = (key: string, latex = key, extra: Partial<VirtualKeyboardKeycap> = {}): Key => ({
-  latex,
+/** A key that types a character; `label` is its label (default: the character). */
+const typed = (key: string, label = key, extra: Extra = {}): Partial<VirtualKeyboardKeycap> => ({
+  label,
   key,
   ...extra,
 });
 
-/** A key that inserts LaTeX (a structure or a command). */
-const insert = (latex: string, extra: Partial<VirtualKeyboardKeycap> = {}): Key => ({
-  latex,
+/** A key that inserts LaTeX (a structure or a command), with an HTML label. */
+const insert = (
+  latex: string,
+  label: string,
+  extra: Extra = {},
+): Partial<VirtualKeyboardKeycap> => ({
+  label,
   insert: latex,
   ...extra,
 });
 
-const SEPARATOR = '[separator-5]';
+/** A letter, with its capital on shift. */
+const letter = (c: string): Key => typed(c, c, { shift: typed(c.toUpperCase()) });
 
-const NUMBERS: VirtualKeyboardLayout = {
-  label: '123',
-  tooltip: 'Numbers and operators',
+const HALF = '[separator-5]';
+const LEFT = '[left]';
+const RIGHT = '[right]';
+const BACKSPACE = '[backspace]';
+const RETURN = '[return]';
+
+// Structures and symbols shared by the tabs.
+const power = insert('#@^{#?}', 'xʸ', {
+  tooltip: 'Power',
+  shift: insert('#@_{#?}', 'xₙ'),
+  variants: [insert('#@^{2}', 'x²'), insert('#@_{#?}', 'xₙ'), insert('#@^{-1}', 'x⁻¹')],
+});
+const root = insert('\\sqrt{#?}', '√', {
+  tooltip: 'Square root',
+  shift: insert('\\sqrt[#?]{#?}', 'ⁿ√'),
+  variants: [insert('\\sqrt[3]{#?}', '∛'), insert('\\sqrt[#?]{#?}', 'ⁿ√')],
+});
+const abs = insert('\\left|#?\\right|', '|x|', {
+  tooltip: 'Absolute value, length or determinant',
+});
+const matrix = insert(MATRIX_TEMPLATE, 'mat', {
+  class: 'small',
+  tooltip: 'Matrix: , goes to the next entry, ; to the next row',
+});
+const vector = insert(VECTOR_TEMPLATE, 'vec', {
+  class: 'small',
+  tooltip: 'Column vector: ; goes to the next entry',
+});
+const ans = insert('\\mathrm{ans}', 'ans', { class: 'small', tooltip: 'The result above' });
+const out = insert('\\mathrm{out}', 'out', {
+  class: 'small',
+  tooltip: 'An output: type its number next (out3)',
+});
+// No ± / ∓: MathSlate does not compute with them.
+const plus = typed('+');
+const minus = typed('-', '−');
+const times = insert('\\cdot', '×', {
+  tooltip: 'Multiply (shift: cross product ×)',
+  shift: insert('\\times', '⨯'),
+  variants: [insert('\\times', '⨯')],
+});
+const divide = typed('/', '÷', { tooltip: 'Fraction' });
+const equals = typed('=', '=', { shift: insert('\\ne', '≠'), variants: [insert('\\ne', '≠')] });
+const less = typed('<', '<', { shift: insert('\\le', '≤'), variants: [insert('\\le', '≤')] });
+const greater = typed('>', '>', {
+  tooltip: '- then > makes →',
+  shift: insert('\\ge', '≥'),
+  variants: [insert('\\ge', '≥')],
+});
+const open = typed('(', '(', { shift: typed('|', '|') });
+const close = typed(')');
+const openSquare = typed('[', '[', {
+  tooltip: 'A unit [km], or a list or matrix [1, 2; 3, 4]',
+  shift: matrix,
+  variants: [matrix, vector],
+});
+const closeSquare = typed(']');
+const comma = typed(',', ',', { shift: typed(';'), variants: [typed(';')] });
+const factorial = typed('!', '!', { shift: typed('%'), variants: [typed('%')] });
+const menu = typed('\\', '\\', {
+  tooltip: 'Everything MathSlate understands (the \\ menu)',
+  shift: ans,
+  variants: [ans, out],
+});
+/** Digits; 2 and 3 are squares and cubes on shift. */
+const digit = (d: string): Key =>
+  d === '2' || d === '3'
+    ? typed(d, d, { shift: insert(`#@^{${d}}`, d === '2' ? 'x²' : 'x³') })
+    : typed(d);
+
+/** The characters of a string of plain ASCII keys. */
+const chars = (keys: string): string[] => keys.split(/(?=.)/);
+
+const MATH: VirtualKeyboardLayout = {
+  label: 'Math',
+  tooltip: 'Letters, numbers and symbols',
   rows: [
+    chars('1234567890').map(digit),
+    chars('qwertyuiop').map(letter),
+    [HALF, ...chars('asdfghjkl').map(letter), HALF],
     [
-      typed('x', 'x', { variants: ['y', 'z', 't', 'k'].map((v) => typed(v)) }),
-      typed('y'),
-      SEPARATOR,
-      typed('7'),
-      typed('8'),
-      typed('9'),
-      typed('/', '\\frac{a}{b}', { class: 'small', tooltip: 'Fraction' }),
-      SEPARATOR,
-      insert('#@^{#?}', { tooltip: 'Power' }),
-      insert('\\sqrt{#?}', { tooltip: 'Square root', variants: [insert('\\sqrt[#?]{#?}')] }),
-      insert('\\pi', { tooltip: 'π' }),
+      { label: '[shift]', width: 1.5 },
+      ...chars('zxcvbnm').map(letter),
+      { label: BACKSPACE, width: 1.5 },
     ],
-    [
-      typed('a', 'a', { variants: ['b', 'c', 'm', 'r'].map((v) => typed(v)) }),
-      typed('n', 'n', { variants: ['i', 'j', 'k'].map((v) => typed(v)) }),
-      SEPARATOR,
-      typed('4'),
-      typed('5'),
-      typed('6'),
-      insert('\\cdot', { tooltip: 'Multiply', variants: [insert('\\times')] }),
-      SEPARATOR,
-      insert('#@_{#?}', { tooltip: 'Subscript' }),
-      typed('('),
-      typed(')'),
-    ],
-    [
-      typed('<', '<', {
-        variants: [typed('>'), insert('\\le'), insert('\\ge'), insert('\\ne')],
-        tooltip: 'Long-press for > ≤ ≥ ≠',
-      }),
-      typed('='),
-      SEPARATOR,
-      typed('1'),
-      typed('2'),
-      typed('3'),
-      typed('-', '−'),
-      SEPARATOR,
-      typed('[', '[', {
-        tooltip: 'Square brackets: a unit [km], or a list or matrix [1, 2; 3, 4]',
-      }),
-      typed(']'),
-      typed('e', 'e', { tooltip: 'e (2.718…)' }),
-    ],
-    [
-      typed('\\', '\\backslash', { tooltip: 'Everything MathSlate understands (the \\ menu)' }),
-      insert('\\to', { tooltip: 'Convert to a unit (→ [km]), or a limit (x → 0)' }),
-      SEPARATOR,
-      typed('0'),
-      typed('.'),
-      typed(',', ',', { variants: [typed(';')], tooltip: 'Long-press for ;' }),
-      typed('+'),
-      SEPARATOR,
-      '[left]',
-      '[right]',
-      { label: '[backspace]', width: 1 },
-      '[return]',
-    ],
+    [plus, minus, times, divide, equals, power, root, open, close, openSquare, closeSquare],
+    [menu, comma, typed('.'), abs, factorial, less, greater, LEFT, RIGHT, RETURN],
   ],
 };
+
+/** A function key: inserts \name, labelled with its name. */
+const fn = (name: string, label = name, extra: Extra = {}): Key =>
+  insert(`\\${name}`, label, extra);
 
 const FUNCTIONS: VirtualKeyboardLayout = {
   label: 'f(x)',
-  tooltip: 'Functions, calculus and matrices',
+  tooltip: 'Functions and calculus',
   rows: [
     [
-      insert('\\sin', { variants: [insert('\\arcsin')] }),
-      insert('\\cos', { variants: [insert('\\arccos')] }),
-      insert('\\tan', { variants: [insert('\\arctan')] }),
-      SEPARATOR,
-      insert('\\ln'),
-      insert('\\log', { variants: [insert('\\log_{#?}')] }),
-      insert('\\exp'),
-      SEPARATOR,
-      insert('\\int', { tooltip: 'Integral: type _ and ^ for bounds, then dx' }),
-      insert('\\frac{d}{dx}', { class: 'small', tooltip: 'Derivative' }),
-      insert('\\partial'),
+      fn('sin', 'sin', { variants: [fn('csc')] }),
+      fn('cos', 'cos', { variants: [fn('sec')] }),
+      fn('tan', 'tan', { variants: [fn('cot')] }),
+      fn('ln'),
+      fn('log', 'log', { variants: [insert('\\log_{#?}', 'logₐ')] }),
+      fn('exp'),
+      insert('\\pi', 'π'),
+      typed('e'),
+      insert('\\sqrt[3]{#?}', '∛'),
+      BACKSPACE,
     ],
     [
-      insert('\\sinh'),
-      insert('\\cosh'),
-      insert('\\tanh'),
-      SEPARATOR,
-      insert('\\left|#?\\right|', { tooltip: 'Absolute value, length or determinant' }),
-      typed('!', '!', { tooltip: 'Factorial' }),
-      insert('\\binom{#?}{#?}', { class: 'small' }),
-      SEPARATOR,
-      insert('\\sum_{#?}^{#?}', { class: 'small' }),
-      insert('\\prod_{#?}^{#?}', { class: 'small' }),
-      insert('\\lim_{#?\\to#?}', { class: 'small' }),
+      fn('arcsin', 'sin⁻¹'),
+      fn('arccos', 'cos⁻¹'),
+      fn('arctan', 'tan⁻¹'),
+      fn('sinh'),
+      fn('cosh'),
+      fn('tanh'),
+      typed('!', 'n!'),
+      insert('\\binom{#?}{#?}', 'binom', { class: 'small', tooltip: 'Binomial coefficient' }),
+      typed('%'),
+      typed("'", '′', { tooltip: "Derivative of your function: f'(x)" }),
     ],
     [
-      insert(MATRIX_TEMPLATE, {
-        class: 'small',
-        tooltip: 'Matrix: , goes to the next entry, ; to the next row',
-      }),
-      insert(VECTOR_TEMPLATE, {
-        class: 'small',
-        tooltip: 'Column vector: ; goes to the next entry',
-      }),
-      insert('\\infty'),
-      SEPARATOR,
-      insert('\\mathrm{ans}', { class: 'small', tooltip: 'The result above' }),
-      insert('\\mathrm{out}', {
-        class: 'small',
-        tooltip: 'An output: type its number next (out3)',
-      }),
-      typed('%', '\\%'),
-      SEPARATOR,
-      '[left]',
-      '[right]',
-      { label: '[backspace]', width: 1 },
-      '[return]',
+      insert('\\int', '∫', { tooltip: 'Integral: then dx (type _ and ^ for bounds)' }),
+      insert('\\int_{#?}^{#?}', '∫ₐᵇ', { tooltip: 'Definite integral' }),
+      insert('\\frac{d}{dx}', 'd/dx', { class: 'small', tooltip: 'Derivative' }),
+      insert('\\partial', '∂'),
+      insert('\\sum_{#?}^{#?}', '∑'),
+      insert('\\prod_{#?}^{#?}', '∏'),
+      insert('\\lim_{#?\\to#?}', 'lim'),
+      insert('\\infty', '∞'),
+      insert('\\to', '→'),
+    ],
+    [ans, out, matrix, vector, open, close, LEFT, RIGHT, RETURN],
+  ],
+};
+
+const NUMPAD: VirtualKeyboardLayout = {
+  label: '123',
+  tooltip: 'Numbers',
+  rows: [
+    [
+      typed('x'),
+      typed('y'),
+      open,
+      close,
+      HALF,
+      digit('7'),
+      digit('8'),
+      digit('9'),
+      divide,
+      BACKSPACE,
+    ],
+    [
+      typed('a'),
+      typed('n'),
+      openSquare,
+      closeSquare,
+      HALF,
+      digit('4'),
+      digit('5'),
+      digit('6'),
+      times,
+      LEFT,
+    ],
+    [less, equals, power, root, HALF, digit('1'), digit('2'), digit('3'), minus, RIGHT],
+    [
+      insert('\\pi', 'π'),
+      typed('e'),
+      comma,
+      insert('\\to', '→'),
+      HALF,
+      digit('0'),
+      typed('.'),
+      plus,
+      { label: RETURN, width: 2 },
     ],
   ],
 };
 
-export const KEYBOARD_LAYOUTS: (VirtualKeyboardLayout | 'alphabetic' | 'greek')[] = [
-  NUMBERS,
+export const KEYBOARD_LAYOUTS: (VirtualKeyboardLayout | 'greek')[] = [
+  MATH,
   FUNCTIONS,
-  'alphabetic',
+  NUMPAD,
   'greek',
 ];
+
+/** Every LaTeX a key inserts (main keys, shift and long-press variants), for tests. */
+export function insertedLatex(): string[] {
+  const out: string[] = [];
+  const visit = (k: Key) => {
+    if (typeof k === 'string') return;
+    if (k.insert) out.push(k.insert);
+    if (typeof k.shift === 'object') visit(k.shift);
+    if (Array.isArray(k.variants)) k.variants.forEach(visit);
+  };
+  for (const layout of KEYBOARD_LAYOUTS) {
+    if (typeof layout === 'string' || !('rows' in layout)) continue;
+    layout.rows.flat().forEach(visit);
+  }
+  return out;
+}

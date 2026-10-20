@@ -445,7 +445,9 @@ export function MathLiveEditor({
     const applyShortcut = (): Fired | null => {
       const at = mf.position;
       const letters = (from: number) => mf.getValue(Math.max(0, from), at, 'latex');
-      const key = wordKeys()
+      // Word shortcuts, and symbol ones made of characters MathLive keeps as typed (-> <= != +-).
+      const symbolKeys = Object.keys(mf.inlineShortcuts).filter((k) => /^[-+<>=!]{2,}$/.test(k));
+      const key = [...wordKeys(), ...symbolKeys]
         .filter((k) => typed.endsWith(k) && k.length <= at && letters(at - k.length) === k)
         .sort((a, b) => b.length - a.length)
         .find((k) => {

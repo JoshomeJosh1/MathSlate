@@ -197,10 +197,16 @@ the page is padded by the keyboard's height so rows can scroll above it. `before
 the keyboard's characters what physical keys get in `onKeyDown`: matrix `,` `;` and delete, and
 the `\` menu's letters, delete and return; its `\` (which switches MathLive to LaTeX mode) is
 caught on `mode-change`, switched back, and opens our menu. The layout is our own
-(`ui/editor/keyboardLayouts.ts`): "123" (variables, digits, operators, power/subscript, √, ( ) [ ],
-π, e, =, →, `,`/`;`, `\`) and "f(x)" (functions, ∫, d/dx, ∂, Σ, Π, lim, |x|, !, binomial, matrix
-and vector templates, ans, out), then MathLive's letters and Greek. Characters are typed keys
-(`key`), not inserted LaTeX, so shortcuts, subscript digits and the matrix keys apply to them.
+(`ui/editor/keyboardLayouts.ts`). The **Math** tab has a digit row, every letter (shift for
+capitals), and only the symbols and structures letters cannot produce (+ − × ÷ = xʸ √ ( ) [ ]
+\ , . |x| ! < >); sin, pi, int, theta, -> are typed and the shortcuts make them (symbol
+shortcuts like `->` and `<=` are applied for the math keyboard too, `applyShortcut`).
+Shift and long-press give related keys (= → ≠, < → ≤, xʸ → xₙ / x² / x⁻¹, [ → mat / vec,
+\ → ans / out, 2 → x²). Then **f(x)** (functions, inverses, ∫, ∫ₐᵇ, d/dx, ∂, Σ, Π, lim, ∞,
+binomial, mat, vec, ans, out), **123** (a calculator numpad) and MathLive's **αβγ**. Labels are
+plain text with Unicode super/subscripts: HTML `<sup>` and LaTeX templates render badly in
+keycaps. Characters are typed keys (`key`), not inserted LaTeX, so shortcuts, subscript digits
+and the matrix keys apply to them; `keyboardLayouts.test.ts` checks every inserted LaTeX parses.
 
 **The `\` menu** replaces MathLive's LaTeX mode, whose suggestions list every command MathLive
 knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser
