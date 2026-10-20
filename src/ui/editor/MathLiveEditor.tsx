@@ -192,7 +192,7 @@ export function MathLiveEditor({
     };
     pickRef.current = pick;
     /** Handles a key while the menu is open; false lets the key through to the field. */
-    const menuKey = (ev: KeyboardEvent, m: MenuState): boolean => {
+    const menuKey = (ev: KeyLike, m: MenuState): boolean => {
       const layout = menuLayout(completions ?? [], m.query);
       const items = layout.items;
       const current = items[m.active];
@@ -226,7 +226,7 @@ export function MathLiveEditor({
      * the end), and Backspace in an empty cell removes its row or column if it is all empty.
      * Returns whether it handled the key.
      */
-    const matrixKey = (ev: KeyboardEvent): boolean => {
+    const matrixKey = (ev: KeyLike): boolean => {
       if (ev.altKey || ev.metaKey || ev.ctrlKey) return false;
       if (ev.key !== ';' && ev.key !== ',' && ev.key !== 'Backspace') return false;
       const cell = matrixCell(mf);
@@ -273,6 +273,51 @@ export function MathLiveEditor({
       if (fromKey || applying || !(ev instanceof InputEvent)) return;
       // A physical key's character (its keydown, already handled, set `pending`).
       if (ev.inputType === 'insertText' && pending && !pending.virtual) return;
+      const data = ev.inputType === 'insertText' && ev.data?.length === 1 ? ev.data : null;
+      // The math keyboard's keys, for what physical keys do in onKeyDown: the `\` menu (its
+      // letters filter, delete and return), opening it, and growing a matrix with , and ;.
+      const open = menuRef.current;
+      if (open) {
+        const key =
+          data ??
+          (ev.inputType === 'deleteContentBackward'
+            ? 'Backspace'
+            : ev.inputType === 'insertLineBreak'
+              ? 'Enter'
+              : null);
+        if (key !== null) {
+          ev.preventDefault();
+          // Any other character completes an exact name and is then typed (here: MathLive loses
+          // its own insert once the field has changed).
+          if (!menuKey(virtualKey(key), open) && data !== null) {
+            mf.insert(data);
+            callbacks.current.onChange(mf.value);
+          }
+          return;
+        }
+      }
+      if (data === '\\') {
+        ev.preventDefault();
+        typed = '';
+        fired = null;
+        spelling = null;
+        openMenu();
+        return;
+      }
+      const matrix =
+        data === ',' || data === ';'
+          ? data
+          : ev.inputType === 'deleteContentBackward' && !fired
+            ? 'Backspace'
+            : null;
+      if (matrix !== null && matrixKey(virtualKey(matrix))) {
+        ev.preventDefault();
+        typed = '';
+        fired = null;
+        spelling = null;
+        callbacks.current.onChange(mf.value);
+        return;
+      }
       const last = fired;
       fired = null;
       if (ev.inputType === 'insertLineBreak') {
@@ -651,6 +696,27 @@ export function MathLiveEditor({
     mf.addEventListener('pointerdown', onPointerDown);
     mf.addEventListener('focusin', onFocusIn);
     mf.addEventListener('focusout', onFocusOut);
+    // The math keyboard's \ switches MathLive to its LaTeX mode (before any input event; a
+    // physical \ never gets here, onKeyDown opens the menu first): back to math, and our menu.
+    const onModeChange = () => {
+      if (mf.mode !== 'latex') return;
+      // After MathLive has finished the keystroke (it enters LaTeX mode, then types the \).
+      setTimeout(() => {
+        if (mf.mode !== 'latex') return;
+        applying = true;
+        mf.executeCommand(['switchMode', 'math']);
+        // The \ it typed stays behind as a character (or a line break \\): remove it.
+        const typedBackslash = mf.getValue(mf.position - 1, mf.position, 'latex');
+        if (/^\\{1,2}$|backslash/.test(typedBackslash)) mf.executeCommand('deleteBackward');
+        applying = false;
+        typed = '';
+        fired = null;
+        spelling = null;
+        callbacks.current.onChange(mf.value);
+        openMenu();
+      }, 0);
+    };
+    mf.addEventListener('mode-change', onModeChange);
     fieldRef.current = mf;
 
     return () => {
@@ -661,6 +727,7 @@ export function MathLiveEditor({
       mf.removeEventListener('pointerdown', onPointerDown);
       mf.removeEventListener('focusin', onFocusIn);
       mf.removeEventListener('focusout', onFocusOut);
+      mf.removeEventListener('mode-change', onModeChange);
       mf.remove();
       fieldRef.current = null;
     };
@@ -949,6 +1016,18 @@ function subscriptTarget(
   }
   return null;
 }
+
+/**
+ * A key, from a physical keyboard (a KeyboardEvent) or the math keyboard (built from its input:
+ * no modifiers), for the handlers that serve both.
+ */
+type KeyLike = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey'>;
+const virtualKey = (key: string): KeyLike => ({
+  key,
+  ctrlKey: false,
+  metaKey: false,
+  altKey: false,
+});
 
 /** Typed characters that end a call-only name without its brackets (letters handled apart). */
 const BREAKS_CALL = /^[^A-Za-z(_^\s]$/;
