@@ -111,6 +111,7 @@ const MATH: VirtualKeyboardLayout = {
   label: 'abc',
   tooltip: 'Letters, numbers and symbols',
   rows: [
+    [openSquare, closeSquare, typed('.'), plus, minus, times, divide, equals, power, open, close],
     chars('1234567890').map(digit),
     chars('qwertyuiop').map(letter),
     [HALF, ...chars('asdfghjkl').map(letter), HALF],
@@ -119,12 +120,11 @@ const MATH: VirtualKeyboardLayout = {
       ...chars('zxcvbnm').map(letter),
       { label: BACKSPACE, width: 1.5 },
     ],
-    [openSquare, closeSquare, abs, plus, minus, times, divide, equals, power, open, close],
     [
       menu,
       comma,
       semicolon,
-      typed('.'),
+      abs,
       factorial,
       root,
       less,

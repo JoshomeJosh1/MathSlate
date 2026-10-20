@@ -197,9 +197,9 @@ the page is padded by the keyboard's height so rows can scroll above it. `before
 the keyboard's characters what physical keys get in `onKeyDown`: matrix `,` `;` and delete, and
 the `\` menu's letters, delete and return; its `\` (which switches MathLive to LaTeX mode) is
 caught on `mode-change`, switched back, and opens our menu. The layout is our own
-(`ui/editor/keyboardLayouts.ts`). The main tab (**abc**) has a digit row, every letter (shift for
-capitals), and only the symbols and structures letters cannot produce ([ ] | + − × ÷ = xʸ ( )
-\ , ; . ! √ < >); sin, pi, int, theta, -> are typed and the shortcuts make them (symbol
+(`ui/editor/keyboardLayouts.ts`). The main tab (**abc**) has an operator row on top, a digit row, every letter (shift for
+capitals), and only the symbols and structures letters cannot produce ([ ] . + − × ÷ = xʸ ( )
+\ , ; | ! √ < >); sin, pi, int, theta, -> are typed and the shortcuts make them (symbol
 shortcuts like `->` and `<=` are applied for the math keyboard too, `applyShortcut`).
 Shift and long-press give related keys (= → ≠, < → ≤, xʸ → xₙ / x² / x⁻¹, ( ) → { }, , → @, ; → # (a folder or heading in an empty row),
 digits → xᵈ / x_d; [ and \ have none). Angle brackets `\langle` / `\rangle` are reserved (an error). Then **f(x)** (functions, inverses, ∫, ∫ₐᵇ, d/dx, ∂, Σ, Π, lim, ∞,
