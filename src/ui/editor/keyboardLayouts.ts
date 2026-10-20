@@ -102,11 +102,14 @@ const menu = typed('\\', '\\', {
   shift: ans,
   variants: [ans, out],
 });
-/** Digits; 2 and 3 are squares and cubes on shift. */
-const digit = (d: string): Key =>
-  d === '2' || d === '3'
-    ? typed(d, d, { shift: insert(`#@^{${d}}`, d === '2' ? 'x²' : 'x³') })
-    : typed(d);
+const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
+/** Digits: shift makes the power xᵈ, long-press gives the power or the subscript xₐ. */
+const digit = (d: string): Key => {
+  const power = insert(`#@^{${d}}`, `x${SUPERSCRIPT[Number(d)]}`);
+  const sub = insert(`#@_{${d}}`, `x${SUBSCRIPT[Number(d)]}`);
+  return typed(d, d, { shift: power, variants: [power, sub] });
+};
 
 /** The characters of a string of plain ASCII keys. */
 const chars = (keys: string): string[] => keys.split(/(?=.)/);
