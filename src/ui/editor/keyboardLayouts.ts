@@ -57,7 +57,7 @@ const root = insert('\\sqrt{#?}', '√', {
   variants: [insert('\\sqrt[3]{#?}', '∛'), insert('\\sqrt[#?]{#?}', 'ⁿ√')],
 });
 // Typed like a bracket: MathLive's smart fences pair it (no empty box; deleting leaves nothing).
-const abs = typed('|', '|x|', { tooltip: 'Absolute value, length or determinant' });
+const abs = typed('|', '|', { tooltip: 'Absolute value, length or determinant' });
 const matrix = insert(MATRIX_TEMPLATE, 'mat', {
   class: 'small',
   tooltip: 'Matrix: , goes to the next entry, ; to the next row',
@@ -79,7 +79,7 @@ const times = insert('\\cdot', '×', {
   shift: insert('\\times', '⨯'),
   variants: [insert('\\times', '⨯')],
 });
-const divide = typed('/', '÷', { tooltip: 'Fraction' });
+const divide = typed('/', '/', { tooltip: 'Fraction' });
 const equals = typed('=', '=', { shift: insert('\\ne', '≠'), variants: [insert('\\ne', '≠')] });
 const less = typed('<', '<', { shift: insert('\\le', '≤'), variants: [insert('\\le', '≤')] });
 const greater = typed('>', '>', {
@@ -94,7 +94,7 @@ const open = typed('(', '(', { shift: openBrace, variants: [openBrace] });
 const close = typed(')', ')', { shift: closeBrace, variants: [closeBrace] });
 const openSquare = typed('[', '[', { tooltip: 'A unit [km], or a list or matrix [1, 2; 3, 4]' });
 const closeSquare = typed(']');
-const comma = typed(',', ',', { shift: typed(';'), variants: [typed(';')] });
+const comma = typed(',');
 const factorial = typed('!', '!', { shift: typed('%'), variants: [typed('%')] });
 const menu = typed('\\', '\\', { tooltip: 'Everything MathSlate understands (the \\ menu)' });
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
@@ -121,8 +121,20 @@ const MATH: VirtualKeyboardLayout = {
       ...chars('zxcvbnm').map(letter),
       { label: BACKSPACE, width: 1.5 },
     ],
-    [plus, minus, times, divide, equals, power, root, open, close, openSquare, closeSquare],
-    [menu, comma, typed('.'), abs, factorial, less, greater, LEFT, RIGHT, RETURN],
+    [plus, minus, times, divide, equals, power, abs, open, close, openSquare, closeSquare],
+    [
+      menu,
+      comma,
+      typed(';'),
+      typed('.'),
+      root,
+      factorial,
+      less,
+      greater,
+      LEFT,
+      RIGHT,
+      { label: RETURN, width: 1 },
+    ],
   ],
 };
 

@@ -198,8 +198,8 @@ the keyboard's characters what physical keys get in `onKeyDown`: matrix `,` `;` 
 the `\` menu's letters, delete and return; its `\` (which switches MathLive to LaTeX mode) is
 caught on `mode-change`, switched back, and opens our menu. The layout is our own
 (`ui/editor/keyboardLayouts.ts`). The main tab (**abc**) has a digit row, every letter (shift for
-capitals), and only the symbols and structures letters cannot produce (+ − × ÷ = xʸ √ ( ) [ ]
-\ , . |x| ! < >); sin, pi, int, theta, -> are typed and the shortcuts make them (symbol
+capitals), and only the symbols and structures letters cannot produce (+ − × / = xʸ | ( ) [ ]
+\ , ; . √ ! < >); sin, pi, int, theta, -> are typed and the shortcuts make them (symbol
 shortcuts like `->` and `<=` are applied for the math keyboard too, `applyShortcut`).
 Shift and long-press give related keys (= → ≠, < → ≤, xʸ → xₙ / x² / x⁻¹, ( ) → { },
 digits → xᵈ / x_d; [ and \ have none). Angle brackets `\langle` / `\rangle` are reserved (an error). Then **f(x)** (functions, inverses, ∫, ∫ₐᵇ, d/dx, ∂, Σ, Π, lim, ∞,
@@ -207,7 +207,7 @@ binomial, mat, vec, ans, out), **123** (a calculator numpad) and MathLive's **α
 plain text with Unicode super/subscripts: HTML `<sup>` and LaTeX templates render badly in
 keycaps. Characters are typed keys (`key`), not inserted LaTeX, so shortcuts, subscript digits
 and the matrix keys apply to them; `keyboardLayouts.test.ts` checks every inserted LaTeX parses.
-`|x|` types `|` (a smart fence like `(`: no empty box). MathLive closes a long-press's variants
+The `|` key types a smart fence like `(` (no empty box). MathLive closes a long-press's variants
 panel on the release that ends the press (it expects a slide onto a variant);
 `keepVariantsOpen` in `MathLiveEditor.tsx` swallows that release so the panel stays to be
 tapped, and the keyboard has `-webkit-touch-callout: none` against iOS's callout.
