@@ -193,7 +193,14 @@ math keyboard too.
 only applies on `pointer: coarse`); MathLive never raises the system keyboard (its input is
 `inputmode=none`). The keyboard's keys arrive as commands, not key events, so its return
 (`commit`) and delete on an empty row are mapped to Enter/Backspace through `beforeinput`, and
-the page is padded by the keyboard's height so rows can scroll above it.
+the page is padded by the keyboard's height so rows can scroll above it. `beforeinput` also gives
+the keyboard's characters what physical keys get in `onKeyDown`: matrix `,` `;` and delete, and
+the `\` menu's letters, delete and return; its `\` (which switches MathLive to LaTeX mode) is
+caught on `mode-change`, switched back, and opens our menu. The layout is our own
+(`ui/editor/keyboardLayouts.ts`): "123" (variables, digits, operators, power/subscript, √, ( ) [ ],
+π, e, =, →, `,`/`;`, `\`) and "f(x)" (functions, ∫, d/dx, ∂, Σ, Π, lim, |x|, !, binomial, matrix
+and vector templates, ans, out), then MathLive's letters and Greek. Characters are typed keys
+(`key`), not inserted LaTeX, so shortcuts, subscript digits and the matrix keys apply to them.
 
 **The `\` menu** replaces MathLive's LaTeX mode, whose suggestions list every command MathLive
 knows (`popoverPolicy = 'off'`). `core/completions.ts` builds the list from what the parser

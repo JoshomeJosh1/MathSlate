@@ -9,6 +9,7 @@ import { menuLayout, moveInGrid } from './matchCompletions';
 import type { CommandCompletion, EditorKeyAction, MathEditorProps } from './MathEditor';
 import { emptyStructureRange, removeStrayPlaceholders } from './emptyStructure';
 import { errorRange } from './errorRange';
+import { KEYBOARD_LAYOUTS } from './keyboardLayouts';
 import { INLINE_SHORTCUTS } from './shortcuts';
 import { UNIT_MACRO, UNIT_SHADOW_CSS, unitsAsBrackets } from './unitLatex';
 
@@ -940,6 +941,8 @@ function keepRowsAboveKeyboard() {
   if (keyboardWatched) return;
   keyboardWatched = true;
   const keyboard = window.mathVirtualKeyboard;
+  // MathSlate's own layers (keyboardLayouts.ts) instead of MathLive's defaults.
+  keyboard.layouts = KEYBOARD_LAYOUTS;
   keyboard.addEventListener('geometrychange', () => {
     const height = keyboard.visible ? keyboard.boundingRect.height : 0;
     document.body.style.paddingBottom = height > 0 ? `${height}px` : '';
