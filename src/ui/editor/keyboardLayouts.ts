@@ -119,7 +119,7 @@ const MATH: VirtualKeyboardLayout = {
       ...chars('zxcvbnm').map(letter),
       { label: BACKSPACE, width: 1.5 },
     ],
-    [plus, minus, times, divide, equals, power, abs, open, close, openSquare, closeSquare],
+    [openSquare, closeSquare, abs, plus, minus, times, divide, equals, power, open, close],
     [
       menu,
       comma,
