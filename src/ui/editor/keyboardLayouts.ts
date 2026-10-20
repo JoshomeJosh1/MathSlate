@@ -74,12 +74,8 @@ const out = insert('\\mathrm{out}', 'out', {
 // No ± / ∓: MathSlate does not compute with them.
 const plus = typed('+');
 const minus = typed('-', '−');
-const times = insert('\\cdot', '×', {
-  tooltip: 'Multiply (shift: cross product ×)',
-  shift: insert('\\times', '⨯'),
-  variants: [insert('\\times', '⨯')],
-});
-const divide = typed('/', '/', { tooltip: 'Fraction' });
+const times = insert('\\cdot', '×', { tooltip: 'Multiply' });
+const divide = typed('/', '÷', { tooltip: 'Fraction' });
 const equals = typed('=', '=', { shift: insert('\\ne', '≠'), variants: [insert('\\ne', '≠')] });
 const less = typed('<', '<', { shift: insert('\\le', '≤'), variants: [insert('\\le', '≤')] });
 const greater = typed('>', '>', {
