@@ -187,7 +187,7 @@ const NUMPAD: VirtualKeyboardLayout = {
       digit('8'),
       digit('9'),
       divide,
-      BACKSPACE,
+      { label: BACKSPACE, width: 1 },
     ],
     [
       typed('a'),

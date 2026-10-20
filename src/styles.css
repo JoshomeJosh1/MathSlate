@@ -1068,3 +1068,17 @@ button {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* Shift and delete: MathLive tucks their icons into a corner (and the clear icon, shown on
+   shift, sits low); centre them like the other keys. */
+.ML__keyboard .MLK__rows > .MLK__row .shift,
+.ML__keyboard .MLK__rows > .MLK__row .action {
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+.ML__keyboard .MLK__rows > .MLK__row .shift svg.svg-glyph,
+.ML__keyboard .MLK__rows > .MLK__row .action svg.svg-glyph {
+  margin: 0;
+}
