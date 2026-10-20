@@ -41,6 +41,35 @@ starting `#` are headings, `##` subheadings.
   consulted by `displayUnit` in `core/units.ts`; system names only special after `→`; `\` menu
   entries. Temperature stays out (offsets).
 
+**More of SymPy** (suggested order: plotting, `dsolve` + `rsolve`, identify, integration steps):
+
+- **Plotting**: a "Plot" command on any f(x) row, drawn in the browser by a small JS plotting
+  library, evaluating locally (not SymPy's matplotlib plotting, too heavy in Pyodide).
+- **Differential equations** (`dsolve`): `y'' + y = 0`, `f'(x) = 2f(x)` → general solution with
+  C₁, C₂; initial values from rows like `f(0) = 1`.
+- **Closed forms of recursive sequences** (`rsolve`): Fibonacci-style definitions → Binet's
+  formula; a command on a sequence row.
+- **Identify a number** (`nsimplify`): 1.41421356 → √2, 0.7853981 → π/4.
+- **Integration steps** (`integral_steps` / `manualintegrate`): a "Show steps" output on integrals
+  (substitution, by parts, partial fractions…).
+- **Algebra commands**: `apart` (partial fractions), `together`, `cancel`, `trigsimp`,
+  `expand_trig`, `rewrite` (e.g. sin as exponentials), polynomial `div` (quotient and remainder),
+  `discriminant`, `resultant`, `roots` with multiplicities.
+- **Inequalities and systems**: `reduce_inequalities` / `solveset` (`x^2 < 4` → (−2, 2)); solve
+  selected equation rows together (`solve([eq1, eq2], [x, y])`).
+- **Multivariable calculus**: `gradient`, `hessian`, `jacobian`; critical points of f(x, y) with
+  max / min / saddle; divergence and curl of vectors.
+- **Transforms**: Laplace (and inverse), Fourier, Z.
+- **Series analysis**: convergence (`Sum(...).is_convergent()`), asymptotic expansions at ∞,
+  residues.
+- **Probability** (`sympy.stats`): `X = Normal(0, 1)`, `P(X > 1)`, `E(X^2)`, `Var(X)`; binomial,
+  Poisson, … (needs a syntax for random variables).
+- **Number theory**: `isprime`, `nextprime`, modular inverse / `mod`, continued fractions,
+  Diophantine equations (`diophantine`).
+- **Matrices**: diagonalization, Jordan form, matrix exponential e^{At} (pairs with ODEs), LU / QR /
+  SVD.
+- **Complex numbers**: `re`, `im`, `arg`, `conjugate`, polar form.
+
 ## Commands
 
 ```sh
