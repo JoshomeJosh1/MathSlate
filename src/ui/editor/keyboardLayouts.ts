@@ -79,7 +79,13 @@ const times = insert('\\cdot', '×', {
   shift: insert('\\times', '⨯'),
   variants: [insert('\\times', '⨯')],
 });
-const divide = typed('/', '/', { tooltip: 'Fraction' });
+// / makes what is before the caret the numerator; shift or long-press gives an empty fraction.
+const emptyFraction = insert('\\frac{#?}{#?}', '□/□', { tooltip: 'Empty fraction' });
+const divide = typed('/', '/', {
+  tooltip: 'Fraction',
+  shift: emptyFraction,
+  variants: [emptyFraction],
+});
 const equals = typed('=', '=', { shift: insert('\\ne', '≠'), variants: [insert('\\ne', '≠')] });
 const less = typed('<', '<', { shift: insert('\\le', '≤'), variants: [insert('\\le', '≤')] });
 const greater = typed('>', '>', {
