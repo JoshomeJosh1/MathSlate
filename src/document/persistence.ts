@@ -139,17 +139,6 @@ export function openUnsaved(store: Store<Doc>, doc: Doc): void {
 }
 
 /**
- * Opens `doc` in a new tab, as an unsaved main slate (the document travels in the address, as
- * with Share). Returns false if pop-ups are blocked.
- */
-export function openInNewTab(hash: string): boolean {
-  const url = new URL(location.href);
-  url.search = '';
-  url.hash = hash;
-  return window.open(url.toString(), '_blank') !== null;
-}
-
-/**
  * Saves a saved slate (debounced) whenever the store changes, and marks the main slate edited.
  * Leaving the page with an edited main slate asks first. Returns an unsubscribe function.
  */

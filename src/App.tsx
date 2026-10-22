@@ -4,8 +4,8 @@ import { useBackends } from './app/services';
 import { docActions, docStore } from './document/docStore';
 import { documentationDoc } from './document/documentation';
 import { emptyDoc, type Doc } from './document/model';
-import { openInNewTab, openUnsaved, saveSlate, saveState } from './document/persistence';
-import { replacedByLink, shareHash, shareLink } from './document/share';
+import { openUnsaved, saveSlate, saveState } from './document/persistence';
+import { replacedByLink, shareLink } from './document/share';
 import { useStore } from './document/store';
 import { RowList } from './ui/rows/RowList';
 import { SlatesDialog } from './ui/SlatesDialog';
@@ -179,20 +179,20 @@ function hasUnsavedWork(): boolean {
 
 /** A slate to open from the header: an empty one, or the documentation. */
 interface Opening {
-  title: string;
   make: () => Doc;
 }
 
-/**
- * Where to open a slate when the current one has unsaved work: save that first, open the new one
- * in a new tab, or discard it.
- */
+/** Before a new slate replaces one with unsaved work: save it, or not. */
 function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [blocked, setBlocked] = useState(false);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
+  const proceed = () => {
+    openUnsaved(docStore, opening.make());
+    dialog.current?.close();
+  };
   return (
     <dialog
       ref={dialog}
@@ -204,42 +204,23 @@ function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () =
         if (e.target === dialog.current) dialog.current.close();
       }}
     >
-      <h2 id="open-dialog-title">{opening.title}</h2>
-      <p>This slate is not saved. Save it first, open the new one in another tab, or discard it?</p>
-      {blocked && (
-        <p className="open-dialog-error">
-          The browser blocked the new tab; allow pop-ups, or replace.
-        </p>
+      <h2 id="open-dialog-title">Save this slate?</h2>
+      <p>Your changes to this slate will be lost if you don’t save them.</p>
+      {failed && (
+        <p className="open-dialog-error">The browser refused to save (storage full or blocked).</p>
       )}
       <div className="open-dialog-buttons">
         <button
           className="primary"
           autoFocus
           onClick={() => {
-            if (saveSlate(docStore.get())) {
-              openUnsaved(docStore, opening.make());
-              dialog.current?.close();
-            }
+            if (saveSlate(docStore.get())) proceed();
+            else setFailed(true);
           }}
         >
-          Save, then open
+          Save
         </button>
-        <button
-          onClick={() => {
-            if (openInNewTab(shareHash(opening.make()))) dialog.current?.close();
-            else setBlocked(true);
-          }}
-        >
-          Open in new tab
-        </button>
-        <button
-          onClick={() => {
-            openUnsaved(docStore, opening.make());
-            dialog.current?.close();
-          }}
-        >
-          Discard this slate
-        </button>
+        <button onClick={proceed}>Don’t save</button>
         <button className="muted-button" onClick={() => dialog.current?.close()}>
           Cancel
         </button>
@@ -265,7 +246,7 @@ export function App() {
         <div className="header-actions">
           <button
             onClick={() => {
-              open({ title: 'New slate', make: emptyDoc });
+              open({ make: emptyDoc });
             }}
           >
             New
@@ -273,7 +254,7 @@ export function App() {
           <button
             title="A slate that demonstrates everything MathSlate can do"
             onClick={() => {
-              open({ title: 'Documentation', make: documentationDoc });
+              open({ make: documentationDoc });
             }}
           >
             Documentation
