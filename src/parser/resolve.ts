@@ -611,12 +611,6 @@ class Resolver {
       if (argsCst.length > 1) {
         throw new MathError('Give the variables once: in the subscript or in brackets', span);
       }
-      if (cst.sub.type === 'group' && cst.sub.items.length === 1) {
-        throw new MathError(
-          '∇ by one vector variable is not supported yet: list the variables, e.g. ∇_{x,y}',
-          cst.sub.span,
-        );
-      }
       argsCst.push(cst.sub);
     } else if (cst.sub) {
       // \log_2 x → log(x, 2)

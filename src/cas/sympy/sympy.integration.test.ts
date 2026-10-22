@@ -168,6 +168,7 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
     expect(await last(['\\nabla_{x,y}(x^2y+z)'])).toEqual([
       '\\begin{bmatrix}2xy\\\\x^{2}\\end{bmatrix}',
     ]);
+    expect(await last(['\\nabla_x(x^2y)'])).toEqual(['2xy']); // by x alone
     expect(await last(['\\nabla\\cdot[x, y, 0]'])).toEqual(['2']); // still x, y, z
     expect(await last(['\\nabla\\times[-y, x]'])).toEqual(['2']);
     expect(await last(['\\jacobian([u^2v, uv], (u, v))'])).toEqual([

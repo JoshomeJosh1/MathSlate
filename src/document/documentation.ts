@@ -549,7 +549,7 @@ export const DOCUMENTATION: readonly Entry[] = [
 
   { folder: 'Vector calculus' },
   {
-    note: 'Type nabla for ∇ (or use the ∇ key, held for ∇·, ∇× and ∇²). ∇f is the gradient, ∇·F the divergence, ∇×F the curl and ∇²f the Laplacian; grad, div and curl also work as words. Apply them to a function you defined, by name: it is differentiated by its own variables, and ∇f(1, 2) is the gradient at (1, 2). On an expression they use its variables in alphabetical order; list others as a subscript, ∇_{x,y}.',
+    note: 'Type nabla for ∇ (or use the ∇ key, held for ∇·, ∇× and ∇²). ∇f is the gradient, ∇·F the divergence, ∇×F the curl and ∇²f the Laplacian; grad, div and curl also work as words. Apply them to a function you defined, by name: it is differentiated by its own variables, and ∇f(1, 2) is the gradient at (1, 2). On an expression they use its variables in alphabetical order; list others as a subscript, ∇_{x,y}, or just one, ∇ₓ.',
   },
   '\\phi\\left(x,y\\right)=x^2y+\\sin y',
   'V\\left(x,y,z\\right)=\\begin{bmatrix}yz\\\\xz^2\\\\xy\\end{bmatrix}',
@@ -559,6 +559,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\nabla\\phi\\left(1,2\\right)',
   '\\grad\\left(x^2+y^2+z^2\\right)',
   '\\nabla_{x,y}\\left(x^2yz\\right)',
+  '\\nabla_x\\left(x^2yz\\right)',
   {
     note: 'div(F) — the divergence ∇·F of a vector field, the sum of ∂Fᵢ/∂xᵢ. Type nabla then *, or div.',
   },

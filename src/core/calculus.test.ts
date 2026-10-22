@@ -117,6 +117,8 @@ describe('vector calculus', () => {
     // Listed variables
     [['\\nabla_{x,y}(x^2yz)'], '(grad (* (* (^ x 2) y) z) (tuple x y))'],
     [['\\nabla_{x_1,x_2}x_1x_2'], '(grad (* x_{1} x_{2}) (tuple x_{1} x_{2}))'],
+    [['\\nabla_x(x^2y)'], '(grad (* (^ x 2) y) (tuple x))'],
+    [['\\nabla_{y}^2(x^2y^3)'], '(laplacian (* (^ x 2) (^ y 3)) (tuple y))'],
     [['\\jacobian([u^2v, uv], (u, v))'], '(jacobian [[(* (^ u 2) v)] [(* u v)]] (tuple u v))'],
   ])('reads %j', (rows, sexpr) => {
     expect(last(...rows)).toBe(sexpr);
@@ -137,10 +139,6 @@ describe('vector calculus', () => {
     ['\\nabla^3 f', 'Only ∇² (the Laplacian) takes a power here'],
     ['\\nabla_{x,x}x^2', 'The variable x is listed twice'],
     ['\\nabla_{x,2}x^2', 'List the variables as letters, e.g. (x, y)'],
-    [
-      '\\nabla_x x^2',
-      '∇ by one vector variable is not supported yet: list the variables, e.g. ∇_{x,y}',
-    ],
     ['\\grad_{x,y}(x^2, (x,y))', 'Give the variables once: in the subscript or in brackets'],
     ['\\grad(x, y, z)', '"grad" takes 1 to 2 arguments, got 3'],
   ])('reports %s', (input, message) => {
@@ -156,6 +154,7 @@ describe('vector calculus', () => {
     [field, '\\nabla\\times F\\left(1,2,3\\right)'],
     [field, '\\jacobian(F)'],
     ['', '\\nabla_{x,y}(x^2yz)'],
+    ['', '\\nabla_x(x^2y)'],
     ['', '\\operatorname{div}[x, y]'],
     ['', '2\\nabla(x^2)y'],
     ['', '\\jacobian([u^2v, uv], (u, v))'],

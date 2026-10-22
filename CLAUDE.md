@@ -373,8 +373,8 @@ grad, div, curl, laplacian, jacobian, hessian are built-in functions
 (`builtins/functions/defs/vectorCalculus.ts`) whose AST is a call `[operand]` or
 `[operand, (variables)]`. The parser reads `\nabla` (a `fn` token) as grad, `\nabla\cdot` div,
 `\nabla\times` curl, `\nabla^2` laplacian; a subscript lists variables (`\nabla_{x,y}`, kept in the
-fnapp's `sub` as a group; one name alone is an error: a symbolic vector variable was tried with SymPy's matrix calculus
-and dropped). `\grad`,
+fnapp's `sub` as a group; `\nabla_x` is by x alone, a scalar — a symbolic vector variable was
+tried with SymPy's matrix calculus and dropped). `\grad`,
 `\curl`, `\laplacian`, `\jacobian`, `\hessian` are `FUNCTION_COMMANDS`, so they work without
 brackets; div is always `\operatorname{div}` (`OPERATORNAME_ONLY` in the lexer: `\div` is ÷), which
 the lexer reads as a function too, and which decoration, shortcuts and macros keep. The resolver
