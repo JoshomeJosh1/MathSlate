@@ -383,6 +383,8 @@ name as the operand (`bareFunction`). The SymPy serializer emits `_vector_calcul
 at)`: listed variables; else a defined function's parameters, evaluated at its arguments when
 called (`\nabla f(1,2)` is the gradient at (1, 2)); else `None`, the free variables in alphabetical
 order (for div and curl of a 2- or 3-vector whose free variables are among x, y, z: x, y, z).
+div pairs components with variables in order, any number of each (`zip`: the extras add nothing);
+curl needs 3 (or 2).
 `printLatex` prints the ∇ forms. Commands: gradient, hessian, laplacian (scalar functions of ≥2
 variables), jacobian, divergence, curl (vectors), via `runVectorCalculus` (a definition by its
 parameters). Nerdamer declines them.

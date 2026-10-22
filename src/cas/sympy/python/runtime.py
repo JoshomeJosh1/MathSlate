@@ -187,13 +187,13 @@ def _variable_names(variables):
     return ", ".join(v.name.lstrip("\\") for v in variables)
 
 
-def _field(F, what, variables):
-    """The components of a vector field, as many as there are variables."""
+def _field(F, what, variables, exact=True):
+    """The components of a vector field; with `exact`, as many as there are variables."""
     F = _scalar(F)
     if not _is_vector(F):
         raise MathSlateError(f"The {what} needs a vector field: a vector of expressions")
     components = list(F)
-    if len(components) != len(variables):
+    if exact and len(components) != len(variables):
         raise MathSlateError(
             f"The {what} needs as many components as variables: this has"
             f" {_count(len(components), 'component')} and {_count(len(variables), 'variable')}"
@@ -215,7 +215,10 @@ def _grad(f, variables):
 
 
 def _div(F, variables):
-    return Add(*[diff(c, v) for c, v in zip(_field(F, "divergence", variables), variables)])
+    """The sum of dF_i/dx_i, for any number of components: a component without a variable of its
+    own (or a variable without a component) adds nothing."""
+    components = _field(F, "divergence", variables, exact=False)
+    return Add(*[diff(c, v) for c, v in zip(components, variables)])
 
 
 def _curl(F, variables):

@@ -177,8 +177,12 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
     expect(await last([[f, 'gradient']])).toEqual([
       'gradient: \\begin{bmatrix}2xy\\\\x^{2}+\\cos\\left(y\\right)\\end{bmatrix}',
     ]);
-    expect(await last(['\\nabla\\cdot[x, y, z^2, 1]'])).toEqual([
-      '!The divergence needs as many components as variables: this has 4 components and 3 variables (x, y, z); list the variables, e.g. ∇_{x,y,z}',
+    // Any number of components: those without a variable (or variables without one) add nothing.
+    expect(await last(['\\nabla\\cdot[x, y, z^2, 1]'])).toEqual(['2z+2']);
+    expect(await last(['\\nabla_{x,y,z}\\cdot[x^2, y]'])).toEqual(['2x+1']);
+    expect(await last(['\\nabla\\cdot[w, x, y, z]'])).toEqual(['4']); // variables w, x, y, z
+    expect(await last(['\\nabla\\times[x, y, z, w]'])).toEqual([
+      '!The curl needs 3 variables (or 2 for the scalar curl), not 4 (w, x, y, z)',
     ]);
     expect(await last(['\\nabla(5)'])).toEqual(['!This has no variables to differentiate by']);
   });

@@ -8,7 +8,7 @@ const divergence: Command = {
   description: 'Divergence of a vector field',
   appliesTo: ({ facts }) => {
     const n = vectorField(facts);
-    return n === undefined ? 0 : n === null || n >= facts.freeVars.length ? 0.5 : 0;
+    return n === undefined ? 0 : 0.5;
   },
   run: (ctx, cas) => runVectorCalculus(ctx, cas, 'div'),
 };

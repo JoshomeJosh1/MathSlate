@@ -561,7 +561,7 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\nabla_{x,y}\\left(x^2yz\\right)',
   '\\nabla_x\\left(x^2yz\\right)',
   {
-    note: 'div(F) — the divergence ∇·F of a vector field, the sum of ∂Fᵢ/∂xᵢ. Type nabla then *, or div.',
+    note: 'div(F) — the divergence ∇·F of a vector field, the sum of ∂Fᵢ/∂xᵢ, for any number of components (one without a variable of its own adds nothing). Type nabla then *, or div.',
   },
   '\\nabla\\cdot V',
   '\\operatorname{div}\\begin{bmatrix}x^2\\\\xy\\end{bmatrix}',
