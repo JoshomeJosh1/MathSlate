@@ -102,8 +102,8 @@ src/
   app/preferences.ts  per-browser display preferences (localStorage), e.g. Decimals: results show
                    only their decimal (`shownValue` in ui/rows/promote.ts; copy uses what is shown)
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
-                   docStore.ts (app singleton + actions), persistence.ts (the main slate — no `?slate=` — is never saved: documentation on a first visit, else empty; Save / Ctrl+S gives it a localStorage slot named by `?slate=<id>`, which then autosaves every edit, with its last-edit time; New / Documentation / shared links / "Open in new tab" always open an unsaved main slate, so a saved slate is never overwritten, and leaving an edited unsaved slate asks first; the old fixed main slot is migrated to a slot on load), slates.ts (the Slates list: every saved slate, newest first; empty unused slots are removed),
-                   documentation.ts (the documentation slate: first visit + Documentation button),
+                   docStore.ts (app singleton + actions), persistence.ts (the main slate — no `?slate=` — is never saved and opens empty; Save / Ctrl+S gives it a localStorage slot named by `?slate=<id>`, which then autosaves every edit, with its last-edit time; New / Documentation / shared links / "Open in new tab" always open an unsaved main slate, so a saved slate is never overwritten, and leaving an edited unsaved slate asks first; the old fixed main slot is migrated to a slot on load), slates.ts (the Slates list: every saved slate, newest first; empty unused slots are removed),
+                   documentation.ts (the documentation slate, opened with the Documentation button),
                    share.ts (Share: the whole doc packed, deflated (fflate) and base64url in the URL hash `#s=…`; a link
                    opens as an unsaved main slate; if it replaced an edited unsaved slate, the
                    banner offers "Back to my slate"; the hash is removed so reloads do not reopen it)

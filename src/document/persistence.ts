@@ -1,4 +1,3 @@
-import { documentationDoc } from './documentation';
 import { emptyDoc, newId, type Doc } from './model';
 import { createStore, type Store } from './store';
 
@@ -69,14 +68,6 @@ export function migrateMainSlate(storage: WritableStorage): void {
   for (const k of doomed) storage.removeItem(k);
 }
 
-/** Whether this browser has any saved slate. */
-function hasSavedSlates(storage: WritableStorage): boolean {
-  for (let i = 0; i < storage.length; i++) {
-    if (storage.key(i)?.startsWith(SLOT_PREFIX)) return true;
-  }
-  return false;
-}
-
 export function isDoc(value: unknown): value is Doc {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Partial<Doc>;
@@ -92,10 +83,7 @@ export function isDoc(value: unknown): value is Doc {
   );
 }
 
-/**
- * The slate this tab opens with: the saved slate in the address, else a main slate — the
- * documentation on a first visit (nothing saved yet), otherwise an empty one.
- */
+/** The slate this tab opens with: the saved slate in the address, else an empty main slate. */
 export function loadDoc(): Doc {
   try {
     migrateMainSlate(localStorage);
@@ -107,11 +95,10 @@ export function loadDoc(): Doc {
       saveState.set({ slate: null, edited: false });
       setAddress(null);
     }
-    return hasSavedSlates(localStorage) ? emptyDoc() : documentationDoc();
   } catch {
     // Storage unavailable or corrupt.
-    return documentationDoc();
   }
+  return emptyDoc();
 }
 
 function write(slate: string, doc: Doc): boolean {

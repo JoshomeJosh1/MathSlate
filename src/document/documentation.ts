@@ -1,7 +1,7 @@
 import { addOutput, insertRowAfter, setCollapsed, type Doc } from './model';
 
 /**
- * The documentation slate: shown on first visit and via the Documentation button. It is a working
+ * The documentation slate: opened with the Documentation button. It is a working
  * document that demonstrates everything MathSlate can do. `documentation.test.ts` fails if a
  * built-in function, sequence, constant, command or calculus operator is missing from it, or if any
  * row has an error that is not intentional — so add an example whenever you add a feature.
