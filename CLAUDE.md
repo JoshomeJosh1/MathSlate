@@ -85,8 +85,8 @@ npm run format            # apply Prettier
 
 ```
 src/
-  main.tsx, App.tsx (header: CAS status, New, Documentation, Slates, Share, CAS picker, Decimals,
-                   Debug), styles.css
+  main.tsx, App.tsx (header: CAS status, New, Documentation, Slates, Save, Share, CAS picker,
+                   Decimals, Debug), styles.css
   ui/
     editor/        MathEditor.ts (editor-agnostic contract), MathLiveEditor.tsx, MathLiveView.tsx
                    (read-only rendering for outputs), index.ts (picks the implementation),
@@ -102,11 +102,11 @@ src/
   app/preferences.ts  per-browser display preferences (localStorage), e.g. Decimals: results show
                    only their decimal (`shownValue` in ui/rows/promote.ts; copy uses what is shown)
   document/        model.ts (Doc types + pure update functions), store.ts (tiny external store),
-                   docStore.ts (app singleton + actions), persistence.ts (localStorage autosave; one slot for the main slate, and one per tab opened with "Open in new tab", named by `?slate=<id>`, each with its last-edit time), slates.ts (the Slates list: every saved slate, newest first; empty unused tab slots are removed),
+                   docStore.ts (app singleton + actions), persistence.ts (the main slate — no `?slate=` — is never saved: documentation on a first visit, else empty; Save / Ctrl+S gives it a localStorage slot named by `?slate=<id>`, which then autosaves every edit, with its last-edit time; New / Documentation / shared links / "Open in new tab" always open an unsaved main slate, so a saved slate is never overwritten, and leaving an edited unsaved slate asks first; the old fixed main slot is migrated to a slot on load), slates.ts (the Slates list: every saved slate, newest first; empty unused slots are removed),
                    documentation.ts (the documentation slate: first visit + Documentation button),
-                   share.ts (Share: the whole doc packed, deflated (fflate) and base64url in the URL hash `#s=…`; opening
-                   a link keeps the user's slate in localStorage until the banner's "Back to my
-                   slate" / "Keep this one"; the hash is removed so reloads do not reopen it)
+                   share.ts (Share: the whole doc packed, deflated (fflate) and base64url in the URL hash `#s=…`; a link
+                   opens as an unsaved main slate; if it replaced an edited unsaved slate, the
+                   banner offers "Back to my slate"; the hash is removed so reloads do not reopen it)
   parser/          errors.ts (MathError + Span), lexer.ts, cst.ts, parser.ts (Pratt, LaTeX → CST),
                    definitions.ts (LHS shapes), symbols.ts (SymbolTable), resolve.ts (CST → AST),
                    ast.ts, printLatex.ts (AST → LaTeX), sexpr.ts (debug/test rendering)

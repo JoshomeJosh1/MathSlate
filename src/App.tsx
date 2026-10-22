@@ -4,8 +4,8 @@ import { useBackends } from './app/services';
 import { docActions, docStore } from './document/docStore';
 import { documentationDoc } from './document/documentation';
 import { emptyDoc, type Doc } from './document/model';
-import { openInNewTab } from './document/persistence';
-import { replacedByLink, shareLink } from './document/share';
+import { openInNewTab, openUnsaved, saveSlate, saveState } from './document/persistence';
+import { replacedByLink, shareHash, shareLink } from './document/share';
 import { useStore } from './document/store';
 import { RowList } from './ui/rows/RowList';
 import { SlatesDialog } from './ui/SlatesDialog';
@@ -101,7 +101,50 @@ function ShareButton() {
   );
 }
 
-/** After a shared link replaced the user's slate: offer it back. */
+/**
+ * Saves the main slate as a slate of its own (listed under Slates); a saved slate saves itself on
+ * every edit, so the button just says so. Ctrl+S does the same.
+ */
+function SaveButton() {
+  const { slate } = useStore(saveState);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setFailed(!saveSlate(docStore.get()));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+  if (slate !== null) {
+    return (
+      <button
+        className="save-button saved"
+        title="Saved in this browser; every edit is saved"
+        disabled
+      >
+        Saved
+      </button>
+    );
+  }
+  return (
+    <button
+      className="save-button"
+      title="Save this slate in this browser (Ctrl+S); it then saves every edit"
+      onClick={() => {
+        setFailed(!saveSlate(docStore.get()));
+      }}
+    >
+      {failed ? 'Save failed' : 'Save'}
+    </button>
+  );
+}
+
+/** After a shared link replaced an unsaved slate: offer it back. */
 function SharedBanner() {
   const previous = useStore(replacedByLink);
   if (!previous) return null;
@@ -128,8 +171,10 @@ function SharedBanner() {
   );
 }
 
-function hasContent(): boolean {
-  return docStore.get().rows.some((r) => r.latex.trim() !== '');
+/** The main slate was edited and would be lost if replaced. */
+function hasUnsavedWork(): boolean {
+  const { slate, edited } = saveState.get();
+  return slate === null && edited && docStore.get().rows.some((r) => r.latex.trim() !== '');
 }
 
 /** A slate to open from the header: an empty one, or the documentation. */
@@ -139,8 +184,8 @@ interface Opening {
 }
 
 /**
- * Where to open a slate when the current one has content: in a new tab (its own saved slot, see
- * persistence.ts), or in place of this one.
+ * Where to open a slate when the current one has unsaved work: save that first, open the new one
+ * in a new tab, or discard it.
  */
 function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -160,7 +205,7 @@ function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () =
       }}
     >
       <h2 id="open-dialog-title">{opening.title}</h2>
-      <p>This slate has content. Open the new one in another tab, or replace this one?</p>
+      <p>This slate is not saved. Save it first, open the new one in another tab, or discard it?</p>
       {blocked && (
         <p className="open-dialog-error">
           The browser blocked the new tab; allow pop-ups, or replace.
@@ -171,7 +216,17 @@ function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () =
           className="primary"
           autoFocus
           onClick={() => {
-            if (openInNewTab(opening.make())) dialog.current?.close();
+            if (saveSlate(docStore.get())) {
+              openUnsaved(docStore, opening.make());
+              dialog.current?.close();
+            }
+          }}
+        >
+          Save, then open
+        </button>
+        <button
+          onClick={() => {
+            if (openInNewTab(shareHash(opening.make()))) dialog.current?.close();
             else setBlocked(true);
           }}
         >
@@ -179,11 +234,11 @@ function OpenSlateDialog({ opening, onClose }: { opening: Opening; onClose: () =
         </button>
         <button
           onClick={() => {
-            docActions.replace(opening.make());
+            openUnsaved(docStore, opening.make());
             dialog.current?.close();
           }}
         >
-          Replace this slate
+          Discard this slate
         </button>
         <button className="muted-button" onClick={() => dialog.current?.close()}>
           Cancel
@@ -198,8 +253,9 @@ export function App() {
   const [opening, setOpening] = useState<Opening | null>(null);
   const [showSlates, setShowSlates] = useState(false);
   const open = (next: Opening) => {
-    if (hasContent()) setOpening(next);
-    else docActions.replace(next.make());
+    // A saved slate stays saved: the new one simply takes its place in this tab.
+    if (hasUnsavedWork()) setOpening(next);
+    else openUnsaved(docStore, next.make());
   };
   return (
     <div className="app">
@@ -230,6 +286,7 @@ export function App() {
           >
             Slates
           </button>
+          <SaveButton />
           <ShareButton />
           <BackendPicker />
           <DecimalsToggle />

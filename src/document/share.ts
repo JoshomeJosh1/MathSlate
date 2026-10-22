@@ -1,7 +1,7 @@
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import { docStore } from './docStore';
 import { normalizeFolders, type Doc, type InputRow, type OutputSpec } from './model';
-import { hasSavedDoc, isDoc, slateKey } from './persistence';
+import { isDoc, openUnsaved, saveState } from './persistence';
 import { createStore } from './store';
 
 /**
@@ -118,46 +118,24 @@ export function shareLink(doc: Doc): string {
 }
 
 /**
- * After opening a shared link: the slate that was open before, which the banner offers to
- * restore. Null once restored or dismissed (or when there was nothing of the user's to keep).
- * Kept in localStorage until then, so a reload does not lose it.
+ * After a shared link replaced an edited, unsaved main slate: that slate, which the banner offers
+ * to restore. Null once restored or dismissed (or when nothing unsaved was replaced).
  */
-const PREVIOUS_KEY = slateKey('beforeLink');
-
-function loadPrevious(): Doc | null {
-  try {
-    const raw = localStorage.getItem(PREVIOUS_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : null;
-    return isDoc(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export const replacedByLink = createStore<Doc | null>(loadPrevious());
-
-replacedByLink.subscribe(() => {
-  try {
-    const previous = replacedByLink.get();
-    if (previous) localStorage.setItem(PREVIOUS_KEY, JSON.stringify(previous));
-    else localStorage.removeItem(PREVIOUS_KEY);
-  } catch {
-    // Kept for this visit only.
-  }
-});
+export const replacedByLink = createStore<Doc | null>(null);
 
 /**
  * Opens the document in the page's hash, if any (on load, and when a link is pasted into an open
- * tab). The hash is then removed so a reload does not open it again over later edits.
+ * tab), as an unsaved main slate: a saved slate open in this tab stays as it was. The hash is
+ * then removed so a reload does not open it again over later edits.
  */
 export function openSharedLink(): void {
   const shared = docFromHash(location.hash);
   if (!shared) return;
   history.replaceState(null, '', `${location.pathname}${location.search}`);
-  // Only the user's own saved slate is worth restoring (not the documentation of a first visit),
-  // and a second link keeps the slate the first one replaced.
-  if (!replacedByLink.get() && hasSavedDoc()) replacedByLink.set(docStore.get());
-  docStore.set(shared);
+  // A second link keeps the slate the first one replaced.
+  const { slate, edited } = saveState.get();
+  if (!replacedByLink.get() && slate === null && edited) replacedByLink.set(docStore.get());
+  openUnsaved(docStore, shared);
 }
 
 /** The document a hash holds, or null if it holds none (or a damaged one). */

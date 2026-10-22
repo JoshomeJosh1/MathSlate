@@ -44,16 +44,19 @@ export function SlatesDialog({ onClose }: { onClose: () => void }) {
     >
       <h2 id="slates-title">Slates in this browser</h2>
       <p>Click one to open it here; Ctrl+click or middle-click opens it in a new tab.</p>
+      {slates.length === 0 && (
+        <p className="muted">No saved slates yet: Save adds the slate you are working on.</p>
+      )}
       <ul className="slates-list">
         {slates.map((slate) => (
-          <li key={slate.id ?? 'main'} className={slate.current ? 'current' : undefined}>
+          <li key={slate.id} className={slate.current ? 'current' : undefined}>
             <a href={slateHref(slate.id)} className="slate-link">
               <span className="slate-name">
                 <SlateName slate={slate} />
               </span>
               <span className="slate-meta">
                 {[
-                  slate.current ? 'this tab' : slate.id === null ? 'main slate' : null,
+                  slate.current ? 'this tab' : null,
                   `${slate.rows} ${slate.rows === 1 ? 'row' : 'rows'}`,
                   whenEdited(slate.updated, now),
                 ]

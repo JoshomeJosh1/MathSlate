@@ -1,17 +1,15 @@
 import type { Doc } from './model';
-import { CURRENT_SLATE, MAIN_KEY, SLOT_PREFIX, isDoc, keyOf, updatedKey } from './persistence';
+import { SLOT_PREFIX, isDoc, keyOf, saveState, updatedKey } from './persistence';
 
 /**
- * The slates saved in this browser: the main one, and one per tab opened with "Open in new tab"
- * (persistence.ts). The Slates list shows them, opens them and deletes them.
+ * The slates saved in this browser, one per Save of a main slate (persistence.ts). The Slates list shows them, opens them and deletes them.
  */
 
 /** What a slate is called in the list: its first heading, folder title or row of math. */
 export type SlateTitle = { kind: 'text'; text: string } | { kind: 'math'; latex: string } | null;
 
 export interface SlateInfo {
-  /** Null for the main slate. */
-  id: string | null;
+  id: string;
   title: SlateTitle;
   /** When it was last edited (ms since 1970), if known. */
   updated: number | null;
@@ -42,9 +40,9 @@ const contentRows = (doc: Doc) => doc.rows.filter((r) => r.latex.trim() !== '').
  */
 export function listSlates(
   storage: SlateStorage,
-  current: string | null = CURRENT_SLATE,
+  current: string | null = saveState.get().slate,
 ): SlateInfo[] {
-  const ids: (string | null)[] = [null];
+  const ids: string[] = [];
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
     const id = key?.startsWith(SLOT_PREFIX) ? key.slice(SLOT_PREFIX.length) : null;
@@ -63,7 +61,7 @@ export function listSlates(
     if (!isDoc(doc)) continue;
     const rows = contentRows(doc);
     const isCurrent = id === current;
-    if (rows === 0 && !isCurrent && id !== null) {
+    if (rows === 0 && !isCurrent) {
       deleteSlate(storage, id);
       continue;
     }
@@ -79,9 +77,9 @@ export function listSlates(
   return slates.sort((a, b) => (b.updated ?? 0) - (a.updated ?? 0));
 }
 
-/** Removes a saved slate and what is kept beside it. The main slate's slot is just emptied. */
-export function deleteSlate(storage: SlateStorage, id: string | null): void {
-  const key = id === null ? MAIN_KEY : keyOf(id);
+/** Removes a saved slate and what is kept beside it. */
+export function deleteSlate(storage: SlateStorage, id: string): void {
+  const key = keyOf(id);
   const doomed: string[] = [];
   for (let i = 0; i < storage.length; i++) {
     const k = storage.key(i);
@@ -91,6 +89,6 @@ export function deleteSlate(storage: SlateStorage, id: string | null): void {
 }
 
 /** The address that opens a slate (relative to the app's own page). */
-export function slateHref(id: string | null): string {
-  return id === null ? './' : `./?slate=${encodeURIComponent(id)}`;
+export function slateHref(id: string): string {
+  return `./?slate=${encodeURIComponent(id)}`;
 }

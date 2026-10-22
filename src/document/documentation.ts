@@ -20,7 +20,7 @@ type Entry =
 export const DOCUMENTATION: readonly Entry[] = [
   { note: '# MathSlate' },
   {
-    note: 'A notebook for exact, symbolic math. Every row below is live: edit anything and the results update. Click New for an empty slate; this page comes back with the Documentation button (if your slate has content, either can open in a new tab instead). Slates lists every slate saved in this browser, to reopen or delete. Your slate is saved in this browser; Share copies a link that opens it anywhere (the slate is inside the link, nothing is uploaded).',
+    note: 'A notebook for exact, symbolic math. Every row below is live: edit anything and the results update. Click New for an empty slate; this page comes back with the Documentation button. A new slate is not saved until you click Save (or press Ctrl+S); from then on it saves every edit in this browser, and Slates lists it to reopen or delete. Share copies a link that opens your slate anywhere (the slate is inside the link, nothing is uploaded).',
   },
   {
     note: 'Each section below is a folder: click ▸ beside its title to open it.',

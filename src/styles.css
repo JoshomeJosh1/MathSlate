@@ -111,6 +111,21 @@ button {
   color: var(--accent);
 }
 
+/* Save stands out while the slate is unsaved; once saved it is only a status. */
+.header-actions > button.save-button:not(.saved) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.header-actions > button.save-button.saved {
+  color: var(--muted);
+  cursor: default;
+}
+
+.header-actions > button.save-button.saved:hover {
+  border-color: var(--border);
+}
+
 /* The suggested choice. */
 .open-dialog-buttons > button.primary {
   border-color: var(--accent);
