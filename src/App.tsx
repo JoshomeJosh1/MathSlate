@@ -251,14 +251,8 @@ export function App() {
           >
             New
           </button>
-          <button
-            title="A slate that demonstrates everything MathSlate can do"
-            onClick={() => {
-              open({ make: documentationDoc });
-            }}
-          >
-            Documentation
-          </button>
+          <SaveButton />
+          <ShareButton />
           <button
             title="The slates saved in this browser"
             onClick={() => {
@@ -267,8 +261,14 @@ export function App() {
           >
             Slates
           </button>
-          <SaveButton />
-          <ShareButton />
+          <button
+            title="A slate that demonstrates everything MathSlate can do"
+            onClick={() => {
+              open({ make: documentationDoc });
+            }}
+          >
+            Documentation
+          </button>
           <BackendPicker />
           <DecimalsToggle />
           <label className="toggle">

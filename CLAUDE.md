@@ -85,7 +85,7 @@ npm run format            # apply Prettier
 
 ```
 src/
-  main.tsx, App.tsx (header: CAS status, New, Documentation, Slates, Save, Share, CAS picker,
+  main.tsx, App.tsx (header: CAS status, New, Save, Share, Slates, Documentation, CAS picker,
                    Decimals, Debug), styles.css
   ui/
     editor/        MathEditor.ts (editor-agnostic contract), MathLiveEditor.tsx, MathLiveView.tsx
