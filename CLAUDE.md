@@ -30,7 +30,6 @@ starting `#` are headings, `##` subheadings.
 | 7         | `out_k` as a sequence (sums over results); sums over sequences; integer sequences         | done  |
 | 8         | URL share, error highlight inside the math field, perf (measured; see Performance)        | done  |
 | 9         | Vector calculus: ∇ (grad, div, curl, ∇²), jacobian, hessian; functions by name, at points | done  |
-| 9b        | `\nabla_x` with x a symbolic vector (matrix calculus) — on branch `vector-nabla`          | wip   |
 
 ### Ideas (not started — ask before implementing)
 
@@ -170,7 +169,10 @@ Registries use Vite's `import.meta.glob('./defs/*.ts', { eager: true })`, so a n
   `\log_{_2}`, `f^{\prime}`, `\placeholder{}` ("Fill in the empty box"), `\exponentialE`,
   `\imaginaryI`. SymPy's `\left[\begin{matrix}…\end{matrix}\right]` is accepted.
 - `printLatex` round-trips (tested). Juxtaposition is printed only where it cannot be misread
-  (`2x`, `x\sin x`, `x^{2}y`); otherwise `\cdot`. Multi-letter names print as `\mathrm{speed}`.
+  (`2x`, `x\sin x`, `x^{2}y`, and single letters `2xyz` unless they would spell a built-in name
+  across the join, `l\cdot n`, or follow a d, `d\cdot x`: `setReservedLetterRuns`, fed by
+  `core/builtinScope.ts`); otherwise `\cdot`. Multi-letter names print as `\mathrm{speed}`. A
+  result like `xy` copied into a slate that defines the name `xy` reads as that name.
 
 ### Upright names (`core/decorate.ts`)
 
@@ -371,7 +373,8 @@ grad, div, curl, laplacian, jacobian, hessian are built-in functions
 (`builtins/functions/defs/vectorCalculus.ts`) whose AST is a call `[operand]` or
 `[operand, (variables)]`. The parser reads `\nabla` (a `fn` token) as grad, `\nabla\cdot` div,
 `\nabla\times` curl, `\nabla^2` laplacian; a subscript lists variables (`\nabla_{x,y}`, kept in the
-fnapp's `sub` as a group; one name alone is reserved for a symbolic vector variable). `\grad`,
+fnapp's `sub` as a group; one name alone is an error: a symbolic vector variable was tried with SymPy's matrix calculus
+and dropped). `\grad`,
 `\curl`, `\laplacian`, `\jacobian`, `\hessian` are `FUNCTION_COMMANDS`, so they work without
 brackets; div is always `\operatorname{div}` (`OPERATORNAME_ONLY` in the lexer: `\div` is ÷), which
 the lexer reads as a function too, and which decoration, shortcuts and macros keep. The resolver

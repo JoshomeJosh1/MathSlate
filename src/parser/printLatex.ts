@@ -169,9 +169,54 @@ export function printLatex(e: Expr): string {
 }
 
 /**
- * Juxtaposition is only printed where it cannot be misread: after a number, before something
- * that does not start with a digit (2x, 2\sin…, 2\left(…). Elsewhere \cdot keeps letters from
- * merging into a longer name.
+ * Built-in multi-letter names (functions, ans, out) that single letters printed side by side
+ * must not spell: xy is fine, but l·n printed as ln would read back as the logarithm. Set by core
+ * (builtinScope.ts), since the parser does not know the registries.
+ */
+let reservedRuns: readonly string[] = [];
+
+export function setReservedLetterRuns(names: Iterable<string>): void {
+  reservedRuns = [...names].filter((n) => /^[A-Za-z]{2,}$/.test(n));
+}
+
+/** The single Latin letters a product starts and ends with: 2xy ends with "xy". */
+function letters(e: Expr): { start: string; end: string; all: boolean } {
+  if (e.kind === 'var' && e.name.sub === undefined && /^[A-Za-z]$/.test(e.name.base)) {
+    return { start: e.name.base, end: e.name.base, all: true };
+  }
+  if (e.kind === 'binary' && e.op === 'mul' && e.form === 'juxt') {
+    const l = letters(e.left);
+    const r = letters(e.right);
+    return {
+      start: l.all ? l.start + r.start : l.start,
+      end: r.all ? l.end + r.end : r.end,
+      all: l.all && r.all,
+    };
+  }
+  return { start: '', end: '', all: false };
+}
+
+/**
+ * Single letters side by side (xy, 2xyz) unless the run they join would spell a built-in name
+ * across the join, or the left one is d (dx ends an integrand).
+ */
+function lettersJoin(e: Expr & { kind: 'binary' }): boolean {
+  const before = letters(e.left).end;
+  const after = letters(e.right).start;
+  if (!before || !after || before.endsWith('d')) return false;
+  const run = before + after;
+  return !reservedRuns.some((name) => {
+    for (let i = run.indexOf(name); i >= 0; i = run.indexOf(name, i + 1)) {
+      if (i < before.length && i + name.length > before.length) return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Juxtaposition is printed where it cannot be misread: after a number, before something that
+ * does not start with a digit (2x, 2\sin…, 2\left(…), and between single letters that do not
+ * spell a built-in name (xy). Elsewhere \cdot keeps letters from merging into a longer name.
  */
 function mulSeparator(e: Expr & { kind: 'binary' }, left: string, right: string): string {
   if (e.form === 'times') return '\\times ';
@@ -184,6 +229,7 @@ function mulSeparator(e: Expr & { kind: 'binary' }, left: string, right: string)
     if (right.startsWith('\\') && !right.startsWith('\\cdot')) return '';
     // After a power, subscript or bracket (x^{2}y, (x+1)y): the letters cannot merge into a name.
     if ((left.endsWith('}') || left.endsWith(')')) && /^[A-Za-z]/.test(right)) return '';
+    if (lettersJoin(e)) return '';
   }
   return '\\cdot ';
 }

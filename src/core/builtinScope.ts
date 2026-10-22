@@ -1,4 +1,5 @@
 import { FUNCTION_LATEX, SUBSCRIPT_FIRST, functionAliasKey } from '../parser/functionNames';
+import { setReservedLetterRuns } from '../parser/printLatex';
 import { SymbolTable, type SymbolInfo } from '../parser/symbols';
 import { builtinFunctions, type BuiltinFunction } from '../registries/builtins/functions';
 
@@ -41,3 +42,10 @@ export const OUT = 'out';
 export function needsBrackets(f: BuiltinFunction): boolean {
   return f.callOnly === true || f.arity[0] >= 2;
 }
+
+// Results print single letters side by side (xy) unless they would spell one of these names.
+setReservedLetterRuns([
+  ...[...builtinFunctions.values()].flatMap((f) => [f.name, ...(f.aliases ?? [])]),
+  ANS,
+  OUT,
+]);

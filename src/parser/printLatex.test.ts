@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRows } from '../core/analyze';
-import { printStatement } from './printLatex';
+import type { Expr } from './ast';
+import { printLatex, printStatement } from './printLatex';
 import { statementToSexpr } from './sexpr';
 
 /** Parses the last row in context, prints it, re-parses the printed form in the same context. */
@@ -85,9 +86,30 @@ describe('printLatex round-trip', () => {
 
   it('prints readable canonical LaTeX', () => {
     expect(roundTrip(['2x+1']).printed).toBe('2x+1');
-    expect(roundTrip(['xy']).printed).toBe('x\\cdot y');
+    expect(roundTrip(['xy']).printed).toBe('xy');
+    expect(roundTrip(['2xyz']).printed).toBe('2xyz');
+    expect(roundTrip(['x\\cdot y']).printed).toBe('x\\cdot y');
     expect(roundTrip(['speed=3']).printed).toBe('\\mathrm{speed}=3');
     expect(roundTrip(['f(x)=x^2']).printed).toBe('f\\left(x\\right)=x^{2}');
     expect(roundTrip(['\\sin^2x']).printed).toBe('\\sin\\left(x\\right)^{2}');
+  });
+
+  it('keeps letters apart where they would spell a built-in name or a differential', () => {
+    const span = { start: 0, end: 0 };
+    const v = (base: string): Expr => ({ kind: 'var', name: { base }, span });
+    const product = (...names: string[]): Expr =>
+      names.map(v).reduce((left, right) => ({
+        kind: 'binary',
+        op: 'mul',
+        form: 'juxt',
+        left,
+        right,
+        span,
+      }));
+    expect(printLatex(product('l', 'n'))).toBe('l\\cdot n');
+    expect(printLatex(product('i', 'n', 's'))).toBe('ins');
+    expect(printLatex(product('s', 'i', 'n'))).toBe('si\\cdot n');
+    expect(printLatex(product('d', 'x'))).toBe('d\\cdot x');
+    expect(printLatex(product('a', 'b', 'c'))).toBe('abc');
   });
 });
