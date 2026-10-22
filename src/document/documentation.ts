@@ -547,6 +547,45 @@ export const DOCUMENTATION: readonly Entry[] = [
   '\\cross\\left(a,w\\right)',
   'M\\begin{bmatrix}1\\\\1\\end{bmatrix}',
 
+  { folder: 'Vector calculus' },
+  {
+    note: 'Type nabla for ∇ (or use the ∇ key, held for ∇·, ∇× and ∇²). ∇f is the gradient, ∇·F the divergence, ∇×F the curl and ∇²f the Laplacian; grad, div and curl also work as words. Apply them to a function you defined, by name: it is differentiated by its own variables, and ∇f(1, 2) is the gradient at (1, 2). On an expression they use its variables in alphabetical order; list others as a subscript, ∇_{x,y}.',
+  },
+  '\\phi\\left(x,y\\right)=x^2y+\\sin y',
+  'V\\left(x,y,z\\right)=\\begin{bmatrix}yz\\\\xz^2\\\\xy\\end{bmatrix}',
+  { note: '## Gradient, divergence and curl' },
+  { note: 'grad(f) — the gradient ∇f, the vector of partial derivatives. Type nabla or grad.' },
+  '\\nabla\\phi',
+  '\\nabla\\phi\\left(1,2\\right)',
+  '\\grad\\left(x^2+y^2+z^2\\right)',
+  '\\nabla_{x,y}\\left(x^2yz\\right)',
+  {
+    note: 'div(F) — the divergence ∇·F of a vector field, the sum of ∂Fᵢ/∂xᵢ. Type nabla then *, or div.',
+  },
+  '\\nabla\\cdot V',
+  '\\operatorname{div}\\begin{bmatrix}x^2\\\\xy\\end{bmatrix}',
+  {
+    note: 'curl(F) — the curl ∇×F of a vector field of 3 components; of 2 components, the scalar curl ∂Q/∂x − ∂P/∂y. Type nabla then times, or curl.',
+  },
+  '\\nabla\\times V',
+  '\\curl\\begin{bmatrix}-y\\\\x\\end{bmatrix}',
+  { note: '## Second derivatives and matrices' },
+  { note: 'laplacian(f) — the Laplacian ∇²f, the sum of the second partial derivatives.' },
+  '\\nabla^2\\phi',
+  '\\laplacian\\left(x^2+y^2+z^2\\right)',
+  { note: 'hessian(f) — the Hessian matrix of second partial derivatives. Type hessian.' },
+  '\\hessian\\left(\\phi\\right)',
+  {
+    note: 'jacobian(F) — the Jacobian matrix: the partial derivatives of each component. A second argument lists the variables. Type jacobian.',
+  },
+  '\\jacobian\\left(V\\right)',
+  '\\jacobian\\left(\\begin{bmatrix}r\\cos\\theta\\\\r\\sin\\theta\\end{bmatrix},\\left(r,\\theta\\right)\\right)',
+  {
+    note: 'Commands: a function of several variables suggests ∇, the Hessian and ∇²; a vector field the Jacobian, ∇· and ∇×.',
+  },
+  ['\\phi\\left(x,y\\right)', 'gradient', 'hessian', 'laplacian'],
+  ['\\begin{bmatrix}x^2y\\\\yz\\\\xz\\end{bmatrix}', 'jacobian', 'divergence', 'curl'],
+
   { folder: 'Sets' },
   '\\left\\lbrace3,1,2,1\\right\\rbrace',
 

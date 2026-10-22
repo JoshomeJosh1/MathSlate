@@ -1,4 +1,4 @@
-import { GREEK, LATEX_FUNCTION_COMMANDS } from '../parser/lexer';
+import { GREEK, LATEX_FUNCTION_COMMANDS, OPERATORNAME_ONLY } from '../parser/lexer';
 import type { NameOccurrence, Rewrite } from '../parser/resolve';
 import { builtinFunctions, type BuiltinFunction } from '../registries/builtins/functions';
 import type { RowAnalysis } from './analyze';
@@ -77,10 +77,11 @@ export function decoratedRow(latex: string, analysis: RowAnalysis | undefined): 
 /**
  * How a built-in function is written in an input row: as a command, `\sin` or `\lcm`, which the
  * editor displays as a single unit (you cannot type inside it). Names that are also Greek
- * letters (gamma, zeta) stay `\operatorname{…}`.
+ * letters (gamma, zeta), or LaTeX commands meaning something else (`\div` is ÷), stay
+ * `\operatorname{…}`.
  */
 export function functionLatex(name: string): string {
-  return GREEK.has(name) ? `\\operatorname{${name}}` : `\\${name}`;
+  return GREEK.has(name) || OPERATORNAME_ONLY.has(name) ? `\\operatorname{${name}}` : `\\${name}`;
 }
 
 const multiLetterFunctions = () =>
@@ -96,7 +97,7 @@ const spellings = (f: BuiltinFunction) => [f.name, ...(f.aliases ?? [])];
 export function functionMacros(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of multiLetterFunctions().flatMap(spellings)) {
-    if (!LATEX_FUNCTION_COMMANDS.has(name) && !GREEK.has(name)) {
+    if (!LATEX_FUNCTION_COMMANDS.has(name) && !GREEK.has(name) && !OPERATORNAME_ONLY.has(name)) {
       out[name] = `\\operatorname{${name}}`;
     }
   }

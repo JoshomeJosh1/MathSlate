@@ -145,6 +145,43 @@ describe('SymPy backend end to end', { timeout: 60_000 }, () => {
     ]);
   });
 
+  it('does vector calculus', async () => {
+    const f = 'f(x,y)=x^2y+\\sin y';
+    expect(await last([f, '\\nabla f'])).toEqual([
+      '\\begin{bmatrix}2x\\cdot y\\\\x^{2}+\\cos\\left(y\\right)\\end{bmatrix}',
+    ]);
+    expect(await last([f, '\\nabla f(1,2)'])).toEqual([
+      '\\begin{bmatrix}4\\\\\\cos\\left(2\\right)+1\\end{bmatrix}',
+    ]);
+    expect(await last([f, '\\nabla^2 f'])).toEqual(['2y-\\sin\\left(y\\right)']);
+    expect(await last([f, '\\hessian(f)'])).toEqual([
+      '\\begin{bmatrix}2y&2x\\\\2x&-\\sin\\left(y\\right)\\end{bmatrix}',
+    ]);
+    const field = 'F(x,y,z)=[yz, xz^2, xy]';
+    expect(await last([field, '\\nabla\\cdot F'])).toEqual(['0']);
+    expect(await last([field, '\\nabla\\times F(1,2,3)'])).toEqual([
+      '\\begin{bmatrix}-5\\\\0\\\\6\\end{bmatrix}',
+    ]);
+    expect(await last(['\\nabla(x^2y+z)'])).toEqual([
+      '\\begin{bmatrix}2x\\cdot y\\\\x^{2}\\\\1\\end{bmatrix}',
+    ]);
+    expect(await last(['\\nabla_{x,y}(x^2y+z)'])).toEqual([
+      '\\begin{bmatrix}2x\\cdot y\\\\x^{2}\\end{bmatrix}',
+    ]);
+    expect(await last(['\\nabla\\cdot[x, y, 0]'])).toEqual(['2']); // still x, y, z
+    expect(await last(['\\nabla\\times[-y, x]'])).toEqual(['2']);
+    expect(await last(['\\jacobian([u^2v, uv], (u, v))'])).toEqual([
+      '\\begin{bmatrix}2u\\cdot v&u^{2}\\\\v&u\\end{bmatrix}',
+    ]);
+    expect(await last([[f, 'gradient']])).toEqual([
+      'gradient: \\begin{bmatrix}2x\\cdot y\\\\x^{2}+\\cos\\left(y\\right)\\end{bmatrix}',
+    ]);
+    expect(await last(['\\nabla\\cdot[x, y, z^2, 1]'])).toEqual([
+      '!The divergence needs as many components as variables: this has 4 components and 3 variables (x, y, z); list the variables, e.g. ∇_{x,y,z}',
+    ]);
+    expect(await last(['\\nabla(5)'])).toEqual(['!This has no variables to differentiate by']);
+  });
+
   it('reports errors and cycles on the right rows', async () => {
     expect(await outputs(['a=b+1', 'b=a+1'])).toEqual([
       ['!Circular definition: a → b → a'],

@@ -2,6 +2,7 @@ import type { ConstantId, Expr, Name, RelOp, Statement } from './ast';
 import { FUNCTION_LATEX, SUBSCRIPT_FIRST } from './functionNames';
 import { LATEX_FUNCTION_COMMANDS } from './lexer';
 import { unitText } from './units';
+import { NABLA_FORMS } from './vectorCalculus';
 
 /**
  * AST → canonical LaTeX that our own parser reads back to the same tree (in the same document
@@ -106,6 +107,13 @@ export function printLatex(e: Expr): string {
       }
       if (e.fn.base === 'binomial' && e.args.length === 2 && e.args[0] && e.args[1]) {
         return `\\binom{${printLatex(e.args[0])}}{${printLatex(e.args[1])}}`;
+      }
+      if (NABLA_FORMS[e.fn.base] && e.args[0]) {
+        // ∇f, ∇·F, ∇×F, ∇²f; listed variables as a subscript, ∇_{x,y}f.
+        const vars = e.args[1]?.kind === 'list' ? e.args[1].items.map(printLatex).join(',') : '';
+        const nabla = NABLA_FORMS[e.fn.base] ?? '';
+        const scripted = vars ? nabla.replace('\\nabla', `\\nabla_{${vars}}`) : nabla;
+        return `${scripted}${paren(printLatex(e.args[0]))}`;
       }
       if (SUBSCRIPT_FIRST.has(e.fn.base) && e.args.length >= 2 && e.args[0]) {
         // J_n(x), Li_s(x): the first argument is a subscript.

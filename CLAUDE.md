@@ -29,6 +29,8 @@ starting `#` are headings, `##` subheadings.
 | 6         | Matrices: input, operations (det, eigen, rref, dot, cross, …) and commands                | done  |
 | 7         | `out_k` as a sequence (sums over results); sums over sequences; integer sequences         | done  |
 | 8         | URL share, error highlight inside the math field, perf (measured; see Performance)        | done  |
+| 9         | Vector calculus: ∇ (grad, div, curl, ∇²), jacobian, hessian; functions by name, at points | done  |
+| 9b        | `\nabla_x` with x a symbolic vector (matrix calculus) — on branch `vector-nabla`          | wip   |
 
 ### Ideas (not started — ask before implementing)
 
@@ -57,8 +59,8 @@ starting `#` are headings, `##` subheadings.
   `discriminant`, `resultant`, `roots` with multiplicities.
 - **Inequalities and systems**: `reduce_inequalities` / `solveset` (`x^2 < 4` → (−2, 2)); solve
   selected equation rows together (`solve([eq1, eq2], [x, y])`).
-- **Multivariable calculus**: `gradient`, `hessian`, `jacobian`; critical points of f(x, y) with
-  max / min / saddle; divergence and curl of vectors.
+- **Critical points** of f(x, y) with max / min / saddle (gradient and Hessian exist: see Vector
+  calculus).
 - **Transforms**: Laplace (and inverse), Fourier, Z.
 - **Series analysis**: convergence (`Sum(...).is_convergent()`), asymptotic expansions at ∞,
   residues.
@@ -362,6 +364,25 @@ row is a matrix and often its size (`matrixSize` follows names, products, transp
 `matrixRelevance` ranks commands by square / other / vector. SymPy's matrix errors are reworded
 (`_ERRORS`; any other SymPy error becomes a sentence without Python class names, `_error_message` in `runtime.py`).
 Nerdamer declines matrix functions.
+
+### Vector calculus (`parser/vectorCalculus.ts`)
+
+grad, div, curl, laplacian, jacobian, hessian are built-in functions
+(`builtins/functions/defs/vectorCalculus.ts`) whose AST is a call `[operand]` or
+`[operand, (variables)]`. The parser reads `\nabla` (a `fn` token) as grad, `\nabla\cdot` div,
+`\nabla\times` curl, `\nabla^2` laplacian; a subscript lists variables (`\nabla_{x,y}`, kept in the
+fnapp's `sub` as a group; one name alone is reserved for a symbolic vector variable). `\grad`,
+`\curl`, `\laplacian`, `\jacobian`, `\hessian` are `FUNCTION_COMMANDS`, so they work without
+brackets; div is always `\operatorname{div}` (`OPERATORNAME_ONLY` in the lexer: `\div` is ÷), which
+the lexer reads as a function too, and which decoration, shortcuts and macros keep. The resolver
+(`vectorCalculus`) binds listed variables in the operand and accepts a defined function's bare
+name as the operand (`bareFunction`). The SymPy serializer emits `_vector_calculus(op, f, vars,
+at)`: listed variables; else a defined function's parameters, evaluated at its arguments when
+called (`\nabla f(1,2)` is the gradient at (1, 2)); else `None`, the free variables in alphabetical
+order (for div and curl of a 2- or 3-vector whose free variables are among x, y, z: x, y, z).
+`printLatex` prints the ∇ forms. Commands: gradient, hessian, laplacian (scalar functions of ≥2
+variables), jacobian, divergence, curl (vectors), via `runVectorCalculus` (a definition by its
+parameters). Nerdamer declines them.
 
 ### Special functions
 

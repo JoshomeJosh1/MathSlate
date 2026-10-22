@@ -1,5 +1,5 @@
 import { preferredVariable, type ShapeFacts, type Target } from '../../core/shape';
-import type { Definition, Name, Statement } from '../../parser/ast';
+import type { Definition, Expr, Name, Statement } from '../../parser/ast';
 import { printName } from '../../parser/printLatex';
 import type { CasBackend, CasOperation, CasResult } from '../../cas/types';
 import type { Args, CommandParam } from './params';
@@ -55,6 +55,47 @@ export function runFunction(ctx: CommandContext, cas: CasBackend, fn: string): P
     env: ctx.env,
     locals: ctx.target.locals,
   });
+}
+
+/**
+ * Helper for vector calculus commands (grad, div, …; parser/vectorCalculus.ts): on a function
+ * definition, by its parameters; otherwise by the expression's free variables.
+ */
+export function runVectorCalculus(
+  ctx: CommandContext,
+  cas: CasBackend,
+  fn: string,
+): Promise<CasResult> {
+  const target = ctx.target.expr;
+  const span = target.span;
+  const args: Expr[] = [target];
+  if (ctx.statement.kind === 'defFunc') {
+    const items = ctx.statement.params.map((name): Expr => ({ kind: 'var', name, span }));
+    args.push({ kind: 'list', delim: 'paren', items, span });
+  }
+  return cas.run({
+    operation: { op: 'evaluate' },
+    target: { kind: 'call', fn: { base: fn }, args, span },
+    env: ctx.env,
+    locals: ctx.target.locals,
+  });
+}
+
+/** A scalar function of two or more variables: what grad, the Hessian and ∇² apply to. */
+export function isScalarField(facts: ShapeFacts): boolean {
+  return !facts.isRelation && !facts.isMatrix && facts.freeVars.length >= 2;
+}
+
+/**
+ * A vector of expressions in some variables: its number of components (null if unknown), or
+ * undefined if it is not one.
+ */
+export function vectorField(facts: ShapeFacts): number | null | undefined {
+  if (!facts.isMatrix || facts.freeVars.length === 0) return undefined;
+  const size = facts.matrixSize;
+  if (!size) return null;
+  if (size.rows !== 1 && size.cols !== 1) return undefined;
+  return size.rows * size.cols;
 }
 
 /**

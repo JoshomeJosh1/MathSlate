@@ -173,6 +173,14 @@ const FUNCTIONS: VirtualKeyboardLayout = {
       insert('\\int_{#?}^{#?}', '∫ₐᵇ', { tooltip: 'Definite integral' }),
       insert('\\frac{d}{dx}', 'd/dx', { class: 'small', tooltip: 'Derivative' }),
       insert('\\partial', '∂'),
+      insert('\\nabla', '∇', {
+        tooltip: 'Nabla: ∇f is the gradient (hold for ∇·, ∇×, ∇²)',
+        variants: [
+          insert('\\nabla\\cdot', '∇·'),
+          insert('\\nabla\\times', '∇×'),
+          insert('\\nabla^{2}', '∇²'),
+        ],
+      }),
       insert('\\sum_{#?}^{#?}', '∑'),
       insert('\\prod_{#?}^{#?}', '∏'),
       insert('\\lim_{#?\\to#?}', 'lim'),

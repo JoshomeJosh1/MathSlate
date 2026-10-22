@@ -69,6 +69,8 @@ export const INLINE_SHORTCUTS: InlineShortcutDefinitions = {
   // Typing "partial" gives ∂, so partial/partial x makes ∂/∂x like d/dx makes d/dx.
   partial: '\\partial',
   '∂': '\\partial',
+  nabla: '\\nabla',
+  '∇': '\\nabla',
   // No dx → \differentialD: the parser decides what is a differential (core/decorate.ts makes
   // the d of recognised calculus upright), so d·x elsewhere is not mangled.
 

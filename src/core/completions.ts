@@ -45,6 +45,7 @@ const STRUCTURES: LatexCompletion[] = [
     ['prod', '\\prod_{#?}^{#?}', 'Product'],
     ['lim', '\\lim_{#?\\to#?}', 'Limit'],
     ['partial', '\\partial', 'Partial derivative ∂ (∂/∂x)'],
+    ['nabla', '\\nabla', 'Nabla: ∇f gradient, ∇·F divergence, ∇×F curl, ∇²f Laplacian'],
     ['infty', '\\infty', 'Infinity'],
     ['to', '\\to', 'Arrow: in limits (x → 0), or to convert to a unit (→ [km])'],
   ]),
@@ -55,7 +56,7 @@ const STRUCTURES: LatexCompletion[] = [
   ...symbols('Operators and relations', [
     ['cdot', '\\cdot', 'Multiplication dot'],
     ['times', '\\times', 'Multiplication cross'],
-    ['div', '\\div', 'Division sign'],
+    ['divide', '\\div', 'Division sign'],
     ['pm', '\\pm', 'Plus or minus'],
     ['mp', '\\mp', 'Minus or plus'],
     ['le', '\\le', 'Less than or equal to'],

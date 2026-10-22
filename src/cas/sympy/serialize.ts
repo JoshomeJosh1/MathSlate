@@ -1,4 +1,5 @@
 import { nameKey, type ConstantId, type Definition, type Expr, type Name } from '../../parser/ast';
+import { VECTOR_CALCULUS } from '../../parser/vectorCalculus';
 import type { CasOperation, CasRequest } from '../types';
 
 /**
@@ -136,6 +137,8 @@ type DefKind = 'const' | 'func' | 'seq';
 class Serializer {
   private readonly symbols = new Set<string>();
   private readonly defined = new Map<string, DefKind>();
+  /** Each defined function's parameters. */
+  private readonly params = new Map<string, Name[]>();
 
   constructor(
     env: readonly Definition[],
@@ -146,6 +149,7 @@ class Serializer {
       const key = nameKey(d.name);
       const kind: DefKind = d.kind === 'defConst' ? 'const' : d.kind === 'defFunc' ? 'func' : 'seq';
       this.defined.set(key, kind);
+      if (d.kind === 'defFunc') this.params.set(key, d.params);
     }
   }
 
@@ -221,6 +225,36 @@ class Serializer {
     return lines;
   }
 
+  /**
+   * grad, div, curl, … (parser/vectorCalculus.ts): by the listed variables, else by a defined
+   * function's parameters (called: at its arguments, ∇f(1, 2)), else by the free variables.
+   */
+  private vectorCalculus(op: string, args: Expr[], locals: ReadonlySet<string>): string {
+    const [operand, vars] = args;
+    if (!operand) throw new SerializeError(`${op} needs an argument`);
+    if (vars?.kind === 'list') {
+      const names = vars.items.flatMap((v) => (v.kind === 'var' ? [v.name] : []));
+      const inner = new Set([...locals, ...names.map(nameKey)]);
+      const symbols = names.map((n) => `${this.symbol(n)},`).join(' ');
+      return `_vector_calculus(${pyString(op)}, ${this.expr(operand, inner)}, (${symbols}))`;
+    }
+    const fn =
+      operand.kind === 'var' ? operand.name : operand.kind === 'call' ? operand.fn : undefined;
+    const key = fn && nameKey(fn);
+    const params = key !== undefined && !locals.has(key) ? this.params.get(key) : undefined;
+    if (key !== undefined && params) {
+      const symbols = params.map((p) => this.symbol(p));
+      const at =
+        operand.kind === 'call'
+          ? `(${operand.args.map((a) => `${this.expr(a, locals)},`).join(' ')})`
+          : 'None';
+      const body = `_scalar(u_${pyId(key)}(${symbols.join(', ')}))`;
+      const variables = `(${symbols.map((s) => `${s},`).join(' ')})`;
+      return `_vector_calculus(${pyString(op)}, ${body}, ${variables}, ${at})`;
+    }
+    return `_vector_calculus(${pyString(op)}, ${this.expr(operand, locals)}, None)`;
+  }
+
   expr(e: Expr, locals: ReadonlySet<string>): string {
     const go = (x: Expr) => this.expr(x, locals);
     switch (e.kind) {
@@ -262,6 +296,9 @@ class Serializer {
         return `factorial(${go(e.arg)})`;
       case 'call': {
         const key = nameKey(e.fn);
+        if (VECTOR_CALCULUS.has(key) && this.defined.get(key) === undefined) {
+          return this.vectorCalculus(key, e.args, locals);
+        }
         const args = e.args.map(go);
         if (this.defined.get(key) === 'func') return `u_${pyId(key)}(${args.join(', ')})`;
         const fn = FUNCTIONS[key];

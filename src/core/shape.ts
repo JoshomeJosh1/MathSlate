@@ -6,6 +6,7 @@ import {
   type Name,
   type Statement,
 } from '../parser/ast';
+import { VECTOR_CALCULUS } from '../parser/vectorCalculus';
 
 /**
  * Cheap static facts about an expression, used by commands to judge relevance and pick a
@@ -105,10 +106,21 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
         visit(e.lower);
         visit(e.upper);
         return;
-      case 'call':
+      case 'call': {
         hasFunctions = true;
+        const [operand, vars] = e.args;
+        if (VECTOR_CALCULUS.has(e.fn.base) && operand) {
+          // Differentiates: computes something; listed variables are bound in the operand.
+          hasOperators = true;
+          const names = vars?.kind === 'list' ? vars.items : [];
+          for (const v of names) if (v.kind === 'var') bound.push(nameKey(v.name));
+          visit(operand);
+          bound.splice(bound.length - names.length, names.length);
+          return;
+        }
         e.args.forEach(visit);
         return;
+      }
       case 'derivative':
         hasFunctions = true;
         hasOperators = true;
@@ -180,6 +192,8 @@ export function shapeOf(expr: Expr, env: readonly Definition[]): ShapeFacts {
 
 type Size = { rows: number; cols: number } | 'unknown' | null;
 
+const VECTOR_VALUED = new Set(['grad', 'curl', 'jacobian', 'hessian']);
+
 /** Functions of a matrix whose value is a matrix: how they change its size. */
 const MATRIX_FUNCTIONS: Partial<Record<string, (s: { rows: number; cols: number }) => Size>> = {
   transpose: (s) => ({ rows: s.cols, cols: s.rows }),
@@ -206,6 +220,8 @@ function matrixSize(e: Expr, env: readonly Definition[], depth: number): Size {
     case 'convert':
       return go(e.kind === 'neg' ? e.arg : e.expr);
     case 'call': {
+      // Vector calculus: grad and curl are vectors, jacobian and hessian matrices.
+      if (VECTOR_VALUED.has(e.fn.base)) return 'unknown';
       const fn = MATRIX_FUNCTIONS[e.fn.base];
       const arg = e.args[0] ? go(e.args[0]) : null;
       if (!fn || arg === null) return null;

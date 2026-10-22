@@ -15,7 +15,9 @@ import { MathError, spanOf, type Span } from './errors';
 import { functionAliasKey } from './functionNames';
 import { isCallable, isSequence, type SymbolInfo, type SymbolTable } from './symbols';
 import { INLINE_MATRIX } from './parser';
+import { OPERATORNAME_ONLY } from './lexer';
 import { printLatex } from './printLatex';
+import { VECTOR_CALCULUS } from './vectorCalculus';
 import { parseUnitText, unitText } from './units';
 
 /**
@@ -583,6 +585,9 @@ class Resolver {
   ): Expr {
     const display = displayName(nameKey(fn));
     if (!info || !isCallable(info)) throw new MathError(`Unknown function "${display}"`, span);
+    if (info.kind === 'builtinFunction' && VECTOR_CALCULUS.has(fn.base)) {
+      return this.vectorCalculus(fn, argsCst, scope, span, info);
+    }
     this.ref(nameKey(fn), info);
     const args = argsCst.map((c) => this.expr(c, scope));
     checkArity(display, info, args.length, span);
@@ -595,10 +600,25 @@ class Resolver {
     if (!info || !isCallable(info)) {
       throw new MathError(`Unknown function "\\${cst.name}"`, span);
     }
-    if (!cst.arg) throw new MathError(`"\\${cst.name}" needs an argument`, span);
+    if (!cst.arg) {
+      const shown = OPERATORNAME_ONLY.has(cst.name) ? cst.name : `\\${cst.name}`;
+      throw new MathError(`"${shown}" needs an argument`, span);
+    }
     const argsCst =
       cst.arg.type === 'group' && cst.arg.delim === 'paren' ? [...cst.arg.items] : [cst.arg];
-    if (cst.sub) {
+    if (VECTOR_CALCULUS.has(cst.name) && cst.sub) {
+      // \nabla_{x,y} f: the variables, as if given as the second argument.
+      if (argsCst.length > 1) {
+        throw new MathError('Give the variables once: in the subscript or in brackets', span);
+      }
+      if (cst.sub.type === 'group' && cst.sub.items.length === 1) {
+        throw new MathError(
+          '∇ by one vector variable is not supported yet: list the variables, e.g. ∇_{x,y}',
+          cst.sub.span,
+        );
+      }
+      argsCst.push(cst.sub);
+    } else if (cst.sub) {
       // \log_2 x → log(x, 2)
       if (!info.subscriptArg) {
         throw new MathError(`"\\${cst.name}" does not take a subscript`, cst.sub.span);
@@ -622,6 +642,51 @@ class Resolver {
     return power
       ? { kind: 'binary', op: 'pow', left: callNode, right: this.expr(power, scope), span }
       : callNode;
+  }
+
+  /**
+   * grad, div, curl, laplacian, jacobian, hessian (vectorCalculus.ts): the operand, and the
+   * variables if listed, bound in the operand like a calculus operator's variable. Without them
+   * the operand may be a defined function's bare name (`\nabla f`).
+   */
+  private vectorCalculus(
+    fn: Name,
+    argsCst: Cst[],
+    scope: SymbolTable,
+    span: Span,
+    info: SymbolInfo,
+  ): Expr {
+    checkArity(displayName(nameKey(fn)), info, argsCst.length, span);
+    const [operandCst, varsCst] = argsCst;
+    if (!operandCst) throw new MathError('Missing expression', span);
+    if (!varsCst) {
+      const operand = this.bareFunction(operandCst, scope) ?? this.expr(operandCst, scope);
+      return { kind: 'call', fn, args: [operand], span };
+    }
+    const vars = variableList(varsCst);
+    const keys = vars.map((v) => nameKey(v.name));
+    const repeated = keys.find((k, i) => keys.indexOf(k) !== i);
+    if (repeated !== undefined) {
+      throw new MathError(`The variable ${displayName(repeated)} is listed twice`, varsCst.span);
+    }
+    const operand = this.expr(operandCst, scope.withLocals(keys));
+    const list: Expr = { kind: 'list', delim: 'paren', items: vars, span: varsCst.span };
+    return { kind: 'call', fn, args: [operand, list], span };
+  }
+
+  /** A defined function's name on its own (`f`, `speed`), or null if `cst` is not one. */
+  private bareFunction(cst: Cst, scope: SymbolTable): Expr | null {
+    const parts = cst.type === 'juxt' ? cst.items : [cst];
+    const letters = parts.every((c) => c.type === 'letter');
+    if (!letters && !(parts.length === 1 && cst.type === 'opname')) return null;
+    const key = parts
+      .map((c) => (c.type === 'letter' || c.type === 'opname' ? c.name : ''))
+      .join('');
+    const info = scope.lookup(key);
+    if (info?.kind !== 'function') return null;
+    this.ref(key, info);
+    if (/^[A-Za-z]{2,}$/.test(key)) this.names.push({ key, span: cst.span, known: 'user' });
+    return { kind: 'var', name: makeName(key), span: cst.span };
   }
 
   private applyWrappers(node: Expr, wrappers: Wrapper[], scope: SymbolTable): Expr {
@@ -912,6 +977,19 @@ function isParenGroup(f: Factor | undefined): boolean {
 function boundName(cst: Cst): Name {
   if (cst.type === 'letter') return makeName(cst.name);
   throw new MathError('The variable must be a single letter, e.g. x', cst.span);
+}
+
+/** The variables of vector calculus: `(x, y)`, `[x, y]` or one name; letters or `x_1`. */
+function variableList(cst: Cst): (Expr & { kind: 'var' })[] {
+  const items = cst.type === 'group' ? cst.items : cst.type === 'matrix' ? cst.rows.flat() : [cst];
+  return items.map((c): Expr & { kind: 'var' } => {
+    if (c.type === 'letter') return { kind: 'var', name: makeName(c.name), span: c.span };
+    if (c.type === 'sub' && c.base.type === 'letter') {
+      const sub = subscriptText(c.sub);
+      if (sub !== null) return { kind: 'var', name: makeName(c.base.name, sub), span: c.span };
+    }
+    throw new MathError('List the variables as letters, e.g. (x, y)', c.span);
+  });
 }
 
 function isLatinLetter(f: Factor): boolean {

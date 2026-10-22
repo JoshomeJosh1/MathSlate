@@ -1,6 +1,7 @@
 import type { BinaryOp, Cst, GroupDelim, MulForm } from './cst';
 import { MathError, spanOf, type Span } from './errors';
 import { tokenize, type Delim, type OpSymbol, type RelSymbol, type Token } from './lexer';
+import { VECTOR_CALCULUS } from './vectorCalculus';
 
 /**
  * Hand-written Pratt parser: LaTeX → CST for a single row.
@@ -552,6 +553,7 @@ class Parser {
    */
   private parseFunction(t: Token & { kind: 'fn' }): Cst {
     if (t.name === 'lim') return this.parseLimit(t);
+    if (t.name === 'nabla' || VECTOR_CALCULUS.has(t.name)) return this.parseVectorCalculus(t);
     let sub: Cst | undefined;
     let power: Cst | undefined;
     for (let s = this.peek(); s.kind === 'sub' || s.kind === 'sup'; s = this.peek()) {
@@ -575,6 +577,70 @@ class Parser {
     if (power) node.power = power;
     if (arg) node.arg = arg;
     return node;
+  }
+
+  /**
+   * ∇ and the vector calculus functions (vectorCalculus.ts): `\nabla f` is grad, `\nabla\cdot F`
+   * div, `\nabla\times F` curl and `\nabla^2 f` the Laplacian; `\grad f`, `\operatorname{div} F`.
+   * The operand is taken like a function's argument. A subscript lists the variables
+   * (`\nabla_{x,y} f`), kept in `sub` as a parenthesised group.
+   */
+  private parseVectorCalculus(t: Token & { kind: 'fn' }): Cst {
+    let sub: Cst | undefined;
+    let squared = false;
+    for (let s = this.peek(); s.kind === 'sub' || s.kind === 'sup'; s = this.peek()) {
+      this.next();
+      if (s.kind === 'sub') {
+        if (sub) throw new MathError('Double subscript: use braces, e.g. x_{12}', s.span);
+        sub = this.parseVariableList(s);
+      } else {
+        const exp = this.parseScriptArg(s);
+        if (t.name !== 'nabla' || squared || exp.type !== 'num' || exp.value !== '2') {
+          throw new MathError('Only ∇² (the Laplacian) takes a power here', exp.span);
+        }
+        squared = true;
+      }
+    }
+    let name = t.name;
+    if (name === 'nabla') {
+      const op = this.peek();
+      if (squared) {
+        name = 'laplacian';
+      } else if (op.kind === 'op' && (op.op === 'cdot' || op.op === 'times')) {
+        this.next();
+        name = op.op === 'cdot' ? 'div' : 'curl';
+      } else {
+        name = 'grad';
+      }
+    }
+    const arg = this.parseOperatorArgument('function');
+    if (!arg && t.name === 'nabla') {
+      throw new MathError('Write what ∇ applies to after it', spanOf(t.span, this.peek().span));
+    }
+    const end = arg ?? sub;
+    const node: Cst = { type: 'fnapp', name, span: end ? spanOf(t.span, end.span) : t.span };
+    if (sub) node.sub = sub;
+    if (arg) node.arg = arg;
+    return node;
+  }
+
+  /** `_{x,y}` (or `_x`) after ∇: the variables, as a parenthesised group. */
+  private parseVariableList(owner: Token): Cst {
+    const open = this.peek();
+    if (!this.isDelim(open, '{')) {
+      const only = this.parseScriptArg(owner);
+      return { type: 'group', delim: 'paren', items: [only], span: only.span };
+    }
+    this.next();
+    const items: Cst[] = [];
+    for (;;) {
+      if (this.isDelim(this.peek(), '}')) throw new MathError('Missing variable', this.peek().span);
+      items.push(this.parseExpr(0));
+      if (this.peek().kind !== 'comma') break;
+      this.next();
+    }
+    const close = this.expectDelim('}', '}', open.span);
+    return { type: 'group', delim: 'paren', items, span: spanOf(open.span, close.span) };
   }
 
   /**

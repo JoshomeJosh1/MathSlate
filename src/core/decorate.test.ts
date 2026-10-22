@@ -166,6 +166,7 @@ describe('upright display of recognised multi-letter names', () => {
     expect(shortcuts.erf).toBe('\\erf');
     expect(shortcuts.Si).toBe('\\Si');
     expect(shortcuts.gamma).toBeUndefined(); // the Greek letter's shortcut
+    expect(shortcuts.div).toBe('\\operatorname{div}'); // \div is ÷
     const bracketOnly = bracketOnlyShortcuts();
     for (const name of ['binomial', 'gcd', 'lcm', 'erf', 'Si', 'besselJ']) {
       expect(bracketOnly.has(name), name).toBe(true);
@@ -175,6 +176,7 @@ describe('upright display of recognised multi-letter names', () => {
     // Every command the shortcuts and decoration produce is one the editor can display.
     const macros = functionMacros();
     for (const latex of Object.values(shortcuts)) {
+      if (latex.startsWith('\\operatorname{')) continue; // displayed as it is
       const name = latex.slice(1);
       expect(LATEX_FUNCTION_COMMANDS.has(name) || name in macros, name).toBe(true);
     }

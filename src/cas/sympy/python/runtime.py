@@ -179,6 +179,109 @@ def _pow_T(a, t):
     return a.T if isinstance(a, MatrixBase) else a**t
 
 
+def _count(n, noun):
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
+
+def _variable_names(variables):
+    return ", ".join(v.name.lstrip("\\") for v in variables)
+
+
+def _field(F, what, variables):
+    """The components of a vector field, as many as there are variables."""
+    F = _scalar(F)
+    if not _is_vector(F):
+        raise MathSlateError(f"The {what} needs a vector field: a vector of expressions")
+    components = list(F)
+    if len(components) != len(variables):
+        raise MathSlateError(
+            f"The {what} needs as many components as variables: this has"
+            f" {_count(len(components), 'component')} and {_count(len(variables), 'variable')}"
+            f" ({_variable_names(variables)}); list the variables, e.g. ∇_{{x,y,z}}"
+        )
+    return components
+
+
+def _function(f, what):
+    f = _scalar(f)
+    if isinstance(f, MatrixBase):
+        raise MathSlateError(f"The {what} needs a scalar function, not a vector or matrix")
+    return f
+
+
+def _grad(f, variables):
+    f = _function(f, "gradient")
+    return Matrix([diff(f, v) for v in variables])
+
+
+def _div(F, variables):
+    return Add(*[diff(c, v) for c, v in zip(_field(F, "divergence", variables), variables)])
+
+
+def _curl(F, variables):
+    if len(variables) not in (2, 3):
+        raise MathSlateError(
+            f"The curl needs 3 variables (or 2 for the scalar curl), not {len(variables)}"
+            f" ({_variable_names(variables)})"
+        )
+    components = _field(F, "curl", variables)
+    if len(variables) == 2:
+        (P, Q), (x, y) = components, variables
+        return diff(Q, x) - diff(P, y)
+    (P, Q, R), (x, y, z) = components, variables
+    return Matrix([diff(R, y) - diff(Q, z), diff(P, z) - diff(R, x), diff(Q, x) - diff(P, y)])
+
+
+def _laplacian(f, variables):
+    f = _scalar(f)
+    if isinstance(f, MatrixBase):
+        return f.applyfunc(lambda c: _laplacian(c, variables))  # the vector Laplacian
+    return Add(*[diff(f, v, 2) for v in variables])
+
+
+def _jacobian(F, variables):
+    F = _scalar(F)
+    if isinstance(F, MatrixBase) and not _is_vector(F):
+        raise MathSlateError("The Jacobian needs a vector (one column or row) or a function")
+    components = list(F) if isinstance(F, MatrixBase) else [F]
+    return Matrix(components).jacobian(list(variables))
+
+
+def _hessian(f, variables):
+    return hessian(_function(f, "Hessian"), list(variables))
+
+
+_VECTOR_CALCULUS = {
+    "grad": _grad,
+    "div": _div,
+    "curl": _curl,
+    "laplacian": _laplacian,
+    "jacobian": _jacobian,
+    "hessian": _hessian,
+}
+
+
+def _vector_calculus(op, f, variables, at=None):
+    """grad, div, curl, … of f by `variables`: a function's parameters, the listed variables,
+    or (None) f's free variables in alphabetical order. With `at` (a function's arguments,
+    ∇f(1, 2)), the result is evaluated there."""
+    if variables is None:
+        free = {s for s in f.free_symbols if not s.name.startswith("@")}  # not units' base symbols
+        variables = sorted(free, key=lambda s: s.name.lstrip("\\"))
+        # A field in x, y, z with fewer of them written, ∇·[x, y, 0]: still x, y, z.
+        xyz = symbols("x y z")
+        if op in ("div", "curl") and _is_vector(f) and len(f) in (2, 3):
+            if free <= set(xyz[: len(f)]):
+                variables = list(xyz[: len(f)])
+        if not variables:
+            raise MathSlateError("This has no variables to differentiate by")
+    variables = list(variables)
+    result = _VECTOR_CALCULUS[op](f, variables)
+    if at is not None:
+        result = result.subs(dict(zip(variables, at)), simultaneous=True)
+    return result
+
+
 class _Sequence:
     """A user sequence: rule(n) with optional base cases, memoised and filled bottom-up so deep
     recursion (a_{1000}) does not hit Python's recursion limit."""

@@ -65,8 +65,15 @@ export const FUNCTION_COMMANDS = new Set([
   'arccsc', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch', 'arsinh', 'arcosh', 'artanh',
   'arcoth', 'arsech', 'arcsch', 'ln',
   'log', 'lg', 'lb', 'exp', 'det', 'dim', 'gcd', 'max', 'min', 'sup', 'inf', 'lim', 'arg', 'deg',
-  'ker', 'hom', 'Pr', 'tr', 'rank', 'mod',
+  'ker', 'hom', 'Pr', 'tr', 'rank', 'mod', 'grad', 'curl', 'laplacian', 'jacobian', 'hessian',
+  'nabla', // ∇: grad, div, curl or laplacian (parser.ts)
 ]); // prettier-ignore
+
+/**
+ * Functions written `\operatorname{…}` because `\name` already means something else (`\div` is
+ * ÷). That spelling reads as the function, like a command in FUNCTION_COMMANDS.
+ */
+export const OPERATORNAME_ONLY = new Set(['div']);
 
 const SIMPLE_OPS: Record<string, OpSymbol> = {
   cdot: 'cdot',
@@ -293,7 +300,13 @@ export function tokenize(src: string): Token[] {
         if (!/^[A-Za-z]+$/.test(text)) {
           throw new MathError(`Unsupported name "${text}"`, span());
         }
-        if (name === 'operatorname') {
+        if (
+          name === 'operatorname' &&
+          (FUNCTION_COMMANDS.has(text) || OPERATORNAME_ONLY.has(text))
+        ) {
+          // \operatorname{div} F: a function applied like \sin.
+          push({ kind: 'fn', name: text, span: span() });
+        } else if (name === 'operatorname') {
           // Always an operator name, even a single letter: \operatorname{S}(x) is Fresnel S.
           push({ kind: 'opname', name: text, operator: true, span: span() });
         } else {

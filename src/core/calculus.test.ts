@@ -93,3 +93,81 @@ describe('calculus notation', () => {
     );
   });
 });
+
+describe('vector calculus', () => {
+  const f = 'f(x,y)=x^2y';
+  const field = 'F(x,y,z)=[yz, xz, xy]';
+  it.each([
+    // A defined function by name (by its parameters), or called (at its arguments)
+    [[f, '\\nabla f'], '(grad f)'],
+    [[f, '\\nabla f(1,2)'], '(grad (f 1 2))'],
+    [[f, '\\grad f'], '(grad f)'],
+    [[f, '\\operatorname{grad}(f)'], '(grad f)'],
+    [[f, '\\hessian(f)'], '(hessian f)'],
+    [[f, '\\nabla^2 f'], '(laplacian f)'],
+    [[f, '\\nabla^{2}f+1'], '(+ (laplacian f) 1)'],
+    [[field, '\\nabla\\cdot F'], '(div F)'],
+    [[field, '\\nabla\\times F'], '(curl F)'],
+    [[field, '\\operatorname{div}F'], '(div F)'],
+    [[field, '\\curl F(1,2,3)'], '(curl (F 1 2 3))'],
+    [[field, '\\jacobian(F)'], '(jacobian F)'],
+    // Expressions; the operand is taken like a function's argument
+    [['\\nabla(x^2y)'], '(grad (* (^ x 2) y))'],
+    [['\\nabla x^2y+1'], '(+ (grad (* (^ x 2) y)) 1)'],
+    // Listed variables
+    [['\\nabla_{x,y}(x^2yz)'], '(grad (* (* (^ x 2) y) z) (tuple x y))'],
+    [['\\nabla_{x_1,x_2}x_1x_2'], '(grad (* x_{1} x_{2}) (tuple x_{1} x_{2}))'],
+    [['\\jacobian([u^2v, uv], (u, v))'], '(jacobian [[(* (^ u 2) v)] [(* u v)]] (tuple u v))'],
+  ])('reads %j', (rows, sexpr) => {
+    expect(last(...rows)).toBe(sexpr);
+  });
+
+  it('binds listed variables inside the operand', () => {
+    expect(last('x=3', '\\nabla_{x,y}(x^2y)')).toBe('(grad (* (^ x 2) y) (tuple x y))');
+    const rows = analyzeRows(
+      ['x=3', f, '\\nabla_{x,y}(x^2y)', '\\nabla f'].map((latex, i) => ({ id: `r${i}`, latex })),
+    );
+    expect(rows[2]?.refs).toEqual([]);
+    expect(rows[3]?.refs).toEqual(['f']);
+  });
+
+  it.each([
+    ['\\nabla', 'Write what ∇ applies to after it'],
+    ['\\operatorname{div}', '"div" needs an argument'],
+    ['\\nabla^3 f', 'Only ∇² (the Laplacian) takes a power here'],
+    ['\\nabla_{x,x}x^2', 'The variable x is listed twice'],
+    ['\\nabla_{x,2}x^2', 'List the variables as letters, e.g. (x, y)'],
+    [
+      '\\nabla_x x^2',
+      '∇ by one vector variable is not supported yet: list the variables, e.g. ∇_{x,y}',
+    ],
+    ['\\grad_{x,y}(x^2, (x,y))', 'Give the variables once: in the subscript or in brackets'],
+    ['\\grad(x, y, z)', '"grad" takes 1 to 2 arguments, got 3'],
+  ])('reports %s', (input, message) => {
+    expect(last(input)).toBe(`!${message}`);
+  });
+
+  it.each([
+    [f, '\\nabla f'],
+    [f, '\\nabla f(1,2)'],
+    [f, '\\nabla^2 f+1'],
+    [f, '\\hessian(f)'],
+    [field, '\\nabla\\cdot F'],
+    [field, '\\nabla\\times F\\left(1,2,3\\right)'],
+    [field, '\\jacobian(F)'],
+    ['', '\\nabla_{x,y}(x^2yz)'],
+    ['', '\\operatorname{div}[x, y]'],
+    ['', '2\\nabla(x^2)y'],
+    ['', '\\jacobian([u^2v, uv], (u, v))'],
+  ])('round-trips %s / %s', (definition, input) => {
+    const rows = (latex: string) =>
+      analyzeRows([definition, latex].map((l, i) => ({ id: `r${i}`, latex: l }))).at(-1);
+    const first = rows(input);
+    if (!first?.statement) throw new Error(first?.error?.message ?? 'no statement');
+    const again = rows(printStatement(first.statement));
+    expect(again?.error?.message).toBeUndefined();
+    expect(again?.statement && statementToSexpr(again.statement)).toBe(
+      statementToSexpr(first.statement),
+    );
+  });
+});
